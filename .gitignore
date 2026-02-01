@@ -1,0 +1,101 @@
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Runtime / temp
+tmp/
+temp/
+.cache/
+*.pid
+*.seed
+
+# Tool-local state
+.claude/
+
+# Node
+node_modules/
+dist/
+build/
+coverage/
+.next/
+.out/
+.nuxt/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.venv/
+ENV/
+env/
+pip-wheel-metadata/
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.mypy_cache/
+
+# IDEs / Editors
+# VS Code: commit selectively; ignore rest
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# Secrets / env
+.env
+.env*
+.env.local
+.env.*.local
+*.pem
+*.key
+*.crt
+credentials
+secrets.yml
+
+# Java / JVM
+target/
+*.class
+*.jar
+*.war
+
+# Go
+bin/
+pkg/
+
+# Rust
+target/
+
+# PHP / Composer
+vendor/
+
+# Misc
+*.swp
+*~
+*.sqlite3
+*.db
+*.tgz
+
+# Workspace-specific
+_bmad/
+_bmad-output/
+
+# Explicitly do NOT ignore (kept in repo)
+!.github/
+
+# Ignore specific folder inside .github
+.github/agents/
