@@ -1,0 +1,1530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>recruitment-tracker — Design Direction Mockup</title>
+<style>
+  /* ========================================
+     Design Tokens (mirrors @theme in Tailwind v4)
+     ======================================== */
+  :root {
+    /* Core palette — If Insurance brand */
+    --brand-brown: #331e11;
+    --bg-base: #faf9f7;
+    --bg-surface: #ffffff;
+    --border-default: #ede6e1;
+    --border-subtle: #f5f0ec;
+    --interactive: #005fcc;
+    --interactive-hover: #004da6;
+    --text-secondary: #6b5d54;
+    --text-tertiary: #9c8e85;
+
+    /* Status colors */
+    --status-pass: #1a7d37;
+    --status-pass-bg: #ecfdf3;
+    --status-fail: #c4320a;
+    --status-fail-bg: #fef3f2;
+    --status-hold: #b54708;
+    --status-hold-bg: #fffaeb;
+    --status-info: #005fcc;
+    --status-info-bg: #eff8ff;
+
+    /* Typography */
+    --font-primary: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+
+    /* Spacing */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+
+    /* Border radius */
+    --radius: 6px;
+  }
+
+  /* ========================================
+     Reset & Base
+     ======================================== */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--font-primary);
+    background: var(--bg-base);
+    color: var(--brand-brown);
+    font-size: 14px;
+    line-height: 1.57;
+    min-width: 1280px;
+  }
+
+  /* ========================================
+     Page Selector
+     ======================================== */
+  .page-selector {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    background: var(--brand-brown);
+    color: white;
+    padding: var(--space-2) var(--space-6);
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    font-size: 13px;
+  }
+
+  .page-selector span {
+    font-weight: 600;
+    opacity: 0.7;
+  }
+
+  .page-selector button {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 13px;
+    transition: background 0.15s;
+  }
+
+  .page-selector button:hover { background: rgba(255,255,255,0.25); }
+  .page-selector button.active { background: var(--interactive); border-color: var(--interactive); }
+
+  .mockup-container { margin-top: 40px; }
+
+  /* ========================================
+     View containers
+     ======================================== */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ========================================
+     App Header (48px)
+     ======================================== */
+  .app-header {
+    height: 48px;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-6);
+  }
+
+  .breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 14px;
+  }
+
+  .breadcrumb .sep { color: var(--text-tertiary); }
+  .breadcrumb .current { font-weight: 600; }
+  .breadcrumb a {
+    color: var(--interactive);
+    text-decoration: none;
+  }
+  .breadcrumb a:hover { text-decoration: underline; }
+
+  .user-menu {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--border-default);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+  }
+
+  /* ========================================
+     Overview Section
+     ======================================== */
+  .overview-section {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    padding: var(--space-4) var(--space-6);
+  }
+
+  .overview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+  }
+
+  .overview-title {
+    font-size: 18px;
+    font-weight: 600;
+    line-height: 1.33;
+  }
+
+  .collapse-btn {
+    background: none;
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    padding: var(--space-1) var(--space-2);
+    cursor: pointer;
+    font-family: var(--font-primary);
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-1);
+  }
+
+  .collapse-btn:hover { background: var(--border-subtle); }
+
+  /* KPI Cards */
+  .kpi-row {
+    display: flex;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+  }
+
+  .kpi-card {
+    background: var(--bg-base);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4);
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kpi-label {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    margin-bottom: var(--space-1);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+
+  .kpi-number {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1.25;
+  }
+
+  .kpi-number.stale { color: var(--status-hold); }
+
+  /* Pipeline breakdown */
+  .pipeline-row {
+    display: flex;
+    gap: 2px;
+    border-radius: var(--radius);
+    overflow: hidden;
+    height: 32px;
+  }
+
+  .pipeline-step {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--brand-brown);
+    background: var(--border-subtle);
+    cursor: pointer;
+    transition: background 0.15s;
+    padding: 0 var(--space-3);
+    white-space: nowrap;
+  }
+
+  .pipeline-step:hover { background: var(--border-default); }
+  .pipeline-step .count { font-weight: 700; }
+
+  .pipeline-step.has-stale {
+    position: relative;
+  }
+
+  .stale-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    color: var(--status-hold);
+    font-size: 11px;
+  }
+
+  /* Collapsed overview */
+  .overview-collapsed {
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+    padding: var(--space-2) var(--space-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .overview-collapsed .summary-stats {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .overview-collapsed .stat-value { font-weight: 600; color: var(--brand-brown); }
+
+  /* ========================================
+     Three-Panel Layout
+     ======================================== */
+  .main-content {
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    height: calc(100vh - 48px - 160px);
+    /* Adjusted per view */
+  }
+
+  .main-content.with-overview { height: calc(100vh - 48px - 200px); }
+  .main-content.with-collapsed { height: calc(100vh - 48px - 40px); }
+
+  /* Candidate List Panel */
+  .candidate-list-panel {
+    background: var(--bg-base);
+    border-right: 1px solid var(--border-default);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .list-header {
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .list-header .filter-row {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+  }
+
+  .search-input {
+    flex: 1;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 13px;
+    background: var(--bg-surface);
+    color: var(--brand-brown);
+    outline: none;
+  }
+
+  .search-input:focus { border-color: var(--interactive); box-shadow: 0 0 0 2px rgba(0,95,204,0.15); }
+
+  .search-input::placeholder { color: var(--text-tertiary); }
+
+  .sort-select {
+    padding: var(--space-2) var(--space-2);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 12px;
+    background: var(--bg-surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .candidate-items {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .candidate-item {
+    height: 48px;
+    padding: 0 var(--space-4);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-subtle);
+    transition: background 0.1s;
+  }
+
+  .candidate-item:hover { background: var(--border-subtle); }
+
+  .candidate-item.selected {
+    background: var(--status-info-bg);
+    border-left: 3px solid var(--interactive);
+    padding-left: calc(var(--space-4) - 3px);
+  }
+
+  .candidate-item .unscreened-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--interactive);
+    flex-shrink: 0;
+  }
+
+  .candidate-item .screened-spacer {
+    width: 6px;
+    flex-shrink: 0;
+  }
+
+  .candidate-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 400;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .candidate-item.selected .candidate-name { font-weight: 500; }
+
+  /* Status Badge */
+  .status-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 6px;
+    border-radius: var(--radius);
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  .status-badge.pass { background: var(--status-pass-bg); color: var(--status-pass); }
+  .status-badge.fail { background: var(--status-fail-bg); color: var(--status-fail); }
+  .status-badge.hold { background: var(--status-hold-bg); color: var(--status-hold); }
+
+  .screening-progress {
+    padding: var(--space-3) var(--space-4);
+    border-top: 1px solid var(--border-default);
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .progress-bar-track {
+    width: 100%;
+    height: 4px;
+    background: var(--border-default);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--interactive);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+
+  /* CV Viewer Panel */
+  .cv-viewer-panel {
+    background: var(--bg-surface);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .cv-header {
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--border-default);
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cv-content {
+    flex: 1;
+    padding: var(--space-6);
+    overflow-y: auto;
+    display: flex;
+    justify-content: center;
+  }
+
+  .cv-page {
+    width: 100%;
+    max-width: 640px;
+    background: white;
+    border: 1px solid var(--border-default);
+    border-radius: 2px;
+    padding: 48px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    font-size: 13px;
+    line-height: 1.6;
+    color: #333;
+  }
+
+  .cv-page h2 { font-size: 20px; margin-bottom: 4px; color: #111; }
+  .cv-page h3 { font-size: 14px; font-weight: 600; margin-top: 16px; margin-bottom: 4px; color: #111; border-bottom: 1px solid #eee; padding-bottom: 4px; }
+  .cv-page .subtitle { font-size: 13px; color: #666; margin-bottom: 16px; }
+  .cv-page .section-item { margin-bottom: 8px; }
+  .cv-page .item-title { font-weight: 600; }
+  .cv-page .item-date { font-size: 12px; color: #888; }
+  .cv-page .item-desc { font-size: 12px; color: #555; margin-top: 2px; }
+  .cv-page ul { padding-left: 16px; font-size: 12px; }
+
+  /* CV empty state */
+  .cv-empty {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-tertiary);
+    font-size: 14px;
+  }
+
+  /* Outcome Panel */
+  .outcome-panel {
+    background: var(--bg-surface);
+    border-left: 1px solid var(--border-default);
+    padding: var(--space-4);
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .outcome-candidate-info {
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .outcome-candidate-name {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+  }
+
+  .outcome-candidate-step {
+    font-size: 13px;
+    color: var(--text-secondary);
+  }
+
+  .outcome-section-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    margin-bottom: var(--space-2);
+  }
+
+  .outcome-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .outcome-btn {
+    padding: var(--space-3) var(--space-4);
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--bg-surface);
+    color: var(--brand-brown);
+    transition: all 0.1s;
+  }
+
+  .outcome-btn:hover { border-color: var(--text-tertiary); }
+
+  .outcome-btn.selected-pass {
+    background: var(--status-pass-bg);
+    border-color: var(--status-pass);
+    color: var(--status-pass);
+  }
+
+  .outcome-btn .shortcut {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    font-weight: 400;
+    background: var(--bg-base);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .outcome-btn.selected-pass .shortcut {
+    background: rgba(26,125,55,0.1);
+    color: var(--status-pass);
+  }
+
+  .reason-field {
+    width: 100%;
+    padding: var(--space-2) var(--space-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 13px;
+    resize: vertical;
+    min-height: 80px;
+    color: var(--brand-brown);
+    outline: none;
+  }
+
+  .reason-field:focus { border-color: var(--interactive); box-shadow: 0 0 0 2px rgba(0,95,204,0.15); }
+  .reason-field::placeholder { color: var(--text-tertiary); }
+
+  .confirm-btn {
+    width: 100%;
+    padding: var(--space-3);
+    background: var(--interactive);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    transition: background 0.15s;
+  }
+
+  .confirm-btn:hover { background: var(--interactive-hover); }
+
+  .confirm-shortcut {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .outcome-history {
+    margin-top: auto;
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--border-default);
+  }
+
+  .history-label {
+    font-size: 12px;
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-2);
+  }
+
+  .history-item {
+    font-size: 12px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-1) 0;
+  }
+
+  .history-item .step-name { font-weight: 500; }
+
+  /* ========================================
+     Toast Notification
+     ======================================== */
+  .toast {
+    position: fixed;
+    bottom: var(--space-6);
+    right: var(--space-6);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    font-size: 13px;
+    z-index: 100;
+    animation: slideIn 0.15s ease-out;
+  }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .toast .toast-icon { color: var(--status-pass); font-size: 16px; }
+
+  .toast .undo-link {
+    color: var(--interactive);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    margin-left: var(--space-2);
+  }
+
+  .toast .undo-link:hover { text-decoration: underline; }
+
+  /* ========================================
+     Resize Handle
+     ======================================== */
+  .resize-handle {
+    width: 4px;
+    cursor: col-resize;
+    background: transparent;
+    transition: background 0.15s;
+    position: relative;
+  }
+
+  .resize-handle:hover { background: var(--interactive); opacity: 0.3; }
+
+  /* ========================================
+     Empty State view
+     ======================================== */
+  .empty-state-view {
+    height: calc(100vh - 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-base);
+  }
+
+  .empty-state-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    padding: var(--space-8);
+    text-align: center;
+    max-width: 480px;
+  }
+
+  .empty-state-icon {
+    font-size: 48px;
+    margin-bottom: var(--space-4);
+    opacity: 0.3;
+  }
+
+  .empty-state-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: var(--space-2);
+  }
+
+  .empty-state-desc {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+    line-height: 1.5;
+  }
+
+  .primary-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+    padding: var(--space-3) var(--space-6);
+    background: var(--interactive);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .primary-btn:hover { background: var(--interactive-hover); }
+
+  /* ========================================
+     Import Wizard View
+     ======================================== */
+  .import-overlay {
+    height: calc(100vh - 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg-base);
+  }
+
+  .import-dialog {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    width: 640px;
+    max-height: 80vh;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+  }
+
+  .import-header {
+    padding: var(--space-4) var(--space-6);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .import-header h2 { font-size: 18px; font-weight: 600; }
+  .import-header p { font-size: 13px; color: var(--text-secondary); margin-top: var(--space-1); }
+
+  .import-steps {
+    display: flex;
+    padding: var(--space-3) var(--space-6);
+    gap: var(--space-2);
+    border-bottom: 1px solid var(--border-default);
+    background: var(--bg-base);
+  }
+
+  .import-step-indicator {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: 13px;
+    color: var(--text-tertiary);
+  }
+
+  .import-step-indicator.active { color: var(--interactive); font-weight: 500; }
+  .import-step-indicator.done { color: var(--status-pass); }
+
+  .step-number {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid currentColor;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .import-step-indicator.active .step-number { background: var(--interactive); color: white; border-color: var(--interactive); }
+  .import-step-indicator.done .step-number { background: var(--status-pass); color: white; border-color: var(--status-pass); }
+
+  .step-arrow { color: var(--text-tertiary); font-size: 12px; margin: 0 var(--space-1); }
+
+  .import-body {
+    padding: var(--space-6);
+  }
+
+  .upload-zone {
+    border: 2px dashed var(--border-default);
+    border-radius: var(--radius);
+    padding: var(--space-8) var(--space-4);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    margin-bottom: var(--space-4);
+  }
+
+  .upload-zone:hover { border-color: var(--interactive); background: var(--status-info-bg); }
+
+  .upload-zone .upload-icon { font-size: 32px; opacity: 0.3; margin-bottom: var(--space-2); }
+  .upload-zone .upload-text { font-size: 14px; font-weight: 500; }
+  .upload-zone .upload-hint { font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-1); }
+
+  .import-footer {
+    padding: var(--space-4) var(--space-6);
+    border-top: 1px solid var(--border-default);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .secondary-btn {
+    padding: var(--space-2) var(--space-4);
+    background: var(--bg-surface);
+    border: 1px solid var(--border-default);
+    border-radius: var(--radius);
+    font-family: var(--font-primary);
+    font-size: 13px;
+    color: var(--text-secondary);
+    cursor: pointer;
+  }
+
+  .secondary-btn:hover { background: var(--bg-base); }
+
+  /* Alert (non-blocking) */
+  .alert-amber {
+    background: var(--status-hold-bg);
+    border: 1px solid #f0c674;
+    border-radius: var(--radius);
+    padding: var(--space-3) var(--space-4);
+    font-size: 13px;
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+    color: var(--brand-brown);
+  }
+
+  .alert-amber .alert-icon { color: var(--status-hold); font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .alert-amber .alert-title { font-weight: 600; margin-bottom: 2px; }
+  .alert-amber .alert-desc { font-size: 12px; color: var(--text-secondary); }
+
+  /* ========================================
+     Color Palette Display
+     ======================================== */
+  .palette-section {
+    padding: var(--space-8) var(--space-6);
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .palette-section h2 {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: var(--space-6);
+  }
+
+  .palette-group {
+    margin-bottom: var(--space-6);
+  }
+
+  .palette-group h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: var(--space-3);
+    color: var(--text-secondary);
+  }
+
+  .palette-swatches {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    width: 120px;
+  }
+
+  .swatch-color {
+    width: 100%;
+    height: 56px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border-default);
+  }
+
+  .swatch-label {
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: var(--space-1);
+  }
+
+  .swatch-hex {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-family: monospace;
+  }
+</style>
+</head>
+<body>
+
+<!-- Page Selector -->
+<div class="page-selector">
+  <span>MOCKUP:</span>
+  <button class="active" onclick="showView('screening')">Screening Flow</button>
+  <button onclick="showView('collapsed')">Collapsed Overview</button>
+  <button onclick="showView('empty')">Empty State</button>
+  <button onclick="showView('import')">Import Wizard</button>
+  <button onclick="showView('palette')">Color Palette</button>
+</div>
+
+<div class="mockup-container">
+
+<!-- ============================================
+     VIEW 1: SCREENING FLOW (with expanded overview)
+     ============================================ -->
+<div id="view-screening" class="view active">
+
+  <!-- App Header -->
+  <div class="app-header">
+    <div class="breadcrumb">
+      <a href="#">My Recruitments</a>
+      <span class="sep">›</span>
+      <span class="current">Senior Platform Engineer 2026</span>
+      <span class="sep">›</span>
+      <span style="color: var(--text-secondary);">CV Screening</span>
+    </div>
+    <div class="user-menu">
+      <div class="avatar">TG</div>
+      <span>Thomas Gyllen</span>
+    </div>
+  </div>
+
+  <!-- Overview Section (Expanded) -->
+  <div class="overview-section">
+    <div class="overview-header">
+      <div class="overview-title">Overview</div>
+      <button class="collapse-btn" onclick="showView('collapsed')">▲ Collapse</button>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Candidates</div>
+        <div class="kpi-number">130</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Screened</div>
+        <div class="kpi-number">47</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Pending Action</div>
+        <div class="kpi-number">83</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Stale (>7 days)</div>
+        <div class="kpi-number stale">3</div>
+      </div>
+    </div>
+    <div class="pipeline-row">
+      <div class="pipeline-step" style="flex: 83;"><span class="count">83</span> CV Screening</div>
+      <div class="pipeline-step has-stale" style="flex: 23;"><span class="count">23</span> Technical <span class="stale-indicator">⏱ 3</span></div>
+      <div class="pipeline-step" style="flex: 12;"><span class="count">12</span> Interview</div>
+      <div class="pipeline-step" style="flex: 8;"><span class="count">8</span> Reference</div>
+      <div class="pipeline-step" style="flex: 4;"><span class="count">4</span> Offer</div>
+    </div>
+  </div>
+
+  <!-- Three-Panel Layout -->
+  <div class="main-content with-overview" style="height: calc(100vh - 48px - 200px);">
+
+    <!-- Left: Candidate List -->
+    <div class="candidate-list-panel">
+      <div class="list-header">
+        <div class="filter-row">
+          <input type="text" class="search-input" placeholder="Search candidates...">
+          <select class="sort-select">
+            <option>Import order</option>
+            <option>Name A-Z</option>
+            <option>Status</option>
+          </select>
+        </div>
+      </div>
+      <div class="candidate-items">
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Andersson, Maria</span>
+          <span class="status-badge pass">✓ Pass</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Bergström, Johan</span>
+          <span class="status-badge fail">✕ Fail</span>
+        </div>
+        <div class="candidate-item selected">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Chen, Wei</span>
+          <span class="status-badge" style="background: var(--status-info-bg); color: var(--status-info);">● Active</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Dahl, Erik</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Eriksson, Anna</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Falk, Henrik</span>
+          <span class="status-badge pass">✓ Pass</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Gustafsson, Lars</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Holm, Sara</span>
+          <span class="status-badge hold">⏸ Hold</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Isaksson, Nils</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Johansson, Karin</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Karlsson, Peter</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Lindberg, Emma</span>
+        </div>
+      </div>
+      <div class="screening-progress">
+        <div style="display: flex; justify-content: space-between;">
+          <span>47 of 130 screened</span>
+          <span>12 this session</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" style="width: 36%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: CV Viewer -->
+    <div class="cv-viewer-panel">
+      <div class="cv-header">
+        <span>CV — Chen, Wei</span>
+        <span>Page 1 of 2</span>
+      </div>
+      <div class="cv-content">
+        <div class="cv-page">
+          <h2>Wei Chen</h2>
+          <div class="subtitle">Senior Software Engineer · Stockholm, Sweden<br>wei.chen@email.com · +46 70 123 4567</div>
+
+          <h3>Professional Summary</h3>
+          <p>Platform engineer with 6 years of experience in distributed systems, cloud infrastructure, and developer tooling. Passionate about building reliable, scalable systems that empower development teams. Strong background in Kubernetes, Azure, and infrastructure-as-code.</p>
+
+          <h3>Experience</h3>
+          <div class="section-item">
+            <div class="item-title">Senior Platform Engineer — Klarna</div>
+            <div class="item-date">2022 – Present · Stockholm</div>
+            <div class="item-desc">Led platform team of 4 engineers. Designed and implemented internal developer portal serving 200+ engineers. Migrated legacy CI/CD pipeline to GitHub Actions, reducing build times by 40%.</div>
+          </div>
+          <div class="section-item">
+            <div class="item-title">Software Engineer — Spotify</div>
+            <div class="item-date">2019 – 2022 · Stockholm</div>
+            <div class="item-desc">Built and maintained Kubernetes operators for automated service deployment. Contributed to internal service mesh adoption. On-call rotation for platform infrastructure.</div>
+          </div>
+          <div class="section-item">
+            <div class="item-title">Junior Developer — Ericsson</div>
+            <div class="item-date">2018 – 2019 · Linköping</div>
+            <div class="item-desc">Cloud infrastructure automation using Terraform and Ansible. Monitoring and alerting with Prometheus and Grafana.</div>
+          </div>
+
+          <h3>Technical Skills</h3>
+          <ul>
+            <li>Kubernetes, Docker, Helm, ArgoCD</li>
+            <li>Azure (AKS, App Service, Functions, DevOps)</li>
+            <li>Go, Python, TypeScript, C#</li>
+            <li>Terraform, Pulumi, Bicep</li>
+            <li>GitHub Actions, Azure DevOps Pipelines</li>
+          </ul>
+
+          <h3>Education</h3>
+          <div class="section-item">
+            <div class="item-title">M.Sc. Computer Science — Linköping University</div>
+            <div class="item-date">2016 – 2018</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Outcome Panel -->
+    <div class="outcome-panel">
+      <div class="outcome-candidate-info">
+        <div class="outcome-candidate-name">Chen, Wei</div>
+        <div class="outcome-candidate-step">Step: CV Screening</div>
+      </div>
+
+      <div>
+        <div class="outcome-section-label">Record Outcome</div>
+        <div class="outcome-buttons">
+          <button class="outcome-btn selected-pass">
+            <span>✓ Pass</span>
+            <span class="shortcut">1</span>
+          </button>
+          <button class="outcome-btn">
+            <span>✕ Fail</span>
+            <span class="shortcut">2</span>
+          </button>
+          <button class="outcome-btn">
+            <span>⏸ Hold</span>
+            <span class="shortcut">3</span>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <div class="outcome-section-label">Reason (optional)</div>
+        <textarea class="reason-field" placeholder="Brief assessment...">Strong platform experience. 6 years distributed systems, Kubernetes expertise. Klarna leadership experience relevant.</textarea>
+      </div>
+
+      <button class="confirm-btn">
+        Confirm & Next
+        <span class="confirm-shortcut">Enter ↵</span>
+      </button>
+
+      <div class="outcome-history">
+        <div class="history-label">Previous Steps</div>
+        <div class="history-item">
+          <span style="color: var(--text-tertiary);">—</span>
+          <span>First step (no prior outcomes)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast">
+    <span class="toast-icon">✓</span>
+    <span>Pass recorded for <strong>Andersson, Maria</strong></span>
+    <a class="undo-link">Undo</a>
+  </div>
+</div>
+
+<!-- ============================================
+     VIEW 2: COLLAPSED OVERVIEW
+     ============================================ -->
+<div id="view-collapsed" class="view">
+  <div class="app-header">
+    <div class="breadcrumb">
+      <a href="#">My Recruitments</a>
+      <span class="sep">›</span>
+      <span class="current">Senior Platform Engineer 2026</span>
+      <span class="sep">›</span>
+      <span style="color: var(--text-secondary);">CV Screening</span>
+    </div>
+    <div class="user-menu">
+      <div class="avatar">LN</div>
+      <span>Lina Norberg</span>
+    </div>
+  </div>
+
+  <div class="overview-collapsed">
+    <div class="summary-stats">
+      <span><span class="stat-value">130</span> candidates</span>
+      <span>·</span>
+      <span><span class="stat-value">47</span> screened</span>
+      <span>·</span>
+      <span style="color: var(--status-hold);"><span class="stat-value" style="color: var(--status-hold);">3</span> stale</span>
+    </div>
+    <button class="collapse-btn" onclick="showView('screening')">▼ Expand</button>
+  </div>
+
+  <div class="main-content with-collapsed" style="height: calc(100vh - 48px - 40px);">
+    <div class="candidate-list-panel">
+      <div class="list-header">
+        <div class="filter-row">
+          <input type="text" class="search-input" placeholder="Search candidates...">
+          <select class="sort-select">
+            <option>Import order</option>
+          </select>
+        </div>
+      </div>
+      <div class="candidate-items">
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Andersson, Maria</span>
+          <span class="status-badge pass">✓ Pass</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Bergström, Johan</span>
+          <span class="status-badge fail">✕ Fail</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Chen, Wei</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Dahl, Erik</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Eriksson, Anna</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Falk, Henrik</span>
+          <span class="status-badge pass">✓ Pass</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Gustafsson, Lars</span>
+        </div>
+        <div class="candidate-item">
+          <div class="screened-spacer"></div>
+          <span class="candidate-name">Holm, Sara</span>
+          <span class="status-badge hold">⏸ Hold</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Isaksson, Nils</span>
+        </div>
+        <div class="candidate-item">
+          <div class="unscreened-dot"></div>
+          <span class="candidate-name">Johansson, Karin</span>
+        </div>
+      </div>
+      <div class="screening-progress">
+        <div style="display: flex; justify-content: space-between;">
+          <span>47 of 130 screened</span>
+          <span>12 this session</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" style="width: 36%;"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="cv-viewer-panel">
+      <div class="cv-empty">Select a candidate to review their CV</div>
+    </div>
+
+    <div class="outcome-panel" style="color: var(--text-tertiary); display: flex; align-items: center; justify-content: center; font-size: 13px;">
+      <span>Select a candidate to begin</span>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     VIEW 3: EMPTY STATE
+     ============================================ -->
+<div id="view-empty" class="view">
+  <div class="app-header">
+    <div class="breadcrumb">
+      <span class="current">My Recruitments</span>
+    </div>
+    <div class="user-menu">
+      <div class="avatar">EL</div>
+      <span>Erik Lundqvist</span>
+    </div>
+  </div>
+  <div class="empty-state-view">
+    <div class="empty-state-card">
+      <div class="empty-state-icon">📋</div>
+      <div class="empty-state-title">No recruitments yet</div>
+      <div class="empty-state-desc">Create your first recruitment to start tracking candidates through your hiring pipeline.</div>
+      <button class="primary-btn">+ Create Recruitment</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     VIEW 4: IMPORT WIZARD
+     ============================================ -->
+<div id="view-import" class="view">
+  <div class="app-header">
+    <div class="breadcrumb">
+      <a href="#">My Recruitments</a>
+      <span class="sep">›</span>
+      <span class="current">Senior Platform Engineer 2026</span>
+    </div>
+    <div class="user-menu">
+      <div class="avatar">EL</div>
+      <span>Erik Lundqvist</span>
+    </div>
+  </div>
+  <div class="import-overlay">
+    <div class="import-dialog">
+      <div class="import-header">
+        <h2>Import Candidates</h2>
+        <p>Upload candidate data and CVs to add them to this recruitment.</p>
+      </div>
+      <div class="import-steps">
+        <div class="import-step-indicator done">
+          <div class="step-number">✓</div>
+          <span>Upload XLSX</span>
+        </div>
+        <span class="step-arrow">→</span>
+        <div class="import-step-indicator active">
+          <div class="step-number">2</div>
+          <span>Upload CVs</span>
+        </div>
+        <span class="step-arrow">→</span>
+        <div class="import-step-indicator">
+          <div class="step-number">3</div>
+          <span>Review Matches</span>
+        </div>
+        <span class="step-arrow">→</span>
+        <div class="import-step-indicator">
+          <div class="step-number">4</div>
+          <span>Confirm</span>
+        </div>
+      </div>
+      <div class="import-body">
+        <div class="upload-zone">
+          <div class="upload-icon">📄</div>
+          <div class="upload-text">Drop PDF files here or click to browse</div>
+          <div class="upload-hint">Upload CV files as PDF. Multiple files supported (max 100MB total).</div>
+        </div>
+        <div class="alert-amber">
+          <span class="alert-icon">⏱</span>
+          <div>
+            <div class="alert-title">3 candidates have no matching CV</div>
+            <div class="alert-desc">You can assign CVs manually in the next step, or proceed without CVs for these candidates.</div>
+          </div>
+        </div>
+      </div>
+      <div class="import-footer">
+        <button class="secondary-btn">← Back</button>
+        <button class="primary-btn" style="padding: var(--space-2) var(--space-4);">Continue →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================
+     VIEW 5: COLOR PALETTE
+     ============================================ -->
+<div id="view-palette" class="view">
+  <div class="palette-section">
+    <h2>Design Tokens — If Insurance Brand Palette</h2>
+
+    <div class="palette-group">
+      <h3>Core Palette</h3>
+      <div class="palette-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #331e11;"></div>
+          <div class="swatch-label">Brand Brown</div>
+          <div class="swatch-hex">#331e11</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #faf9f7;"></div>
+          <div class="swatch-label">Base Background</div>
+          <div class="swatch-hex">#faf9f7</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #ffffff;"></div>
+          <div class="swatch-label">Surface</div>
+          <div class="swatch-hex">#ffffff</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #ede6e1;"></div>
+          <div class="swatch-label">Border Default</div>
+          <div class="swatch-hex">#ede6e1</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #f5f0ec;"></div>
+          <div class="swatch-label">Border Subtle</div>
+          <div class="swatch-hex">#f5f0ec</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #005fcc;"></div>
+          <div class="swatch-label">Interactive</div>
+          <div class="swatch-hex">#005fcc</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #004da6;"></div>
+          <div class="swatch-label">Interactive Hover</div>
+          <div class="swatch-hex">#004da6</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="palette-group">
+      <h3>Text Colors</h3>
+      <div class="palette-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #331e11;"></div>
+          <div class="swatch-label">Primary Text</div>
+          <div class="swatch-hex">#331e11</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #6b5d54;"></div>
+          <div class="swatch-label">Secondary Text</div>
+          <div class="swatch-hex">#6b5d54</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #9c8e85;"></div>
+          <div class="swatch-label">Tertiary Text</div>
+          <div class="swatch-hex">#9c8e85</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="palette-group">
+      <h3>Status Colors</h3>
+      <div class="palette-swatches">
+        <div class="swatch">
+          <div class="swatch-color" style="background: #1a7d37;"></div>
+          <div class="swatch-label">Pass</div>
+          <div class="swatch-hex">#1a7d37</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #ecfdf3;"></div>
+          <div class="swatch-label">Pass BG</div>
+          <div class="swatch-hex">#ecfdf3</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #c4320a;"></div>
+          <div class="swatch-label">Fail</div>
+          <div class="swatch-hex">#c4320a</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #fef3f2;"></div>
+          <div class="swatch-label">Fail BG</div>
+          <div class="swatch-hex">#fef3f2</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #b54708;"></div>
+          <div class="swatch-label">Hold / Stale</div>
+          <div class="swatch-hex">#b54708</div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-color" style="background: #fffaeb;"></div>
+          <div class="swatch-label">Hold BG</div>
+          <div class="swatch-hex">#fffaeb</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="palette-group">
+      <h3>Status Badges</h3>
+      <div style="display: flex; gap: var(--space-4); align-items: center; padding: var(--space-4) 0;">
+        <span class="status-badge pass" style="font-size: 13px; padding: 3px 10px;">✓ Pass</span>
+        <span class="status-badge fail" style="font-size: 13px; padding: 3px 10px;">✕ Fail</span>
+        <span class="status-badge hold" style="font-size: 13px; padding: 3px 10px;">⏸ Hold</span>
+        <span class="status-badge" style="font-size: 13px; padding: 3px 10px; background: var(--status-hold-bg); color: var(--status-hold); border: 1px solid var(--status-hold);">⏱ Stale</span>
+      </div>
+    </div>
+
+    <div class="palette-group">
+      <h3>Typography Scale</h3>
+      <div style="display: flex; flex-direction: column; gap: var(--space-3); padding: var(--space-4) 0;">
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Page title (24px)</span>
+          <span style="font-size: 24px; font-weight: 600; line-height: 1.33;">Senior Platform Engineer</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Section (18px)</span>
+          <span style="font-size: 18px; font-weight: 600; line-height: 1.33;">Overview</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Card title (14px med)</span>
+          <span style="font-size: 14px; font-weight: 500; line-height: 1.43;">TOTAL CANDIDATES</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Body (14px)</span>
+          <span style="font-size: 14px; font-weight: 400; line-height: 1.57;">Andersson, Maria — Senior Engineer at Klarna</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Body small (13px)</span>
+          <span style="font-size: 13px; font-weight: 400; line-height: 1.54; color: var(--text-secondary);">Screened by Lina Norberg · 2 hours ago</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">Caption (12px)</span>
+          <span style="font-size: 12px; font-weight: 400; line-height: 1.33; color: var(--text-tertiary);">47 of 130 screened · 12 this session</span>
+        </div>
+        <div style="display: flex; align-items: baseline; gap: var(--space-6);">
+          <span style="width: 140px; font-size: 12px; color: var(--text-tertiary);">KPI number (24px bold)</span>
+          <span style="font-size: 24px; font-weight: 700; line-height: 1.25;">130</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /mockup-container -->
+
+<script>
+function showView(viewName) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.page-selector button').forEach(b => b.classList.remove('active'));
+  document.getElementById('view-' + viewName).classList.add('active');
+  event.target.classList.add('active');
+}
+</script>
+</body>
+</html>

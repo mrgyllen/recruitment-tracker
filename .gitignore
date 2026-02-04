@@ -92,7 +92,6 @@ vendor/
 
 # Workspace-specific
 _bmad/
-_bmad-output/
 
 # Explicitly do NOT ignore (kept in repo)
 !.github/
