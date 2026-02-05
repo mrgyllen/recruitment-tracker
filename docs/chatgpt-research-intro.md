@@ -161,6 +161,12 @@ You are the BMAD orchestrator. Create BMAD-compliant requirements artifacts (bri
   - correct and working .gitignore for the chosen stack
   - minimal operational files: README (setup/run/test), basic lint/format config
 
+## Domain Modeling: Pragmatic DDD
+- Use pragmatic DDD: define aggregate roots (Recruitment, Candidate, ImportSession) with clear boundaries and invariants.
+- Modify child entities only through aggregate root methods. Cross-aggregate references use IDs only.
+- Use ubiquitous language consistently across code, docs, and conversation.
+- See architecture doc for aggregate boundaries and glossary.
+
 ## Testing Approach: Pragmatic TDD
 
 See canonical policy: `docs/testing-pragmatic-tdd.md`

@@ -301,7 +301,45 @@ Optimize to **path-filtered pipelines** (`api/**` triggers .NET, `web/**` trigge
 
 **Database:** Azure SQL with Entity Framework Core (Code First)
 
-**Modeling approach:** Rich domain entities in the Domain project. EF Core configurations in Infrastructure (Fluent API, no data annotations on domain entities). Entities own their business rules and invariants.
+**Modeling approach:** Rich domain entities in the Domain project following pragmatic DDD. EF Core configurations in Infrastructure (Fluent API, no data annotations on domain entities). Entities own their business rules and invariants. Aggregates define consistency and testing boundaries.
+
+#### Aggregate Boundaries
+
+The domain uses three aggregates. Each aggregate root enforces its own invariants. Child entities are never modified directly — always through the aggregate root's methods.
+
+| Aggregate Root | Owned Entities | Key Invariants |
+|----------------|---------------|----------------|
+| **Recruitment** | `WorkflowStep`, `RecruitmentMember` | Cannot close with active candidates in progress. Step names unique within recruitment. Step order is contiguous. Members require valid role. At least one Recruiting Leader must exist. |
+| **Candidate** | `CandidateOutcome`, `CandidateDocument` | Outcomes reference valid workflow steps. Cannot record outcome on a step that doesn't exist in the recruitment. Cannot delete candidate with recorded outcomes (soft-delete or archive). One primary document per type. |
+| **ImportSession** | _(no children — tracks row-level results as value objects)_ | Status transitions: Processing → Completed or Failed. Cannot transition backwards. Row results are immutable once written. |
+
+**Standalone entities (not aggregates):**
+- `AuditEntry` — append-only, no business rules, no aggregate root needed
+
+**Aggregate rules for AI agents:**
+1. All state changes to owned entities go through the aggregate root's methods (e.g., `recruitment.AddStep()`, not `dbContext.WorkflowSteps.Add()`)
+2. An aggregate root is the unit of persistence — load and save the whole aggregate, not individual children
+3. Cross-aggregate references use IDs only (e.g., `Candidate` holds `RecruitmentId`, not a navigation property to `Recruitment`)
+4. Domain events are raised by aggregate roots when significant state changes occur
+5. Command handlers operate on one aggregate per transaction — if a command affects two aggregates, use domain events for eventual consistency
+
+**Testing implication:** Test aggregate behavior through the root's public methods. Unit tests verify invariants (e.g., "adding a duplicate step name throws `DuplicateStepException`"). No need to test child entity properties in isolation.
+
+#### Ubiquitous Language
+
+These terms have precise meanings in code, documentation, and conversation. AI agents and developers must use them consistently.
+
+| Term | Meaning | NOT |
+|------|---------|-----|
+| **Recruitment** | A hiring process with steps, candidates, and team members | "Job", "position", "opening" |
+| **Workflow Step** | A named phase in a recruitment (e.g., Screening, Technical Interview) | "Stage", "phase", "milestone" |
+| **Candidate** | A person being evaluated in a recruitment | "Applicant", "participant" |
+| **Outcome** | A recorded decision on a candidate for a specific step (Pass/Fail/Hold) | "Result", "score", "verdict" |
+| **Screening** | The act of reviewing candidates and recording outcomes across steps | "Review", "evaluation" (too vague) |
+| **Import Session** | A single XLSX/PDF upload-and-process operation with tracked results | "Upload", "sync", "batch" |
+| **Recruitment Member** | A user with an assigned role in a specific recruitment | "Participant", "user" (too generic) |
+| **Recruiting Leader** | The member who created/owns the recruitment (admin role) | "Manager", "owner" |
+| **SME/Collaborator** | A member who reviews candidates and records outcomes | "Reviewer" (acceptable shorthand in UI) |
 
 **Per-recruitment data isolation via `ITenantContext`:**
 
@@ -871,6 +909,8 @@ components/
 7. Write tests that assert Problem Details shape, not just status codes
 8. Never put PII in audit events or logs
 9. Use `ITenantContext` for data scoping — never query without it
+10. Modify child entities only through aggregate root methods — never bypass the root (see Aggregate Boundaries)
+11. Use ubiquitous language terms consistently — no synonyms (see Ubiquitous Language table)
 
 **Pattern Enforcement:**
 - ESLint + Prettier enforce frontend code style and import ordering
