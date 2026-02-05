@@ -18,3 +18,12 @@ Key rules:
 - Cross-aggregate references use IDs only
 - One aggregate per transaction; use domain events for cross-aggregate coordination
 - Use ubiquitous language consistently (see architecture doc glossary)
+
+## Tech Stack
+
+Backend: ASP.NET Core (.NET 10), EF Core, MediatR, Azure SQL, Azure Blob Storage
+Frontend: React 19, TypeScript, Vite 7, Tailwind CSS v4, TanStack Query
+
+## Before Writing Code
+
+Read `_bmad-output/planning-artifacts/architecture.md` first — it defines project structure, patterns, naming conventions, and enforcement rules.
