@@ -117,7 +117,7 @@ The PRD is the binding contract. The Product Brief includes features the PRD exp
 | Desktop-first, Edge/Chrome only | PRD | No Safari/Firefox, no mobile optimization |
 | PDF-only upload in MVP | PRD | Word-to-PDF deferred to Growth |
 | No real-time updates in MVP | PRD | Manual refresh, SignalR deferred |
-| TDD for domain/application logic | Brief | Testing strategy shapes code structure |
+| Pragmatic TDD for domain/application logic | Brief | Testing strategy shapes code structure (see `docs/testing-pragmatic-tdd.md`) |
 
 ### Cross-Cutting Concerns Identified
 

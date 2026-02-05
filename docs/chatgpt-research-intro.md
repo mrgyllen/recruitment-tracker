@@ -161,16 +161,23 @@ You are the BMAD orchestrator. Create BMAD-compliant requirements artifacts (bri
   - correct and working .gitignore for the chosen stack
   - minimal operational files: README (setup/run/test), basic lint/format config
 
-## Testing Approach: Compact test pyramid with TDD
-- Principle: TDD (red → green → refactor) for domain and application logic; tests written first for new behavior in these layers.
+## Testing Approach: Pragmatic TDD
+
+See canonical policy: `docs/testing-pragmatic-tdd.md`
+
+- Principle: **Pragmatic TDD** — prefer test-first for clear/stable behavior and business rules; allow short spikes when uncertainty is high (tests before merge); use characterization tests for unclear/legacy behavior.
+- Before coding: declare testing mode (test-first / spike / characterization) and rationale.
+- Prioritize tests for high-risk paths and regressions; avoid low-value micro-tests.
+- Refactor with safety: tests (preferred) or explicit alternative verification noted in the story.
 - Target test mix:
   - Unit tests (majority): domain rules, workflow transitions, validations, data transformations.
   - Integration tests (some): API endpoints + authorization (role checks), persistence behavior, key workflows (create candidate → progress steps → record evaluation). Include denial paths and validation errors.
   - End-to-end/UI smoke tests (few): critical happy-path flows only (login, list/search candidates, view candidate, move step/status).
 - Definition of Done (testing):
-  - domain/application changes have TDD coverage incl. at least one negative case (invalid input and/or unauthorized access)
+  - domain/application changes have test coverage incl. at least one negative case (invalid input and/or unauthorized access)
   - integration tests cover authz for sensitive endpoints and at least one end-to-end workflow
   - all tests run in CI and pass; test data must not contain real PII
+  - developer declared testing mode per task and listed tests + risk coverage before completing
 
 ## Multi-region Recruiting Context
 - Recruiting may involve Nordics/Baltics and Kuala Lumpur.

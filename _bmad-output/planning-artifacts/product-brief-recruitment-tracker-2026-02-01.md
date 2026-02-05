@@ -311,7 +311,7 @@ Concrete, measurable indicators tied to the product filter: "Does it help run th
 - Modular layered architecture with clear boundaries (API, application/domain, infrastructure)
 - Schema designed for anonymization from day one
 - CI pipeline: tests, lint/format, dependency checks on PRs
-- TDD for domain and application logic
+- Pragmatic TDD for domain and application logic (see `docs/testing-pragmatic-tdd.md`)
 
 ---
 
