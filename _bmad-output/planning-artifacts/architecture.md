@@ -239,14 +239,15 @@ cd web && npm install tailwindcss @tailwindcss/vite
 | React Router v7 | First route setup | Client-side routing |
 | TanStack Query | First API call | Server state management |
 | Playwright | First E2E test | End-to-end smoke tests |
+| react-pdf | Screening feature (Epic 4) | PDF rendering with text layer accessibility and per-page lazy loading |
 | Form library (TBD) | Outcome recording feature | Form state management |
 | Typed API client (TBD) | First API integration | Typed HTTP calls matching backend DTOs |
 
 ### Architectural Decision: PDF Viewing
 
-**MVP uses browser-native PDF rendering via short-lived SAS URLs. No JavaScript PDF library.**
+**MVP uses react-pdf (PDF.js wrapper) for inline PDF rendering with short-lived SAS URLs.**
 
-The PRD specifies `<iframe>` or `<object>` for PDF viewing. SAS tokens (15-minute validity) make the URL self-authenticating. The browser renders the PDF natively. This avoids a heavy dependency like `pdfjs-dist` or `react-pdf` and is the simplest path that meets the requirements.
+SAS tokens (15-minute validity) make the URL self-authenticating. react-pdf provides a text layer for screen reader accessibility (WCAG 2.1 AA compliance) and per-page lazy loading for efficient screening of 130+ candidate sessions. Page 1 renders immediately; subsequent pages lazy-load on scroll intersection. SAS URL pre-fetching for the next 2-3 candidates ensures seamless screening flow.
 
 ### Development Workflow
 
@@ -534,7 +535,7 @@ export const recruitmentApi = {
 - Optimistic outcome recording with non-blocking retry
 - Keyboard-first navigation
 
-**PDF viewing:** Browser-native `<iframe>` rendering with self-authenticating SAS URLs. No JavaScript PDF library.
+**PDF viewing:** react-pdf (PDF.js wrapper) with self-authenticating SAS URLs. Text layer enabled for screen reader accessibility. Per-page lazy loading for screening performance.
 
 ### Infrastructure & Deployment
 
@@ -1200,7 +1201,7 @@ recruitment-tracker/
 │   │   │   │   ├── ScreeningLayout.tsx          # Split-panel container
 │   │   │   │   ├── ScreeningLayout.test.tsx
 │   │   │   │   ├── CandidatePanel.tsx           # Left panel: candidate list + nav
-│   │   │   │   ├── PdfViewer.tsx                # Right panel: iframe + SAS URL
+│   │   │   │   ├── PdfViewer.tsx                # Right panel: react-pdf + SAS URL
 │   │   │   │   ├── OutcomeForm.tsx              # Outcome recording + reason
 │   │   │   │   ├── OutcomeForm.test.tsx
 │   │   │   │   └── hooks/
@@ -1299,7 +1300,7 @@ recruitment-tracker/
 | Boundary | Storage | Access Pattern |
 |----------|---------|----------------|
 | Structured data | Azure SQL | EF Core, global query filters via `ITenantContext` |
-| Documents (PDFs) | Azure Blob Storage | Server-side SAS token generation, `<iframe>` rendering |
+| Documents (PDFs) | Azure Blob Storage | Server-side SAS token generation, react-pdf rendering |
 | Audit trail | Azure SQL (append-only) | Insert-only from `AuditBehaviour`, read via `GetAuditTrail` query |
 | Session/cache | None (stateless API) | TanStack Query client-side cache; no server-side session state |
 
