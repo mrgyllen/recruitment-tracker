@@ -62,9 +62,15 @@ So that I can securely access the application without creating separate credenti
 **Then** the response includes `X-Robots-Tag: noindex` header
 **And** the HTML includes a `<meta name="robots" content="noindex">` tag
 
+**Given** `VITE_AUTH_MODE=development` (frontend) and `ASPNETCORE_ENVIRONMENT=Development` (backend)
+**When** the app loads
+**Then** a dev toolbar is visible allowing the user to switch between preconfigured user personas (User A, User B, Admin/Service, Unauthenticated) without Entra ID
+**And** the selected identity flows through `httpClient.ts` and `ITenantContext` identically to real SSO auth
+
 **Technical notes:**
-- Backend: ASP.NET Core JWT bearer authentication middleware, Entra ID configuration in `AuthenticationConfiguration.cs`
-- Frontend: `@azure/msal-browser` + `@azure/msal-react`, `AuthContext.tsx` wrapping MSAL's `useMsal` hook, `ProtectedRoute.tsx` component, `LoginRedirect.tsx` component
+- Backend: ASP.NET Core JWT bearer authentication middleware, Entra ID configuration in `AuthenticationConfiguration.cs`, dev auth handler for development mode
+- Frontend: `@azure/msal-browser` + `@azure/msal-react`, `AuthContext.tsx` wrapping MSAL's `useMsal` hook, `LoginRedirect.tsx` component, `DevAuthProvider.tsx` for dev mode persona switching
+- `ProtectedRoute.tsx` deferred to Story 1.5 (requires React Router)
 - FR1, FR2, FR3 fulfilled
 
 ## Story 1.3: Core Data Model & Tenant Isolation
@@ -119,7 +125,8 @@ So that all subsequent feature stories can persist and query data safely within 
 - Enums: `OutcomeStatus`, `ImportMatchConfidence`, `RecruitmentStatus`, `ImportSessionStatus`
 - Value objects: `CandidateMatch`, `AnonymizationResult`
 - Domain events: `CandidateImportedEvent`, `OutcomeRecordedEvent`, `DocumentUploadedEvent`, `RecruitmentCreatedEvent`, `RecruitmentClosedEvent`, `MembershipChangedEvent`
-- Domain exceptions: `RecruitmentClosedException`, `DuplicateCandidateException`, `InvalidWorkflowTransitionException`, `StepHasOutcomesException`
+- Domain exceptions: `RecruitmentClosedException`, `DuplicateCandidateException`, `DuplicateStepNameException`, `InvalidWorkflowTransitionException`, `StepHasOutcomesException`
+- `AuditEntry` is a standalone append-only entity (not an aggregate root)
 
 ## Story 1.4: Shared UI Components & Design Tokens
 

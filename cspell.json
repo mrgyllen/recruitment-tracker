@@ -1,4 +1,19 @@
 {
   "version": "0.2",
-  "words": ["bmad", "MediatR"]
+  "words": [
+    "Anonymization",
+    "appsettings",
+    "ASPNETCORE",
+    "Behaviour",
+    "Behaviours",
+    "bmad",
+    "MediatR",
+    "msal",
+    "MSAL",
+    "onmicrosoft",
+    "parameterless",
+    "PKCE",
+    "preconfigured",
+    "recruitments"
+  ]
 }

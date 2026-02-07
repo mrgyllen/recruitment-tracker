@@ -396,6 +396,27 @@ This simplifies both the import pipeline (no counter updates) and the outcome re
 
 **Headers:** `noindex` meta tag + `X-Robots-Tag: noindex` response header. CORS restricted to the Static Web Apps domain.
 
+### Development Authentication Patterns
+
+**Purpose:** A dev auth bypass enables full-stack development and testing without an Entra ID tenant dependency. All downstream stories can be built and tested locally using preconfigured user personas.
+
+**Frontend — Dev Auth Mode (`VITE_AUTH_MODE=development`):**
+- `DevAuthProvider` replaces `MsalProvider` when `VITE_AUTH_MODE=development`
+- A floating dev toolbar allows switching between preconfigured personas: User A, User B, Admin/Service, Unauthenticated
+- `httpClient.ts` has a dual path in `getAuthHeaders()` — production mode uses `acquireTokenSilent()`, dev mode reads from the dev auth context and sends `X-Dev-User-Id` / `X-Dev-User-Name` headers
+- Selection persisted in `localStorage`
+
+**Backend — Dev Auth Handler (`ASPNETCORE_ENVIRONMENT=Development`):**
+- `DevelopmentAuthenticationConfiguration.cs` registers a custom `AuthenticationHandler<T>` that reads `X-Dev-User-Id` and `X-Dev-User-Name` headers and builds a `ClaimsPrincipal`
+- Downstream services (`CurrentUserService`, `TenantContext`) read claims identically regardless of which auth handler ran
+
+**Safety invariant:** The dev auth handler is registered ONLY inside an `IHostEnvironment.IsDevelopment()` runtime check. **Never use `#if DEBUG` preprocessor directives** — they can leak into release builds if build configurations are misconfigured.
+
+**Preconfigured personas map to security test scenarios:**
+- User A / User B → cross-recruitment isolation testing
+- Admin/Service → service context bypass testing
+- Unauthenticated → 401 enforcement testing
+
 ### API & Communication Patterns
 
 **API style:** RESTful via Minimal API endpoints. Organized by feature in the Web project.
@@ -420,7 +441,7 @@ This simplifies both the import pipeline (no counter updates) and the outcome re
 
 **Viewport constraint:** Desktop-first, minimum viewport width of 1280px. The screening split-panel layout requires sufficient horizontal space for candidate list + PDF viewer + outcome form. Below 1280px, display a "please use a wider browser window" message. No responsive breakpoints — the PRD specifies desktop-only (Edge/Chrome).
 
-**Authentication library:** `@azure/msal-browser` + `@azure/msal-react` for Entra ID OIDC (Authorization Code flow with PKCE). MSAL handles token acquisition, caching, and silent refresh. The `AuthContext` wraps MSAL's `useMsal` hook to provide a consistent interface for the rest of the app.
+**Authentication library:** `@azure/msal-browser` + `@azure/msal-react` for Entra ID OIDC (Authorization Code flow with PKCE). MSAL handles token acquisition, caching, and silent refresh. The `AuthContext` wraps MSAL's `useMsal` hook to provide a consistent interface for the rest of the app. The `msalInstance` (PublicClientApplication) is created and exported from `msalConfig.ts` — both `AuthContext.tsx` and `httpClient.ts` import from there to avoid circular dependencies.
 
 **State management:**
 - **Server state:** TanStack Query (caching, refetching, optimistic updates)
@@ -472,18 +493,40 @@ Whether the API modules are hand-written or generated from OpenAPI (deferred dec
 
 ```typescript
 // lib/api/httpClient.ts
-import { msalInstance } from '../../features/auth/AuthContext';
+import { msalInstance } from '../../features/auth/msalConfig';
+import { InteractionRequiredAuthError } from '@azure/msal-browser';
 
 const API_BASE = '/api';
+const isDev = import.meta.env.VITE_AUTH_MODE === 'development';
 
 async function getAuthHeaders(): Promise<HeadersInit> {
+  if (isDev) {
+    // Dev mode: read from localStorage dev persona, send custom headers
+    const devUser = JSON.parse(localStorage.getItem('dev-auth-user') || 'null');
+    if (!devUser) return { 'Content-Type': 'application/json' }; // unauthenticated
+    return {
+      'X-Dev-User-Id': devUser.id,
+      'X-Dev-User-Name': devUser.name,
+      'Content-Type': 'application/json',
+    };
+  }
+
+  // Production mode: acquire token via MSAL
   const accounts = msalInstance.getAllAccounts();
   if (accounts.length === 0) throw new AuthError('No active session');
-  const { accessToken } = await msalInstance.acquireTokenSilent({
-    scopes: ['api://<client-id>/.default'],
-    account: accounts[0],
-  });
-  return { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+  try {
+    const { accessToken } = await msalInstance.acquireTokenSilent({
+      scopes: ['api://<client-id>/.default'],
+      account: accounts[0],
+    });
+    return { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' };
+  } catch (error) {
+    if (error instanceof InteractionRequiredAuthError) {
+      msalInstance.loginRedirect();
+      throw new AuthError('Session expired — redirecting to login');
+    }
+    throw error;
+  }
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
