@@ -398,7 +398,9 @@ web/src/
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/architecture.md` — Frontend Architecture, State Management, Folder Structure, UI Consistency Rules, Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture.md` (core) — Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture/frontend-architecture.md` — Frontend Architecture, State Management, Folder Structure]
+- [Source: `_bmad-output/planning-artifacts/architecture/patterns-frontend.md` — UI Consistency Rules, Empty State Pattern]
 - [Source: `_bmad-output/planning-artifacts/epics/epic-1-project-foundation-user-access.md` — Story 1.5 definition and acceptance criteria]
 - [Source: `_bmad-output/planning-artifacts/ux-design-specification/visual-design-foundation.md` — Layout grid structure, header spec, spacing]
 - [Source: `_bmad-output/planning-artifacts/ux-design-specification/responsive-design-accessibility.md` — Viewport guard spec, skip link, WCAG requirements]

@@ -26,4 +26,4 @@ Frontend: React 19, TypeScript, Vite 7, Tailwind CSS v4, TanStack Query
 
 ## Before Writing Code
 
-Read `_bmad-output/planning-artifacts/architecture.md` first — it defines project structure, patterns, naming conventions, and enforcement rules.
+Read `_bmad-output/planning-artifacts/architecture.md` for core rules (aggregates, decisions, security, enforcement). Then load relevant shards from `_bmad-output/planning-artifacts/architecture/` based on your task — see the routing table in `architecture.md` or `architecture/index.md` for which shards to load.

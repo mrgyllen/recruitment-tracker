@@ -398,7 +398,9 @@ web/src/
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/architecture.md` — Frontend Architecture, UI Consistency Rules, Shared Components, Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture.md` (core) — Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture/frontend-architecture.md` — Frontend Architecture]
+- [Source: `_bmad-output/planning-artifacts/architecture/patterns-frontend.md` — UI Consistency Rules, Shared Components]
 - [Source: `_bmad-output/planning-artifacts/epics/epic-1-project-foundation-user-access.md` — Story 1.4 definition and acceptance criteria]
 - [Source: `_bmad-output/planning-artifacts/ux-design-specification/design-system-foundation.md` — shadcn/ui selection, customization strategy, component list]
 - [Source: `_bmad-output/planning-artifacts/ux-design-specification/visual-design-foundation.md` — Color system, typography, spacing, accessibility]

@@ -322,7 +322,9 @@ This is a scaffolding story. The overall testing mode is **Spike** — we're set
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/architecture.md` — Project Structure, Tech Stack, CI/CD Strategy]
+- [Source: `_bmad-output/planning-artifacts/architecture.md` (core) — Tech Stack, Core Decisions]
+- [Source: `_bmad-output/planning-artifacts/architecture/project-structure.md` — Project Structure, Directory Tree]
+- [Source: `_bmad-output/planning-artifacts/architecture/starter-templates.md` — Template Selection, CI/CD Strategy]
 - [Source: `_bmad-output/planning-artifacts/epics/epic-1-project-foundation-user-access.md` — Story 1.1 definition]
 - [Source: `_bmad-output/planning-artifacts/prd.md` — NFRs, tech constraints, browser support]
 - [Source: `docs/testing-pragmatic-tdd.md` — Testing policy]

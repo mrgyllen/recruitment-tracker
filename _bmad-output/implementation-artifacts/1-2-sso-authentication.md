@@ -317,7 +317,11 @@ Per-task testing modes are declared in the task list above.
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/architecture.md` — Authentication Patterns, Security Patterns, Frontend Architecture, API Patterns, Project Structure]
+- [Source: `_bmad-output/planning-artifacts/architecture.md` (core) — Authentication & Security, Core Decisions]
+- [Source: `_bmad-output/planning-artifacts/architecture/dev-auth-patterns.md` — Dev Auth Bypass, Personas]
+- [Source: `_bmad-output/planning-artifacts/architecture/frontend-architecture.md` — Frontend Architecture, httpClient]
+- [Source: `_bmad-output/planning-artifacts/architecture/api-patterns.md` — API Patterns]
+- [Source: `_bmad-output/planning-artifacts/architecture/project-structure.md` — Project Structure]
 - [Source: `_bmad-output/planning-artifacts/epics/epic-1-project-foundation-user-access.md` — Story 1.2 definition and acceptance criteria]
 - [Source: `_bmad-output/planning-artifacts/prd.md` — FR1-FR3 (Authentication), NFR11 (SSO), NFR16 (noindex)]
 - [Source: `_bmad-output/implementation-artifacts/1-1-project-scaffolding-ci-pipeline.md` — Previous story context]

@@ -460,7 +460,9 @@ modelBuilder.Entity<Candidate>().HasQueryFilter(c =>
 
 ### References
 
-- [Source: `_bmad-output/planning-artifacts/architecture.md` — Aggregate Boundaries, Data Architecture, Implementation Patterns, Project Structure, Naming Conventions, Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture.md` (core) — Aggregate Boundaries, Data Architecture, ITenantContext, Enforcement Guidelines]
+- [Source: `_bmad-output/planning-artifacts/architecture/patterns-backend.md` — Naming Conventions, Structure Patterns, DTO Mapping, Test Conventions]
+- [Source: `_bmad-output/planning-artifacts/architecture/project-structure.md` — Project Structure, Directory Tree]
 - [Source: `_bmad-output/planning-artifacts/epics/epic-1-project-foundation-user-access.md` — Story 1.3 definition and acceptance criteria]
 - [Source: `_bmad-output/planning-artifacts/prd.md` — GDPR requirements, security NFRs, data model requirements]
 - [Source: `_bmad-output/implementation-artifacts/1-1-project-scaffolding-ci-pipeline.md` — Project structure, template version, CI pipeline]
