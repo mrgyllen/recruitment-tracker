@@ -83,6 +83,15 @@ target/
 # PHP / Composer
 vendor/
 
+# .NET
+obj/
+artifacts/
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
 # Misc
 *.swp
 *~
