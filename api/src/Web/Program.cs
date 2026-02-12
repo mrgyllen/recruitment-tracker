@@ -1,4 +1,5 @@
 using api.Infrastructure.Data;
+using api.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,6 +27,7 @@ app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<NoindexMiddleware>();
 
 app.MapOpenApi();
 

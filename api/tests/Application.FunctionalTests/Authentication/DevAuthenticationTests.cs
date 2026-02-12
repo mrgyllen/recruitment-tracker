@@ -93,4 +93,16 @@ public class DevAuthenticationTests
 
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
+
+    [Test]
+    public async Task Response_AlwaysIncludesNoindexHeader()
+    {
+        var client = _factory.CreateClient();
+        client.DefaultRequestHeaders.Add("X-Dev-User-Id", "dev-user-a");
+        client.DefaultRequestHeaders.Add("X-Dev-User-Name", "Alice Dev");
+
+        var response = await client.GetAsync("/api/health-auth");
+
+        response.Headers.GetValues("X-Robots-Tag").Should().Contain("noindex");
+    }
 }
