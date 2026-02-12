@@ -24,9 +24,15 @@ else
 app.UseHealthChecks("/health");
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapOpenApi();
 
 app.UseExceptionHandler(options => { });
+
+app.MapGet("/api/health-auth", () => Results.Ok(new { status = "authenticated" }))
+    .RequireAuthorization();
 
 app.MapEndpoints();
 
