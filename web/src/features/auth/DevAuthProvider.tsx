@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
+} from 'react'
 
 export interface DevUser {
   id: string
@@ -35,7 +42,9 @@ function getInitialPersona(): DevUser | null {
 }
 
 export function DevAuthProvider({ children }: { children: ReactNode }) {
-  const [currentUser, setCurrentUser] = useState<DevUser | null>(getInitialPersona)
+  const [currentUser, setCurrentUser] = useState<DevUser | null>(
+    getInitialPersona,
+  )
 
   const setPersona = useCallback((id: string) => {
     if (id === 'unauthenticated') {
@@ -62,11 +71,15 @@ export function DevAuthProvider({ children }: { children: ReactNode }) {
   return (
     <DevAuthContext.Provider value={value}>
       {children}
-      <DevToolbar currentPersonaId={currentUser?.id ?? 'unauthenticated'} onSelect={setPersona} />
+      <DevToolbar
+        currentPersonaId={currentUser?.id ?? 'unauthenticated'}
+        onSelect={setPersona}
+      />
     </DevAuthContext.Provider>
   )
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useDevAuth(): DevAuthContextValue {
   const context = useContext(DevAuthContext)
   if (!context) {

@@ -1,4 +1,7 @@
-import { parseProblemDetails, type ProblemDetails } from '../utils/problemDetails'
+import {
+  parseProblemDetails,
+  type ProblemDetails,
+} from '../utils/problemDetails'
 
 const API_BASE = '/api'
 
@@ -25,7 +28,9 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   const isDev = import.meta.env.VITE_AUTH_MODE === 'development'
 
   if (isDev) {
-    const devUser = JSON.parse(localStorage.getItem('dev-auth-user') || 'null') as {
+    const devUser = JSON.parse(
+      localStorage.getItem('dev-auth-user') || 'null',
+    ) as {
       id: string
       name: string
     } | null
@@ -40,7 +45,8 @@ async function getAuthHeaders(): Promise<HeadersInit> {
   }
 
   // Production mode: acquire token via MSAL
-  const { msalInstance, loginRequest } = await import('../../features/auth/msalConfig')
+  const { msalInstance, loginRequest } =
+    await import('../../features/auth/msalConfig')
   const accounts = msalInstance.getAllAccounts()
   if (accounts.length === 0) {
     throw new AuthError('No active session')
@@ -82,7 +88,9 @@ async function handleResponse<T>(res: Response): Promise<T> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { headers: await getAuthHeaders() })
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: await getAuthHeaders(),
+  })
   return handleResponse<T>(res)
 }
 

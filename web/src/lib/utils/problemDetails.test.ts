@@ -13,7 +13,9 @@ describe('parseProblemDetails', () => {
 
     const result = parseProblemDetails(json)
 
-    expect(result.type).toBe('https://tools.ietf.org/html/rfc7231#section-6.5.1')
+    expect(result.type).toBe(
+      'https://tools.ietf.org/html/rfc7231#section-6.5.1',
+    )
     expect(result.title).toBe('Validation Failed')
     expect(result.status).toBe(400)
     expect(result.detail).toBe('One or more validation errors occurred.')

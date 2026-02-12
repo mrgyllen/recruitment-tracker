@@ -1,6 +1,6 @@
+import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { render, screen } from '../../test-utils'
-import userEvent from '@testing-library/user-event'
 import { DevAuthProvider, useDevAuth } from './DevAuthProvider'
 
 function TestConsumer() {

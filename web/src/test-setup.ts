@@ -21,7 +21,10 @@ const localStorageMock: Storage = {
   },
   key: (index: number) => [...localStorageMap.keys()][index] ?? null,
 }
-Object.defineProperty(globalThis, 'localStorage', { value: localStorageMock, writable: true })
+Object.defineProperty(globalThis, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+})
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'bypass' }))
 afterEach(() => server.resetHandlers())
