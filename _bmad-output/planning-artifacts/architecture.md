@@ -30,6 +30,7 @@ This document has been sharded for focused context loading. Load the core (this 
 | New API endpoint | Add [`api-patterns.md`](./architecture/api-patterns.md) |
 | Frontend feature with new views | Add [`frontend-architecture.md`](./architecture/frontend-architecture.md) |
 | Creating new files/folders | Add [`project-structure.md`](./architecture/project-structure.md) |
+| Any story with tests | Add [`testing-standards.md`](./architecture/testing-standards.md) |
 | Auth-related work | Add [`dev-auth-patterns.md`](./architecture/dev-auth-patterns.md) |
 | DevOps/deployment | Add [`infrastructure.md`](./architecture/infrastructure.md) |
 

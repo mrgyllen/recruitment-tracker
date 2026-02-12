@@ -155,3 +155,42 @@ public record AuditEvent(
 ```
 
 **Rule: No PII in audit event `Context`.** Use entity IDs, not names or emails. The audit trail references entities; it doesn't duplicate their data.
+
+## Verification Checkpoints
+
+_Scannable checklist for review agents. Derived from architecture docs — check each item during code review._
+
+### DDD / Aggregate Rules
+
+- [ ] Domain entity properties use private setters (`{ get; private set; }` or `init`)
+- [ ] Child entities modified only through aggregate root methods (e.g., `recruitment.AddStep()`)
+- [ ] No direct `dbContext.WorkflowSteps.Add()` or similar bypasses
+- [ ] Cross-aggregate references use IDs only — no navigation properties between aggregates
+- [ ] One aggregate per transaction — no multi-aggregate saves in a single handler
+- [ ] Domain events raised for significant state changes
+- [ ] Domain exceptions thrown for business rule violations (never caught silently)
+
+### EF Core
+
+- [ ] Fluent API only — no `[Required]`, `[MaxLength]`, or other DataAnnotations on domain entities
+- [ ] Global query filters configured for tenant isolation
+- [ ] Index naming: `IX_{Table}_{Columns}`
+- [ ] Unique constraint naming: `UQ_{Table}_{Columns}`
+- [ ] Table naming: PascalCase plural
+- [ ] No `UseInMemoryDatabase` — use Testcontainers for integration tests
+
+### Security / Data Isolation
+
+- [ ] All data queries go through `ITenantContext` — no unscoped queries
+- [ ] 8 mandatory security test scenarios present (see `testing-standards.md`)
+- [ ] No PII in audit events or logs
+- [ ] SAS tokens used for document access (no direct Blob URLs)
+- [ ] FluentValidation on all command/query inputs
+- [ ] Problem Details (RFC 9457) for all error responses
+
+### Template Cleanup
+
+- [ ] Angular `ClientApp` directory removed (if from Jason Taylor template)
+- [ ] No `using Moq;` — use NSubstitute exclusively
+- [ ] No `[Fact]` or `[Theory]` — use NUnit's `[Test]` and `[TestCase]`
+- [ ] No `UseInMemoryDatabase` — use Testcontainers with real SQL Server

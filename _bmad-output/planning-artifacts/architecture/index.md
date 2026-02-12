@@ -10,6 +10,7 @@
 | New API endpoint | Add `api-patterns.md` |
 | Frontend feature with new views | Add `frontend-architecture.md` |
 | Creating new files/folders | Add `project-structure.md` |
+| Any story with tests | Add `testing-standards.md` |
 | Auth-related work | Add `dev-auth-patterns.md` |
 | DevOps/deployment | Add `infrastructure.md` |
 | Project scaffolding (Story 1.1 only) | Add `starter-templates.md` |
@@ -73,6 +74,12 @@
   - [CI/CD](./infrastructure.md#cicd)
   - [Environment Configuration](./infrastructure.md#environment-configuration)
   - [Background Processing](./infrastructure.md#background-processing)
+- [Testing Standards](./testing-standards.md) — Test frameworks (NUnit, NSubstitute, Vitest, MSW), naming conventions, Testcontainers, mandatory security tests, pragmatic TDD modes
+  - [Test Frameworks](./testing-standards.md#test-frameworks)
+  - [Test Naming Convention](./testing-standards.md#test-naming-convention)
+  - [Integration Tests with Testcontainers](./testing-standards.md#integration-tests-with-testcontainers)
+  - [Mandatory Security Test Scenarios](./testing-standards.md#mandatory-security-test-scenarios)
+  - [Pragmatic TDD Modes](./testing-standards.md#pragmatic-tdd-modes)
 - [Validation Results](./validation-results.md) — Coherence validation, requirements coverage, gap analysis, completeness checklist, readiness assessment (historical reference)
 
 ### Architecture Decision Records
