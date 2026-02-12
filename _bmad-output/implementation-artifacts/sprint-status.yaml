@@ -42,7 +42,7 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   # Epic 1: Project Foundation & User Access
   epic-1: in-progress
-  1-1-project-scaffolding-ci-pipeline: ready-for-dev
+  1-1-project-scaffolding-ci-pipeline: done
   1-2-sso-authentication: ready-for-dev
   1-3-core-data-model-tenant-isolation: ready-for-dev
   1-4-shared-ui-components-design-tokens: ready-for-dev
