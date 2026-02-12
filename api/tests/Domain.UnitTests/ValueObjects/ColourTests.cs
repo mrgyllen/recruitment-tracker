@@ -1,7 +1,7 @@
 ﻿using api.Domain.Exceptions;
 using api.Domain.ValueObjects;
+using FluentAssertions;
 using NUnit.Framework;
-using Shouldly;
 
 namespace api.Domain.UnitTests.ValueObjects;
 
@@ -14,7 +14,7 @@ public class ColourTests
 
         var colour = Colour.From(code);
 
-        colour.Code.ShouldBe(code);
+        colour.Code.Should().Be(code);
     }
 
     [Test]
@@ -22,7 +22,7 @@ public class ColourTests
     {
         var colour = Colour.White;
 
-        colour.ToString().ShouldBe(colour.Code);
+        colour.ToString().Should().Be(colour.Code);
     }
 
     [Test]
@@ -30,7 +30,7 @@ public class ColourTests
     {
         string code = Colour.White;
 
-        code.ShouldBe("#FFFFFF");
+        code.Should().Be("#FFFFFF");
     }
 
     [Test]
@@ -38,12 +38,14 @@ public class ColourTests
     {
         var colour = (Colour)"#FFFFFF";
 
-        colour.ShouldBe(Colour.White);
+        colour.Should().Be(Colour.White);
     }
 
     [Test]
     public void ShouldThrowUnsupportedColourExceptionGivenNotSupportedColourCode()
     {
-        Should.Throw<UnsupportedColourException>(() => Colour.From("##FF33CC"));
+        var act = () => Colour.From("##FF33CC");
+
+        act.Should().Throw<UnsupportedColourException>();
     }
 }

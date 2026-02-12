@@ -15,13 +15,11 @@ public class PurgeTodoListsTests : BaseTestFixture
     {
         var command = new PurgeTodoListsCommand();
 
-        command.GetType().ShouldSatisfyAllConditions(
-            type => type.ShouldBeDecoratedWith<AuthorizeAttribute>()
-        );
+        command.GetType().Should().BeDecoratedWith<AuthorizeAttribute>();
 
         var action = () => SendAsync(command);
 
-        await Should.ThrowAsync<UnauthorizedAccessException>(action);
+        await action.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 
     [Test]
@@ -33,7 +31,7 @@ public class PurgeTodoListsTests : BaseTestFixture
 
         var action = () => SendAsync(command);
 
-        await Should.ThrowAsync<ForbiddenAccessException>(action);
+        await action.Should().ThrowAsync<ForbiddenAccessException>();
     }
 
     [Test]
@@ -45,8 +43,7 @@ public class PurgeTodoListsTests : BaseTestFixture
 
         var action = () => SendAsync(command);
 
-        Func<Task> asyncAction = async () => await SendAsync(command);
-        await asyncAction.ShouldNotThrowAsync();
+        await action.Should().NotThrowAsync();
     }
 
     [Test]
@@ -73,6 +70,6 @@ public class PurgeTodoListsTests : BaseTestFixture
 
         var count = await CountAsync<TodoList>();
 
-        count.ShouldBe(0);
+        count.Should().Be(0);
     }
 }

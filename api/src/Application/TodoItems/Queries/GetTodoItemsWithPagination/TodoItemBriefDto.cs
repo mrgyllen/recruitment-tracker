@@ -1,6 +1,4 @@
-﻿using api.Domain.Entities;
-
-namespace api.Application.TodoItems.Queries.GetTodoItemsWithPagination;
+﻿namespace api.Application.TodoItems.Queries.GetTodoItemsWithPagination;
 
 public class TodoItemBriefDto
 {
@@ -11,12 +9,4 @@ public class TodoItemBriefDto
     public string? Title { get; init; }
 
     public bool Done { get; init; }
-
-    private class Mapping : Profile
-    {
-        public Mapping()
-        {
-            CreateMap<TodoItem, TodoItemBriefDto>();
-        }
-    }
 }

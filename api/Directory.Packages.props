@@ -9,8 +9,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageVersion Include="Ardalis.GuardClauses" Version="5.0.0" />
-    <PackageVersion Include="AutoMapper" Version="15.1.0" />
-    <PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
+<PackageVersion Include="Azure.Extensions.AspNetCore.Configuration.Secrets" Version="1.4.0" />
     <PackageVersion Include="Azure.Identity" Version="1.17.0" />
     <PackageVersion Include="coverlet.collector" Version="6.0.4" />
     <PackageVersion Include="FluentValidation.AspNetCore" Version="11.3.0" />
@@ -40,8 +39,7 @@
     <PackageVersion Include="NUnit.Analyzers" Version="4.11.2" />
     <PackageVersion Include="NUnit3TestAdapter" Version="5.2.0" />
     <PackageVersion Include="Respawn" Version="6.2.1" />
-    <PackageVersion Include="Shouldly" Version="4.3.0" />
-    <PackageVersion Include="System.Configuration.ConfigurationManager" Version="9.0.0" />
+<PackageVersion Include="System.Configuration.ConfigurationManager" Version="9.0.0" />
     <PackageVersion Include="System.IdentityModel.Tokens.Jwt" Version="7.7.1" />
 
     <PackageVersion Include="Microsoft.Playwright" Version="1.56.0" />

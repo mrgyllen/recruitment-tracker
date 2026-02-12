@@ -1,7 +1,7 @@
 ﻿using api.Application.Common.Exceptions;
+using FluentAssertions;
 using FluentValidation.Results;
 using NUnit.Framework;
-using Shouldly;
 
 namespace api.Application.UnitTests.Common.Exceptions;
 
@@ -12,7 +12,7 @@ public class ValidationExceptionTests
     {
         var actual = new ValidationException().Errors;
 
-        actual.Keys.ShouldBeEmpty();
+        actual.Keys.Should().BeEmpty();
     }
 
     [Test]
@@ -25,8 +25,8 @@ public class ValidationExceptionTests
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.ShouldBe(new string[] { "Age" });
-        actual["Age"].ShouldBe(new string[] { "must be over 18" });
+        actual.Keys.Should().BeEquivalentTo(new[] { "Age" });
+        actual["Age"].Should().BeEquivalentTo(new[] { "must be over 18" });
     }
 
     [Test]
@@ -44,20 +44,20 @@ public class ValidationExceptionTests
 
         var actual = new ValidationException(failures).Errors;
 
-        actual.Keys.ShouldBe(new string[] { "Password", "Age" }, ignoreOrder: true);
+        actual.Keys.Should().BeEquivalentTo(new[] { "Password", "Age" });
 
-        actual["Age"].ShouldBe(new string[]
+        actual["Age"].Should().BeEquivalentTo(new[]
         {
                 "must be 25 or younger",
                 "must be 18 or older",
-        }, ignoreOrder: true);
+        });
 
-        actual["Password"].ShouldBe(new string[]
+        actual["Password"].Should().BeEquivalentTo(new[]
         {
                 "must contain lower case letter",
                 "must contain upper case letter",
                 "must contain at least 8 characters",
                 "must contain a digit",
-        }, ignoreOrder: true);
+        });
     }
 }

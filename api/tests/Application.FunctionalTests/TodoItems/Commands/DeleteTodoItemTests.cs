@@ -14,7 +14,9 @@ public class DeleteTodoItemTests : BaseTestFixture
     {
         var command = new DeleteTodoItemCommand(99);
 
-        await Should.ThrowAsync<NotFoundException>(() => SendAsync(command));
+        var act = () => SendAsync(command);
+
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
@@ -35,6 +37,6 @@ public class DeleteTodoItemTests : BaseTestFixture
 
         var item = await FindAsync<TodoItem>(itemId);
 
-        item.ShouldBeNull();
+        item.Should().BeNull();
     }
 }

@@ -32,7 +32,7 @@
       </PackageReference>
       <PackageReference Include="NSubstitute" />
       <PackageReference Include="Respawn" />
-      <PackageReference Include="Shouldly" />
+      <PackageReference Include="FluentAssertions" />
       <PackageReference Include="Testcontainers.MsSql" />
     </ItemGroup>
     

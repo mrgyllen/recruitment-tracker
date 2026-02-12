@@ -35,7 +35,10 @@ public class TodoItems : EndpointGroupBase
 
     public async Task<Results<NoContent, BadRequest>> UpdateTodoItem(ISender sender, int id, UpdateTodoItemCommand command)
     {
-        if (id != command.Id) return TypedResults.BadRequest();
+        if (id != command.Id)
+        {
+            return TypedResults.BadRequest();
+        }
 
         await sender.Send(command);
 
@@ -44,7 +47,10 @@ public class TodoItems : EndpointGroupBase
 
     public async Task<Results<NoContent, BadRequest>> UpdateTodoItemDetail(ISender sender, int id, UpdateTodoItemDetailCommand command)
     {
-        if (id != command.Id) return TypedResults.BadRequest();
+        if (id != command.Id)
+        {
+            return TypedResults.BadRequest();
+        }
 
         await sender.Send(command);
 

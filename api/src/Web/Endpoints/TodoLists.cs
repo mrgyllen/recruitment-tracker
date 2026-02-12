@@ -32,7 +32,10 @@ public class TodoLists : EndpointGroupBase
 
     public async Task<Results<NoContent, BadRequest>> UpdateTodoList(ISender sender, int id, UpdateTodoListCommand command)
     {
-        if (id != command.Id) return TypedResults.BadRequest();
+        if (id != command.Id)
+        {
+            return TypedResults.BadRequest();
+        }
 
         await sender.Send(command);
 

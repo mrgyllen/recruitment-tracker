@@ -19,7 +19,7 @@
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="NSubstitute" />
-        <PackageReference Include="Shouldly" />
+        <PackageReference Include="FluentAssertions" />
     </ItemGroup>
 
     <ItemGroup>

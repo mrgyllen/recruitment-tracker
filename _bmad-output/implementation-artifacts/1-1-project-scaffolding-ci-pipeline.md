@@ -10,7 +10,7 @@ so that the team has a verified foundation to build features on.
 
 ## Acceptance Criteria
 
-1. **Backend scaffold:** `api/` directory contains a .NET 10 solution initialized from the Jason Taylor Clean Architecture template (`dotnet new ca-sln -o api --database SqlServer`), `dotnet build api/api.sln` succeeds with zero errors, and `dotnet test` passes all template default tests.
+1. **Backend scaffold:** `api/` directory contains a .NET 10 solution initialized from the Jason Taylor Clean Architecture template (`dotnet new ca-sln -o api --database SqlServer`), `dotnet build api/api.slnx` succeeds with zero errors, and `dotnet test` passes all template default tests.
 
 2. **Frontend scaffold:** `web/` directory contains a Vite 7 + React 19 + TypeScript app (`npm create vite@latest web -- --template react-ts`), `npm run dev` starts the Vite dev server, and `npm run build` produces `dist/`.
 
@@ -33,7 +33,7 @@ so that the team has a verified foundation to build features on.
 - [ ] **Task 1: Initialize .NET backend** (AC: 1, 7)
   - [ ] Install Jason Taylor Clean Architecture template v10.0.0: `dotnet new install Clean.Architecture.Solution.Template::10.0.0`
   - [ ] Generate solution: `dotnet new ca-sln -o api --database SqlServer`
-  - [ ] Verify `dotnet build api/api.sln` succeeds with zero errors
+  - [ ] Verify `dotnet build api/api.slnx` succeeds with zero errors
   - [ ] Verify `dotnet test` passes all template default tests
   - [ ] Confirm `.editorconfig` exists in `api/` (template provides it). Review its rules — template defaults may be too lenient for `dotnet format --verify-no-changes` to be meaningful. Tighten severity to `warning` or `error` for key rules (naming, braces, spacing) so CI enforcement catches real issues.
   - [ ] Update `.gitignore` if needed for .NET artifacts (bin/, obj/, etc.)
@@ -241,10 +241,10 @@ jobs:
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '10.0.x'
-      - run: dotnet restore api/api.sln
-      - run: dotnet build api/api.sln --no-restore
-      - run: dotnet test api/api.sln --no-build
-      - run: dotnet format api/api.sln --verify-no-changes
+      - run: dotnet restore api/api.slnx
+      - run: dotnet build api/api.slnx --no-restore
+      - run: dotnet test api/api.slnx --no-build
+      - run: dotnet format api/api.slnx --verify-no-changes
 
   web:
     runs-on: ubuntu-latest

@@ -17,7 +17,7 @@ public class GetTodosTests : BaseTestFixture
 
         var result = await SendAsync(query);
 
-        result.PriorityLevels.ShouldNotBeEmpty();
+        result.PriorityLevels.Should().NotBeEmpty();
     }
 
     [Test]
@@ -45,8 +45,8 @@ public class GetTodosTests : BaseTestFixture
 
         var result = await SendAsync(query);
 
-        result.Lists.Count.ShouldBe(1);
-        result.Lists.First().Items.Count.ShouldBe(7);
+        result.Lists.Count.Should().Be(1);
+        result.Lists.First().Items.Count.Should().Be(7);
     }
 
     [Test]
@@ -56,6 +56,6 @@ public class GetTodosTests : BaseTestFixture
 
         var action = () => SendAsync(query);
 
-        await Should.ThrowAsync<UnauthorizedAccessException>(action);
+        await action.Should().ThrowAsync<UnauthorizedAccessException>();
     }
 }
