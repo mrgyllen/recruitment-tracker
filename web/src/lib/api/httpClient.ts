@@ -10,12 +10,14 @@ export class AuthError extends Error {
 }
 
 export class ApiError extends Error {
-  constructor(
-    public readonly status: number,
-    public readonly problemDetails: ProblemDetails,
-  ) {
+  readonly status: number
+  readonly problemDetails: ProblemDetails
+
+  constructor(status: number, problemDetails: ProblemDetails) {
     super(problemDetails.title)
     this.name = 'ApiError'
+    this.status = status
+    this.problemDetails = problemDetails
   }
 }
 
@@ -44,7 +46,6 @@ async function getAuthHeaders(): Promise<HeadersInit> {
     throw new AuthError('No active session')
   }
   try {
-    const { InteractionRequiredAuthError } = await import('@azure/msal-browser')
     const { accessToken } = await msalInstance.acquireTokenSilent({
       ...loginRequest,
       account: accounts[0],
