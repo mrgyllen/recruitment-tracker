@@ -80,8 +80,18 @@ async function handleResponse<T>(res: Response): Promise<T> {
   }
 
   if (!res.ok) {
-    const json: unknown = await res.json()
-    throw new ApiError(res.status, parseProblemDetails(json))
+    let json: unknown
+    try {
+      json = await res.json()
+    } catch {
+      // Non-JSON response (e.g. HTML error page from reverse proxy)
+    }
+    throw new ApiError(
+      res.status,
+      parseProblemDetails(
+        json ?? { title: res.statusText, status: res.status },
+      ),
+    )
   }
 
   return res.json() as Promise<T>

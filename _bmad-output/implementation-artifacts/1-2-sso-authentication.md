@@ -330,9 +330,60 @@ Per-task testing modes are declared in the task list above.
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
+- Implementation plan: `docs/plans/2026-02-13-sso-authentication.md`
 
-### Completion Notes List
+### Completion Notes
+- ASP.NET Core runtime not installed locally; functional tests compile but only execute in CI
+- Node 25 required a localStorage polyfill in test-setup.ts (built-in conflicts with jsdom)
+- MSAL v5 removed `storeAuthStateInCookie` from CacheOptions (breaking change from v4)
+- Microsoft.Identity.Web 4.3.0 required System.IdentityModel.Tokens.Jwt upgrade to 8.15.0
+- `erasableSyntaxOnly` in tsconfig required converting ApiError constructor parameter properties to field declarations
 
 ### File List
+
+**Backend - Created:**
+- `api/src/Web/Configuration/DevelopmentAuthenticationConfiguration.cs` — Dev auth handler
+- `api/src/Web/Middleware/NoindexMiddleware.cs` — X-Robots-Tag: noindex
+- `api/src/Application/Common/Interfaces/ICurrentUserService.cs` — Identity contract
+- `api/src/Application/Common/Interfaces/ITenantContext.cs` — Tenant isolation contract
+- `api/src/Infrastructure/Identity/CurrentUserService.cs` — Claims-based implementation
+- `api/src/Infrastructure/Identity/TenantContext.cs` — Tenant context implementation
+- `api/tests/Application.FunctionalTests/Authentication/DevAuthenticationTests.cs` — 5 auth tests
+- `api/tests/Application.UnitTests/Common/Identity/CurrentUserServiceTests.cs` — 3 unit tests
+- `api/tests/Application.UnitTests/Common/Identity/TenantContextTests.cs` — 3 unit tests
+
+**Backend - Modified:**
+- `api/Directory.Packages.props` — Added Microsoft.Identity.Web 4.3.0, updated JWT to 8.15.0
+- `api/src/Web/Web.csproj` — Added Microsoft.Identity.Web package reference
+- `api/src/Web/DependencyInjection.cs` — Auth registration (dev/JWT), FallbackPolicy
+- `api/src/Web/Program.cs` — UseAuthentication/UseAuthorization, health-auth endpoint, NoindexMiddleware
+- `api/src/Infrastructure/DependencyInjection.cs` — ICurrentUserService/ITenantContext registration
+- `api/src/Web/appsettings.json` — AzureAd placeholder configuration
+
+**Frontend - Created:**
+- `web/src/features/auth/msalConfig.ts` — MSAL v5 configuration + singleton
+- `web/src/features/auth/DevAuthProvider.tsx` — Dev persona provider + toolbar
+- `web/src/features/auth/DevAuthProvider.test.tsx` — 5 tests
+- `web/src/features/auth/AuthContext.tsx` — AuthProvider + useAuth hook
+- `web/src/features/auth/AuthContext.test.tsx` — 2 tests
+- `web/src/features/auth/LoginRedirect.tsx` — OIDC redirect component
+- `web/src/features/auth/authProvider.ts` — Re-export barrel
+- `web/src/lib/api/httpClient.ts` — HTTP client with dual auth path
+- `web/src/lib/api/httpClient.test.ts` — 8 tests
+- `web/src/lib/utils/problemDetails.ts` — RFC 9457 Problem Details parser
+- `web/src/lib/utils/problemDetails.test.ts` — 3 tests
+- `web/src/mocks/auth.ts` — Mock user helpers for tests
+- `web/.env.example` — Entra ID env var documentation
+- `web/.env.development` — Dev mode defaults
+
+**Frontend - Modified:**
+- `web/src/main.tsx` — Wrapped App with AuthProvider
+- `web/src/test-utils.tsx` — AllProviders wrapper with AuthProvider
+- `web/src/test-setup.ts` — localStorage polyfill for Node 25
+- `web/src/index.html` — noindex meta tag
+- `web/vite.config.ts` — VITE_AUTH_MODE=development in test env
+- `web/package.json` — @azure/msal-browser 5.1.0, @azure/msal-react 5.0.2
+- `.gitignore` — Track .env.example and .env.development

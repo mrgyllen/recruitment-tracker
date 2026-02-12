@@ -103,6 +103,31 @@ describe('httpClient', () => {
       }
     })
 
+    it('should throw ApiError with fallback ProblemDetails on non-JSON error response', async () => {
+      server.use(
+        http.get('/api/test', () => {
+          return new HttpResponse('<html>Bad Gateway</html>', {
+            status: 502,
+            statusText: 'Bad Gateway',
+            headers: { 'Content-Type': 'text/html' },
+          })
+        }),
+      )
+
+      const { apiGet, ApiError } = await import('./httpClient')
+
+      try {
+        await apiGet('/test')
+        expect.fail('Expected ApiError to be thrown')
+      } catch (error) {
+        expect(error).toBeInstanceOf(ApiError)
+        const apiError = error as InstanceType<typeof ApiError>
+        expect(apiError.status).toBe(502)
+        expect(apiError.problemDetails.title).toBe('Bad Gateway')
+        expect(apiError.problemDetails.status).toBe(502)
+      }
+    })
+
     it('should throw AuthError on 401 response', async () => {
       server.use(
         http.get('/api/test', () => {
