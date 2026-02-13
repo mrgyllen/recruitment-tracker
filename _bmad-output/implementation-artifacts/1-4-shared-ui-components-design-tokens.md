@@ -415,8 +415,80 @@ web/src/
 
 ### Agent Model Used
 
+Claude Opus 4.6 (claude-opus-4-6)
+
 ### Debug Log References
+
+None — no debugging issues encountered.
 
 ### Completion Notes List
 
+**Testing modes used:**
+- Tasks 1-3 (design tokens, shadcn init, theme mapping): **Spike** — CSS configuration verified via build + visual inspection
+- Task 4 (StatusBadge): **Test-first** — 17 tests (5 variant renders, 4 icon checks, 1 no-icon, 1 outlined style, 1 custom aria-label, 5 axe a11y)
+- Task 5 (ActionButton): **Test-first** — 10 tests (3 variant renders, 2 loading state, 2 click behavior, 3 axe a11y)
+- Task 6 (EmptyState): **Test-first** — 8 tests (2 heading levels, 1 description, 2 CTA render/omit, 1 callback, 1 icon, 1 axe a11y)
+- Task 7 (Toast): **Test-first** — 3 tests (success/error/info toast rendering)
+- Task 8 (SkeletonLoader): **Test-first** — 4 tests (3 variants, 1 animation class)
+- Task 9 (ErrorBoundary): **Test-first** — 4 tests (children render, default fallback, custom fallback, reload button)
+- Task 5 (vitest-axe): **Spike** — setup verified through component axe tests
+
+**Key decisions:**
+1. Removed `next-themes` dependency — shadcn/ui sonner component was generated with Next.js import; replaced with hardcoded `theme="light"` since app has no dark mode
+2. Used `@/` path aliases (shadcn/ui convention) — configured in tsconfig.json, tsconfig.app.json, and vite.config.ts
+3. Axe tests use bare `rtlRender` (without provider wrapper) to isolate accessibility checks to the component under test, avoiding false positives from DevAuthProvider's select element
+4. Added eslint override for `src/components/ui/` to allow non-component exports (shadcn pattern: `export { Button, buttonVariants }`)
+5. Mapped all shadcn CSS variables to If Insurance brand colors in `:root` block — removed dark mode `.dark` block entirely
+6. Added `prefers-reduced-motion` CSS guard for sonner toast animations
+
+**Test summary:** 65 tests across 11 files, all passing. Build clean. Lint clean.
+
 ### File List
+
+**New files created:**
+- `web/components.json` — shadcn/ui configuration
+- `web/src/lib/utils.ts` — cn() utility (clsx + tailwind-merge)
+- `web/src/components/ui/button.tsx` — shadcn Button
+- `web/src/components/ui/card.tsx` — shadcn Card
+- `web/src/components/ui/table.tsx` — shadcn Table
+- `web/src/components/ui/dialog.tsx` — shadcn Dialog
+- `web/src/components/ui/select.tsx` — shadcn Select
+- `web/src/components/ui/input.tsx` — shadcn Input
+- `web/src/components/ui/textarea.tsx` — shadcn Textarea
+- `web/src/components/ui/badge.tsx` — shadcn Badge
+- `web/src/components/ui/tooltip.tsx` — shadcn Tooltip
+- `web/src/components/ui/skeleton.tsx` — shadcn Skeleton
+- `web/src/components/ui/separator.tsx` — shadcn Separator
+- `web/src/components/ui/collapsible.tsx` — shadcn Collapsible
+- `web/src/components/ui/progress.tsx` — shadcn Progress
+- `web/src/components/ui/alert.tsx` — shadcn Alert
+- `web/src/components/ui/sheet.tsx` — shadcn Sheet
+- `web/src/components/ui/dropdown-menu.tsx` — shadcn DropdownMenu
+- `web/src/components/ui/form.tsx` — shadcn Form
+- `web/src/components/ui/label.tsx` — shadcn Label
+- `web/src/components/ui/sonner.tsx` — shadcn Sonner (Toast)
+- `web/src/components/StatusBadge.tsx` — custom StatusBadge component
+- `web/src/components/StatusBadge.types.ts` — StatusVariant type
+- `web/src/components/StatusBadge.test.tsx` — 17 tests
+- `web/src/components/ActionButton.tsx` — custom ActionButton component
+- `web/src/components/ActionButton.test.tsx` — 10 tests
+- `web/src/components/EmptyState.tsx` — custom EmptyState component
+- `web/src/components/EmptyState.test.tsx` — 8 tests
+- `web/src/components/Toast.test.tsx` — 3 tests
+- `web/src/components/SkeletonLoader.tsx` — custom SkeletonLoader component
+- `web/src/components/SkeletonLoader.test.tsx` — 4 tests
+- `web/src/components/ErrorBoundary.tsx` — React error boundary
+- `web/src/components/ErrorBoundary.test.tsx` — 4 tests
+- `web/src/hooks/useAppToast.ts` — toast hook with duration rules
+- `docs/plans/2026-02-13-shared-ui-components-design-tokens.md` — implementation plan
+
+**Modified files:**
+- `web/src/index.css` — design tokens (@theme block) + shadcn variables + brand mapping + reduced-motion guard
+- `web/src/App.tsx` — added Toaster provider
+- `web/src/test-utils.tsx` — added Toaster to AllProviders wrapper
+- `web/src/test-setup.ts` — added vitest-axe matchers
+- `web/tsconfig.json` — added @/ path aliases
+- `web/tsconfig.app.json` — added @/ path aliases
+- `web/vite.config.ts` — added @/ resolve alias
+- `web/eslint.config.js` — added shadcn/ui eslint override
+- `web/package.json` — new dependencies
