@@ -37,6 +37,15 @@ public class RecruitmentTests
     }
 
     [Test]
+    public void Create_RaisesRecruitmentCreatedEvent_WithCorrectRecruitmentId()
+    {
+        var recruitment = CreateRecruitment();
+
+        var domainEvent = recruitment.DomainEvents.OfType<RecruitmentCreatedEvent>().Single();
+        domainEvent.RecruitmentId.Should().Be(recruitment.Id);
+    }
+
+    [Test]
     public void AddStep_ValidName_AddsStep()
     {
         var recruitment = CreateRecruitment();
@@ -151,6 +160,38 @@ public class RecruitmentTests
     }
 
     [Test]
+    public void RemoveMember_RaisesMembershipChangedEvent_WithCorrectPayload()
+    {
+        var recruitment = CreateRecruitment();
+        var userId = Guid.NewGuid();
+        recruitment.AddMember(userId, "SME/Collaborator");
+        recruitment.ClearDomainEvents();
+        var memberId = recruitment.Members.First(m => m.UserId == userId).Id;
+
+        recruitment.RemoveMember(memberId);
+
+        var domainEvent = recruitment.DomainEvents.OfType<MembershipChangedEvent>().Single();
+        domainEvent.RecruitmentId.Should().Be(recruitment.Id);
+        domainEvent.UserId.Should().Be(userId);
+        domainEvent.ChangeType.Should().Be("Removed");
+    }
+
+    [Test]
+    public void AddMember_RaisesMembershipChangedEvent_WithCorrectPayload()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.ClearDomainEvents();
+        var userId = Guid.NewGuid();
+
+        recruitment.AddMember(userId, "SME/Collaborator");
+
+        var domainEvent = recruitment.DomainEvents.OfType<MembershipChangedEvent>().Single();
+        domainEvent.RecruitmentId.Should().Be(recruitment.Id);
+        domainEvent.UserId.Should().Be(userId);
+        domainEvent.ChangeType.Should().Be("Added");
+    }
+
+    [Test]
     public void RemoveMember_Creator_ThrowsInvalidOperationException()
     {
         var creatorId = Guid.NewGuid();
@@ -178,6 +219,18 @@ public class RecruitmentTests
         recruitment.ClosedAt.Should().NotBeNull();
         recruitment.DomainEvents.Should().ContainSingle()
             .Which.Should().BeOfType<RecruitmentClosedEvent>();
+    }
+
+    [Test]
+    public void Close_RaisesRecruitmentClosedEvent_WithCorrectRecruitmentId()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.ClearDomainEvents();
+
+        recruitment.Close();
+
+        var domainEvent = recruitment.DomainEvents.OfType<RecruitmentClosedEvent>().Single();
+        domainEvent.RecruitmentId.Should().Be(recruitment.Id);
     }
 
     [Test]

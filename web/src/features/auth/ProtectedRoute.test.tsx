@@ -54,4 +54,33 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Redirecting to login...')).toBeInTheDocument()
     expect(mockLogin).toHaveBeenCalledOnce()
   })
+
+  it('should not call login() when already authenticated', () => {
+    const mockLogin = vi.fn()
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: true,
+      user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: mockLogin,
+      signOut: vi.fn(),
+    })
+
+    renderProtectedRoute()
+
+    expect(mockLogin).not.toHaveBeenCalled()
+    expect(screen.getByText('Protected content')).toBeInTheDocument()
+  })
+
+  it('should not render Outlet when unauthenticated', () => {
+    mockUseAuth.mockReturnValue({
+      isAuthenticated: false,
+      user: null,
+      login: vi.fn(),
+      signOut: vi.fn(),
+    })
+
+    renderProtectedRoute()
+
+    expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+    expect(screen.getByText('Redirecting to login...')).toBeInTheDocument()
+  })
 })

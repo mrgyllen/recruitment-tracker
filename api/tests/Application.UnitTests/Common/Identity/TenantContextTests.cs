@@ -10,12 +10,12 @@ namespace api.Application.UnitTests.Common.Identity;
 public class TenantContextTests
 {
     [Test]
-    public void UserId_DelegatesToCurrentUserService()
+    public void UserId_DelegatesToIUser()
     {
-        var currentUserService = Substitute.For<ICurrentUserService>();
-        currentUserService.UserId.Returns("user-456");
+        var user = Substitute.For<IUser>();
+        user.Id.Returns("user-456");
 
-        var tenantContext = new TenantContext(currentUserService);
+        var tenantContext = new TenantContext(user);
 
         tenantContext.UserId.Should().Be("user-456");
     }
@@ -23,8 +23,8 @@ public class TenantContextTests
     [Test]
     public void RecruitmentId_DefaultsToNull()
     {
-        var currentUserService = Substitute.For<ICurrentUserService>();
-        var tenantContext = new TenantContext(currentUserService);
+        var user = Substitute.For<IUser>();
+        var tenantContext = new TenantContext(user);
 
         tenantContext.RecruitmentId.Should().BeNull();
     }
@@ -32,8 +32,8 @@ public class TenantContextTests
     [Test]
     public void IsServiceContext_DefaultsToFalse()
     {
-        var currentUserService = Substitute.For<ICurrentUserService>();
-        var tenantContext = new TenantContext(currentUserService);
+        var user = Substitute.For<IUser>();
+        var tenantContext = new TenantContext(user);
 
         tenantContext.IsServiceContext.Should().BeFalse();
     }

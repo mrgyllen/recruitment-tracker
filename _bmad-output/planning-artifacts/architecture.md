@@ -292,7 +292,9 @@ This simplifies both the import pipeline (no counter updates) and the outcome re
 
 **Input validation:** FluentValidation on all command/query inputs. File type and size validation on uploads (XLSX: 10MB max, PDF: 100MB max). Parameterized queries via EF Core (SQL injection prevention).
 
-**Headers:** `noindex` meta tag + `X-Robots-Tag: noindex` response header. CORS restricted to the Static Web Apps domain.
+**Headers:** `noindex` meta tag + `X-Robots-Tag: noindex` response header. Security headers middleware adds `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Content-Security-Policy`, `Referrer-Policy`, and `Permissions-Policy`.
+
+**CORS / Same-Origin Policy:** No explicit CORS configuration is needed. The frontend (React SPA) is served from the same origin as the API in both development (Vite proxy `/api` to the backend) and production (Azure Static Web Apps routes `/api` to the backend App Service). All API requests are same-origin, so no CORS headers are required. If the deployment model changes to separate origins, add a CORS middleware with an explicit allowed-origins allowlist restricted to the SWA domain.
 
 _For development authentication patterns (dev auth bypass, personas), see [`dev-auth-patterns.md`](./architecture/dev-auth-patterns.md)._
 

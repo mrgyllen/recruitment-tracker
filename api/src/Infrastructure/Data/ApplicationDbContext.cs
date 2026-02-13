@@ -33,9 +33,9 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             // Import service scoped to specific recruitment
             (_tenantContext.RecruitmentId != null && c.RecruitmentId == _tenantContext.RecruitmentId) ||
             // Web user: only candidates in recruitments where user is a member
-            (_tenantContext.UserId != null &&
+            (_tenantContext.UserGuid != null &&
              EF.Property<Recruitment>(c, "Recruitment").Members
-                .Any(m => m.UserId.ToString() == _tenantContext.UserId))
+                .Any(m => m.UserId == _tenantContext.UserGuid))
         );
     }
 }

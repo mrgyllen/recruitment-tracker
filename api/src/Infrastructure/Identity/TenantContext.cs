@@ -4,14 +4,15 @@ namespace api.Infrastructure.Identity;
 
 public class TenantContext : ITenantContext
 {
-    private readonly ICurrentUserService _currentUserService;
+    private readonly IUser _user;
 
-    public TenantContext(ICurrentUserService currentUserService)
+    public TenantContext(IUser user)
     {
-        _currentUserService = currentUserService;
+        _user = user;
     }
 
-    public string? UserId => _currentUserService.UserId;
+    public string? UserId => _user.Id;
+    public Guid? UserGuid => Guid.TryParse(_user.Id, out var guid) ? guid : null;
     public Guid? RecruitmentId { get; set; }
     public bool IsServiceContext { get; set; }
 }

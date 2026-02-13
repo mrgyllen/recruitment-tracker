@@ -16,7 +16,7 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet restore api/api.slnx
       - run: dotnet build api/api.slnx --no-restore
-      - run: dotnet test api/api.slnx --no-build
+      - run: dotnet test api/api.slnx --no-build --collect:"XPlat Code Coverage"
       - run: dotnet format api/api.slnx --verify-no-changes
 
   web:
