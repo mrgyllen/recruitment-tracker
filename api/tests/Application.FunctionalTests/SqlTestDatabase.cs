@@ -1,8 +1,10 @@
 ﻿using System.Data.Common;
+using api.Application.Common.Interfaces;
 using api.Infrastructure.Data;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using NSubstitute;
 using Respawn;
 
 namespace api.Application.FunctionalTests;
@@ -35,7 +37,9 @@ public class SqlTestDatabase : ITestDatabase
             .UseSqlServer(_connectionString)
             .Options;
 
-        var context = new ApplicationDbContext(options);
+        var tenantContext = Substitute.For<ITenantContext>();
+        tenantContext.IsServiceContext.Returns(true);
+        var context = new ApplicationDbContext(options, tenantContext);
 
         await context.Database.EnsureDeletedAsync();
         await context.Database.EnsureCreatedAsync();
