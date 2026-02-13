@@ -1,0 +1,128 @@
+{
+  "lens": "docs",
+  "wins": [
+    "Dev Agent Record fully populated for both stories with testing modes, key decisions, file lists, and risk analysis",
+    "Implementation plans provided clear task-by-task guidance with code snippets and verification steps",
+    "Anti-patterns captured from review findings and promoted to anti-patterns-pending.txt for enforcement",
+    "Story files maintain strong alignment with architecture docs - StatusBadge variants match backend OutcomeStatus enum (with stale as frontend-only display state)",
+    "Testing mode declarations consistently applied: spike for config, test-first for WCAG-critical components (StatusBadge, ViewportGuard, ProtectedRoute)"
+  ],
+  "risks": [
+    "Story 1.4: Ghost button variant deferred but referenced in multiple architecture docs (patterns-frontend.md table, story 1.5 AppHeader notes) - creates doc drift between 'what exists' and 'what's documented'",
+    "Story 1.5: AC4 wording claims httpClient.ts 'enhanced' but implementation shows apiPut/apiDelete already existed in story 1-2 - acceptance criteria didn't match reality, discovered during execution",
+    "Missing runbook: no documented procedure for when anti-patterns-pending.txt promotions should occur (3 patterns pending, no guidance on lifecycle)",
+    "Architecture drift: frontend-architecture.md shows detailed httpClient.ts example with msalInstance import pattern, but actual implementation uses AuthContext.login() for ProtectedRoute instead of MSAL loginRedirect() - pattern divergence not documented",
+    "Dev Agent Record in story 1.4 lists 'useAppToast() vs useToast() naming deviation (accepted)' as M1 finding but doesn't document WHY accepted or update architecture to reflect this deviation as intentional",
+    "Story 1.5 plan-to-implementation alignment gap: Task 3 plan shows Navigate to='/login' pattern, but C1 review finding forced change to login() callback - plan not updated post-implementation to reflect this critical pattern change",
+    "Missing documentation: prefers-reduced-motion CSS guard added for animate-pulse (per anti-pattern AP-001) but no corresponding guideline update in patterns-frontend.md or testing-standards.md showing this as required pattern"
+  ],
+  "missing_evidence": [],
+  "action_items": [
+    {
+      "type": "docs_update",
+      "priority": "high",
+      "title": "Document Ghost button deferral and update architecture references",
+      "description": "patterns-frontend.md table includes Ghost button in 'Action Button Patterns' but story 1.4 explicitly deferred it. Either remove from architecture doc or add 'Status: Deferred to Epic X' notation. Update story 1.5 AppHeader notes to remove Ghost variant reference (currently uses secondary instead).",
+      "evidence_refs": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md:113-119 (Ghost button in table)",
+        "_bmad-output/implementation-artifacts/1-4-shared-ui-components-design-tokens.md:364 (anti-pattern: do NOT implement Ghost)",
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md:132 (M1: AppHeader uses secondary instead of Ghost)"
+      ],
+      "acceptance_criteria": "patterns-frontend.md table annotated with 'Ghost (deferred)' OR row removed with comment. Story 1.5 M1 finding resolved with doc update showing intentional secondary usage.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "high",
+      "title": "Document ProtectedRoute pattern divergence from architecture example",
+      "description": "frontend-architecture.md shows httpClient.ts calling msalInstance.loginRedirect() on 401, but story 1.5 ProtectedRoute uses AuthContext.login() callback instead of Navigate to='/login'. C1 review finding forced this change, but architecture doc still shows old pattern. Update frontend-architecture.md to document both patterns (httpClient for API calls, ProtectedRoute for route guards) and clarify when to use each.",
+      "evidence_refs": [
+        "_bmad-output/planning-artifacts/architecture/frontend-architecture.md:84-99 (msalInstance.loginRedirect pattern)",
+        ".retro/2026-02-13T220300Z/context.md:130 (C1: ProtectedRoute redirected to non-existent /login)",
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md:56-59 (ProtectedRoute task showing Navigate pattern)"
+      ],
+      "acceptance_criteria": "frontend-architecture.md updated with section 'Auth Guard Patterns' showing: (1) httpClient handles 401 with loginRedirect, (2) ProtectedRoute calls login() from AuthContext for initial route guard. Both patterns documented as correct for their use case.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/frontend-architecture.md"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "medium",
+      "title": "Document prefers-reduced-motion requirement for all animations",
+      "description": "Story 1.4 review I3 found animate-pulse missing prefers-reduced-motion guard. Anti-pattern AP-001 added. Story 1.5 added CSS guard for sonner toast. But no architecture doc codifies this as a required pattern. Add to patterns-frontend.md or testing-standards.md: 'All animations (CSS or JS) MUST be wrapped in prefers-reduced-motion guard or disable via CSS @media query'.",
+      "evidence_refs": [
+        ".retro/2026-02-13T220300Z/context.md:122 (I3: SkeletonLoader animate-pulse no prefers-reduced-motion)",
+        "anti-patterns-pending.txt:1 (AP-001: animate-pulse must be disabled under prefers-reduced-motion)",
+        "_bmad-output/implementation-artifacts/1-4-shared-ui-components-design-tokens.md:443 (key decision: added CSS rule)"
+      ],
+      "acceptance_criteria": "patterns-frontend.md or testing-standards.md includes section 'Animation Accessibility' with rule: 'Wrap all animations in @media (prefers-reduced-motion: no-preference) or use @media (prefers-reduced-motion: reduce) to disable'. Anti-pattern AP-001 promoted to permanent anti-patterns.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        "_bmad-output/planning-artifacts/architecture/anti-patterns.md",
+        "anti-patterns-pending.txt"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "medium",
+      "title": "Document useAppToast naming deviation as intentional pattern",
+      "description": "Story 1.4 M1 review finding noted 'useAppToast() vs useToast() naming deviation (accepted)' but Dev Agent Record doesn't explain WHY. Architecture shows no guidance on when to use 'useApp*' prefix. Either document this as intentional (useAppToast wraps third-party toast with project-specific duration rules, so 'App' prefix clarifies it's not the raw sonner hook) or acknowledge as tech debt to rename.",
+      "evidence_refs": [
+        ".retro/2026-02-13T220300Z/context.md:124 (M1: useAppToast() vs useToast() naming deviation)",
+        "_bmad-output/implementation-artifacts/1-4-shared-ui-components-design-tokens.md:445 (Dev Agent Record key decisions section - no WHY)"
+      ],
+      "acceptance_criteria": "Either: (1) patterns-frontend.md updated with 'Hook Naming: useApp* prefix for project-specific wrappers around third-party hooks' OR (2) Story 1.4 Dev Agent Record updated with note 'M1 accepted as tech debt - consider renaming to useToast in Epic X'.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        "_bmad-output/implementation-artifacts/1-4-shared-ui-components-design-tokens.md"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "medium",
+      "title": "Add anti-patterns-pending.txt lifecycle documentation",
+      "description": "Three patterns in anti-patterns-pending.txt, no documented process for when to promote to permanent anti-patterns.md. Add to .claude/process/team-workflow.md: 'Retrospective lens promotes pending anti-patterns after validation (2+ stories with pattern, no false positives). Max pending duration: 2 sprints.'",
+      "evidence_refs": [
+        "anti-patterns-pending.txt (3 patterns, no lifecycle metadata)",
+        ".retro/2026-02-13T220300Z/context.md:140-145 (anti-patterns discovered section)"
+      ],
+      "acceptance_criteria": ".claude/process/team-workflow.md includes section 'Anti-Pattern Lifecycle' with promotion criteria and pending duration limit. Template for anti-patterns-pending.txt entries updated to include 'Added: <date>, Validated in: [story-ids]'.",
+      "files_to_touch": [
+        ".claude/process/team-workflow.md",
+        "anti-patterns-pending.txt"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "low",
+      "title": "Update story 1.5 implementation plan to reflect ProtectedRoute pattern change",
+      "description": "docs/plans/2026-02-13-app-shell-empty-state-landing.md Task 3 still shows Navigate to='/login' pattern (pre-C1 fix). Post-implementation, plan should be updated to show login() callback as the correct pattern for future reference.",
+      "evidence_refs": [
+        "docs/plans/2026-02-13-app-shell-empty-state-landing.md:124-140 (Task 3 showing Navigate pattern)",
+        ".retro/2026-02-13T220300Z/context.md:130 (C1: ProtectedRoute calls login() instead)"
+      ],
+      "acceptance_criteria": "docs/plans/2026-02-13-app-shell-empty-state-landing.md Task 3 Step 2 updated to show login() callback pattern with comment explaining why Navigate to='/login' was rejected (C1 finding).",
+      "files_to_touch": [
+        "docs/plans/2026-02-13-app-shell-empty-state-landing.md"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "low",
+      "title": "Clarify story 1.5 AC4 wording to match implementation reality",
+      "description": "Story 1.5 AC4 states 'httpClient.ts enhanced' but apiPut/apiDelete already existed in story 1-2. Dev Agent Record notes 'AC4 was already implemented'. AC wording should be corrected to 'httpClient.ts verified to include apiPut/apiDelete' or similar to avoid confusion in future story references.",
+      "evidence_refs": [
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md:21 (AC4: httpClient.ts enhanced)",
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md:430 (Dev Agent Record: AC4 already implemented in 1-2)"
+      ],
+      "acceptance_criteria": "Story 1.5 AC4 reworded to 'httpClient.ts includes apiPut<T>() and apiDelete<T>() methods (implemented in story 1-2; verified via existing tests)'.",
+      "files_to_touch": [
+        "_bmad-output/implementation-artifacts/1-5-app-shell-empty-state-landing.md"
+      ]
+    }
+  ]
+}

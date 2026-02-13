@@ -1,0 +1,157 @@
+{
+  "lens": "security",
+  "wins": [
+    "ProtectedRoute correctly guards all authenticated routes with useEffect-based login redirect (commit d307016 fixed critical C1 finding that initially navigated to non-existent /login route)",
+    "httpClient properly implements separate dev/prod auth paths with X-Dev-User-Id headers in dev mode and Bearer token acquisition via MSAL in production mode, with 401 AuthError handling",
+    "MSAL configuration uses sessionStorage (not localStorage) for token caching, reducing token persistence risk and aligning with session-based auth model",
+    "No XSS vectors detected: zero usage of dangerouslySetInnerHTML, innerHTML, outerHTML, eval(), or Function() across all 64 TypeScript files in src/",
+    ".env files properly excluded from git (*.local pattern in .gitignore), with .env.example containing placeholder values only"
+  ],
+  "risks": [
+    {
+      "severity": "high",
+      "title": "Missing CSP and security headers",
+      "description": "No Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, or Strict-Transport-Security headers configured. index.html contains no meta CSP tags. Vite dev server and production build lack security header middleware.",
+      "evidence": "grep for security headers returned zero results; index.html lines 1-14 show no CSP meta tags",
+      "impact": "Vulnerable to clickjacking, MIME-sniffing attacks, and reduced XSS defense-in-depth despite React's default escaping"
+    },
+    {
+      "severity": "medium",
+      "title": "Dev auth persona stored in localStorage without integrity check",
+      "description": "DevAuthProvider stores dev-auth-user in localStorage as plain JSON (lines 30-52 of DevAuthProvider.tsx). httpClient reads this value without signature/integrity verification. A malicious browser extension or XSS (if introduced) could modify localStorage to impersonate any dev persona.",
+      "evidence": "DevAuthProvider.tsx lines 30-52, httpClient.ts lines 31-44",
+      "impact": "Dev mode only, but dev environments may access pre-production data. Persona switching could allow unauthorized tenant access if backend tenant isolation relies solely on dev headers."
+    },
+    {
+      "severity": "medium",
+      "title": "MSAL production auth incomplete with empty login/signOut stubs",
+      "description": "MsalAuthProvider (AuthContext.tsx lines 43-61) returns hardcoded isAuthenticated: false and empty login/signOut stubs. Production auth flow is non-functional. If VITE_AUTH_MODE is set to 'production', app would be completely broken.",
+      "evidence": "AuthContext.tsx lines 43-61; msalConfig.ts imports MSAL but MsalAuthProvider does not use msalInstance",
+      "impact": "Production readiness blocked. No E2E testing possible for production auth until MSAL integration is completed."
+    },
+    {
+      "severity": "medium",
+      "title": "ProtectedRoute shows 'Redirecting to login...' without timeout or error state",
+      "description": "ProtectedRoute.tsx line 15 shows loading message indefinitely if login() fails or hangs. No timeout, no error boundary, no retry mechanism. User stuck on redirect message if MSAL redirect fails.",
+      "evidence": "ProtectedRoute.tsx lines 14-16",
+      "impact": "Poor UX in production if MSAL redirect fails. No graceful degradation or user recovery path."
+    },
+    {
+      "severity": "low",
+      "title": "httpClient getAuthHeaders lacks timeout for MSAL token acquisition",
+      "description": "httpClient.ts lines 54-58 call msalInstance.acquireTokenSilent() without timeout. If MSAL hangs, all API calls block indefinitely. No circuit breaker or timeout protection.",
+      "evidence": "httpClient.ts lines 54-58",
+      "impact": "Potential for frozen UI if MSAL service degrades. Low severity since MSAL SDK typically has internal timeouts, but no explicit guard."
+    },
+    {
+      "severity": "low",
+      "title": "DevToolbar visible in production if VITE_AUTH_MODE accidentally set to development",
+      "description": "DevAuthProvider renders DevToolbar (lines 99-137) unconditionally when in dev mode. If environment variable misconfigured in production, bright orange 'DEV MODE' toolbar with persona switcher would appear in production UI.",
+      "evidence": "DevAuthProvider.tsx lines 99-137, AuthProvider.tsx lines 64-71",
+      "impact": "Embarrassing security hygiene issue. Low exploitability but high reputational risk if dev mode leaks to production."
+    },
+    {
+      "severity": "info",
+      "title": "VITE_ENTRA_CLIENT_ID and secrets exposed to browser bundle",
+      "description": "All VITE_* env vars are embedded in browser bundle at build time (Vite standard behavior). VITE_ENTRA_CLIENT_ID is public and safe, but pattern could lead to accidental secret exposure if developers add VITE_API_SECRET or similar.",
+      "evidence": "msalConfig.ts lines 8-11, .env.example lines 2-4, Vite docs: import.meta.env.VITE_* is client-side",
+      "impact": "No current risk (client ID is public), but fragile pattern. Needs developer education and pre-commit hook to prevent VITE_SECRET_* vars."
+    }
+  ],
+  "missing_evidence": [],
+  "action_items": [
+    {
+      "type": "security_hardening",
+      "priority": "high",
+      "title": "Add CSP and security headers to production build",
+      "description": "Configure Content-Security-Policy (script-src 'self', default-src 'self', etc.), X-Frame-Options: DENY, X-Content-Type-Options: nosniff, Strict-Transport-Security in index.html meta tags or via backend middleware serving the SPA. For dev server, add Vite plugin for security headers.",
+      "evidence_refs": [
+        "index.html lines 1-14 (no CSP meta tags)",
+        "Risk: Missing CSP and security headers"
+      ],
+      "acceptance_criteria": "npm run build produces index.html with CSP meta tag; production backend serves SPA with security headers; npm run dev emits security headers via Vite plugin; all headers testable via curl -I",
+      "files_to_touch": [
+        "web/index.html",
+        "web/vite.config.ts",
+        "api middleware (if backend serves SPA)"
+      ]
+    },
+    {
+      "type": "security_hardening",
+      "priority": "medium",
+      "title": "Complete MSAL production auth integration",
+      "description": "Wire msalInstance.initialize(), msalInstance.loginRedirect(), and msalInstance.logoutRedirect() into MsalAuthProvider. Add MsalProvider wrapper if using @azure/msal-react. Test E2E with real Entra ID tenant. Remove stub implementation.",
+      "evidence_refs": [
+        "AuthContext.tsx lines 43-61 (stub implementation)",
+        "Risk: MSAL production auth incomplete"
+      ],
+      "acceptance_criteria": "MsalAuthProvider acquires real tokens from Entra ID; ProtectedRoute redirects to Entra login page when unauthenticated; httpClient sends Bearer tokens in production mode; integration test with real tenant passes",
+      "files_to_touch": [
+        "web/src/features/auth/AuthContext.tsx",
+        "web/src/features/auth/msalConfig.ts"
+      ]
+    },
+    {
+      "type": "security_hardening",
+      "priority": "medium",
+      "title": "Add integrity check or session-scoped token for dev auth persona",
+      "description": "Sign dev-auth-user localStorage value with HMAC using server-issued session secret, or move dev persona to sessionStorage with SameSite cookie validation. Prevent client-side persona tampering.",
+      "evidence_refs": [
+        "DevAuthProvider.tsx lines 30-52",
+        "httpClient.ts lines 31-44",
+        "Risk: Dev auth persona stored in localStorage without integrity check"
+      ],
+      "acceptance_criteria": "Dev persona cannot be modified via browser console to impersonate other users; backend validates dev headers against session or signature; test: attempt to modify localStorage and verify API rejects tampered persona",
+      "files_to_touch": [
+        "web/src/features/auth/DevAuthProvider.tsx",
+        "web/src/lib/api/httpClient.ts",
+        "api/src/Infrastructure/Auth/DevAuthHandler.cs"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "medium",
+      "title": "Add pre-commit hook to prevent VITE_SECRET_* environment variables",
+      "description": "Create pre-commit hook (or enhance existing hook) to block commits containing 'VITE_SECRET', 'VITE_API_KEY', 'VITE_PASSWORD', or 'VITE_TOKEN' patterns in .env files or source. Add warning in CLAUDE.md about VITE_* exposure.",
+      "evidence_refs": [
+        "Risk: VITE_ENTRA_CLIENT_ID and secrets exposed to browser bundle",
+        ".env.example lines 1-7"
+      ],
+      "acceptance_criteria": "Pre-commit hook rejects commits with VITE_SECRET_KEY=xxx pattern; CLAUDE.md documents VITE_* exposure risk; developer education complete",
+      "files_to_touch": [
+        ".claude/hooks/pre-commit",
+        "CLAUDE.md",
+        "web/.env.example"
+      ]
+    },
+    {
+      "type": "robustness",
+      "priority": "low",
+      "title": "Add timeout and error state to ProtectedRoute loading UI",
+      "description": "Replace 'Redirecting to login...' with timeout (5s) and error state. If login() does not complete or redirect within timeout, show error message with retry button and support link.",
+      "evidence_refs": [
+        "ProtectedRoute.tsx lines 14-16",
+        "Risk: ProtectedRoute shows loading message without timeout"
+      ],
+      "acceptance_criteria": "After 5s without auth completion, ProtectedRoute shows error UI; error UI includes 'Retry' button and help text; test with mocked delayed login() confirms timeout behavior",
+      "files_to_touch": [
+        "web/src/features/auth/ProtectedRoute.tsx"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "low",
+      "title": "Add runtime guard to prevent DevToolbar in production",
+      "description": "Add NODE_ENV check to DevAuthProvider: throw error if import.meta.env.PROD === true but VITE_AUTH_MODE === 'development'. Fail fast at app startup rather than silently rendering dev UI in production.",
+      "evidence_refs": [
+        "DevAuthProvider.tsx lines 99-137",
+        "AuthProvider.tsx lines 64-71",
+        "Risk: DevToolbar visible in production if VITE_AUTH_MODE misconfigured"
+      ],
+      "acceptance_criteria": "Build with VITE_AUTH_MODE=development throws runtime error in production bundle; dev mode only allowed when import.meta.env.DEV === true; integration test confirms guard behavior",
+      "files_to_touch": [
+        "web/src/features/auth/AuthContext.tsx"
+      ]
+    }
+  ]
+}

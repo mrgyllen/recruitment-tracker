@@ -41,13 +41,19 @@ story_location: _bmad-output/implementation-artifacts
 
 development_status:
   # Epic 1: Project Foundation & User Access
-  epic-1: in-progress
+  epic-1: done
   1-1-project-scaffolding-ci-pipeline: done
   1-2-sso-authentication: done
   1-3-core-data-model-tenant-isolation: done
   1-4-shared-ui-components-design-tokens: done
   1-5-app-shell-empty-state-landing: done
   epic-1-retrospective: done
+  # Deferred items from Epic 1 retros (tracked for next sprint)
+  epic-1-deferred-coverage: backlog          # B7: Code coverage thresholds
+  epic-1-deferred-protectedroute-tests: backlog  # B8: ProtectedRoute edge case tests
+  epic-1-deferred-csp-headers: backlog       # B9: CSP and security headers
+  epic-1-deferred-msal-auth: backlog         # B10: Complete MSAL production auth
+  epic-1-deferred-bundle-budget: backlog     # B11: Bundle size budget tracking
 
   # Epic 2: Recruitment & Team Setup
   epic-2: backlog

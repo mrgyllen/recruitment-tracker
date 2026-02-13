@@ -1,0 +1,83 @@
+{
+  "lens": "architecture",
+  "wins": [
+    "Feature-based folder structure correctly implemented — features/auth and features/recruitments follow architectural pattern with pages/ subdirectories",
+    "Shared component library correctly established — StatusBadge, ActionButton, EmptyState, SkeletonLoader, ErrorBoundary all in components/ as specified, preventing feature-local duplication",
+    "httpClient.ts properly centralizes API communication — dynamic import of msalConfig prevents circular dependencies, implements Problem Details parsing, provides clean apiGet/apiPost/apiPut/apiDelete API",
+    "TanStack Query properly configured with sensible defaults — 30s stale time, 3 retries for queries, no retries for mutations, refetch on window focus enabled",
+    "Accessibility built-in from the start — skip-to-content link, prefers-reduced-motion guards in index.css, ARIA labels on StatusBadge, ViewportGuard with 1280px minimum per desktop-first requirement"
+  ],
+  "risks": [
+    "Missing lib/api/ folder structure — httpClient.ts exists but no feature-specific API modules (recruitmentApi.ts, candidateApi.ts) yet. Pattern documented but not demonstrated. Next API integration story must establish this pattern.",
+    "StatusBadge.types.ts uses .types.ts suffix but lives in components/ not co-located with API module — naming convention inconsistency. Architecture docs specify .types.ts for API types, but StatusBadge types aren't API-related. Should be inline or separate pattern for domain types.",
+    "AppHeader uses variant='secondary' on Button instead of variant='ghost' per architecture review notes (M1) — deferred from Story 1.4 but creates drift from shadcn/ui conventions. Acceptable as documented deviation, but should be revisited.",
+    "No hooks/ folder usage demonstrated yet — useAppToast lives in hooks/ but no feature-specific hooks (e.g., useRecruitmentOverview pattern from frontend-architecture.md). Pattern documented but not exercised.",
+    "AuthContext implements bridge pattern for dev/production auth but MsalAuthProvider is stubbed — all auth logic currently in DevAuthProvider. Production MSAL path exists but untested. Risk: integration issues when production auth is wired up.",
+    "ProtectedRoute uses useEffect for redirect logic — works but creates flash of 'Redirecting...' message. Could use loader pattern from React Router v7 for cleaner UX. Not a violation but suboptimal.",
+    "Dead @custom-variant dark in index.css — shadcn/ui boilerplate for dark mode that's not used. Acknowledged in review (M2) but remains. Low risk, clutters CSS."
+  ],
+  "missing_evidence": [],
+  "action_items": [
+    {
+      "type": "guideline_gap",
+      "priority": "high",
+      "title": "Establish lib/api/ module pattern with first backend integration",
+      "description": "Architecture specifies feature-specific API modules (lib/api/recruitments.ts, lib/api/recruitments.types.ts) but none exist yet. httpClient.ts is ready but pattern is not demonstrated. Next story that creates an API endpoint must create corresponding API module to establish the pattern before it's violated.",
+      "evidence_refs": [
+        "frontend-architecture.md lines 41-56: API Client Contract Pattern",
+        "patterns-frontend.md lines 44-50: lib/api/ structure with co-located types",
+        "httpClient.ts exists but no consumers yet"
+      ],
+      "acceptance_criteria": "First API integration story (likely Epic 2 recruitment CRUD) creates lib/api/recruitments.ts and lib/api/recruitments.types.ts following the documented pattern. Update patterns-frontend.md with real example if needed.",
+      "files_to_touch": [
+        "web/src/lib/api/recruitments.ts (create)",
+        "web/src/lib/api/recruitments.types.ts (create)",
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md (example update if helpful)"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "medium",
+      "title": "Clarify .types.ts suffix usage — API types vs domain types",
+      "description": "StatusBadge.types.ts uses .types.ts suffix but it's not an API type file. Architecture docs specify .types.ts for API modules co-located types (recruitmentApi.types.ts), but StatusBadge types are domain/component types. Need convention: inline export for domain types, .types.ts only for API shapes, OR .types.ts for both but document the distinction.",
+      "evidence_refs": [
+        "patterns-frontend.md lines 18: 'API types: camelCase .types.ts suffix'",
+        "patterns-frontend.md lines 47-50: lib/api/ with .types.ts files",
+        "components/StatusBadge.types.ts: domain enum, not API shape"
+      ],
+      "acceptance_criteria": "Update patterns-frontend.md to clarify: (1) .types.ts suffix for API request/response shapes co-located with API modules, (2) domain/component types either inline or separate .types.ts with clear naming (e.g., Component.types.ts for React props, domain.types.ts for domain enums). StatusBadge.types.ts is acceptable under clarified rule.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md"
+      ]
+    },
+    {
+      "type": "refactor",
+      "priority": "low",
+      "title": "Replace ProtectedRoute useEffect redirect with loader pattern",
+      "description": "Current ProtectedRoute uses useEffect to trigger login() when unauthenticated, causing flash of 'Redirecting...' message. React Router v7 supports loaders for pre-render auth checks. Refactor to loader-based redirect for cleaner UX (no flash). Not urgent — UX acceptable, pattern is suboptimal.",
+      "evidence_refs": [
+        "features/auth/ProtectedRoute.tsx lines 8-12: useEffect triggers login",
+        "React Router v7 loader pattern: https://reactrouter.com/en/main/route/loader"
+      ],
+      "acceptance_criteria": "ProtectedRoute uses loader function to check isAuthenticated before rendering. If unauthenticated, loader throws redirect() to login. No 'Redirecting...' message visible to user. Tests still pass.",
+      "files_to_touch": [
+        "web/src/features/auth/ProtectedRoute.tsx",
+        "web/src/routes/index.tsx (loader config)"
+      ]
+    },
+    {
+      "type": "cleanup",
+      "priority": "low",
+      "title": "Remove unused @custom-variant dark boilerplate from index.css",
+      "description": "Line 5 of index.css contains @custom-variant dark (&:is(.dark *)) from shadcn/ui template. Dark mode is not a requirement (desktop Edge/Chrome, internal tool). Remove to reduce CSS clutter. Acknowledged in Story 1.4 review (M2) but not actioned.",
+      "evidence_refs": [
+        "index.css line 5",
+        "context.md line 124: Story 1.4 review M2 (dead dark variant)"
+      ],
+      "acceptance_criteria": "Remove line 5 from index.css. Verify build still succeeds. No visual changes (dark mode not used).",
+      "files_to_touch": [
+        "web/src/index.css"
+      ]
+    }
+  ]
+}

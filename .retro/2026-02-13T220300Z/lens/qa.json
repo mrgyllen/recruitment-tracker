@@ -1,0 +1,153 @@
+{
+  "lens": "qa",
+  "wins": [
+    "All 90 tests pass with zero failures (16 test files, 3.06s) - clean test suite indicates stable implementation (context.md:99-102)",
+    "Accessibility testing with vitest-axe integrated across all UI components - 17 a11y tests ensure WCAG compliance for StatusBadge, ActionButton, EmptyState (StatusBadge.test.tsx:66-73, ActionButton.test.tsx:84-103)",
+    "Toast duration tests fixed during review (I1) - now verify exact duration values (3000ms success, Infinity error, 5000ms info) preventing silent timing regressions (Toast.test.tsx:59-84, context.md:120)",
+    "Destructive button styling tests explicitly verify bg-transparent and absence of solid red fill (I2 fix) - prevents accessibility violations (ActionButton.test.tsx:24-31, context.md:121)",
+    "Prefers-reduced-motion CSS guard added for animate-pulse (I3 fix) - improves accessibility for users with motion sensitivities (index.css:125-134, context.md:122)"
+  ],
+  "risks": [
+    "No code coverage tooling configured - evidence bundle explicitly states 'Not captured (no coverage tool configured)' (context.md:112-113). Cannot verify coverage adequacy, untested branches, or coverage regressions.",
+    "Icon tests use generic querySelector('svg') - review M4 identified this as weak assertion pattern that doesn't verify correct icon type (Clock vs Pause vs Check) (context.md:127, StatusBadge.test.tsx:25-47)",
+    "Missing edge case tests for ProtectedRoute race conditions - only 3 tests for auth guard, no coverage for: login() failure, multiple rapid auth state changes, component unmount during login redirect (ProtectedRoute.test.tsx:1-57)",
+    "ErrorBoundary has no componentDidCatch error logging test - implementation likely logs to console.error but tests suppress it without verifying the error is actually logged (ErrorBoundary.test.tsx:11-17)",
+    "ViewportGuard media query listener cleanup not tested - test verifies listener registration but doesn't assert removeEventListener is called on unmount, potential memory leak risk (ViewportGuard.test.tsx:70-90)",
+    "No negative test cases for components - missing tests for invalid props, missing required props, or type mismatches. Test pyramid principles state 'Domain/application changes have test coverage including at least one negative case' (testing-pragmatic-tdd.md:35-36)",
+    "Test-utils.tsx not examined - cannot verify if test helpers provide consistent provider setup or if provider config matches production setup (routes.test.tsx uses QueryClient and MemoryRouter but their configuration not validated)"
+  ],
+  "missing_evidence": [
+    "No coverage metrics reported - cannot verify if untested code paths exist in ActionButton loading state, EmptyState optional props, or SkeletonLoader variants",
+    "No performance/rendering budget tests - components like SkeletonLoader with animate-pulse have no assertion on re-render count or animation performance impact",
+    "No visual regression tests - StatusBadge color/icon combinations verified functionally but no snapshot or visual diff to catch unintended style changes",
+    "Missing integration test for Toast + AppHeader interaction - no test verifies toast positioning doesn't overlap header or that multiple toasts stack correctly"
+  ],
+  "action_items": [
+    {
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "title": "Enable code coverage reporting in vitest",
+      "description": "Add @vitest/coverage-v8 dependency and configure coverage thresholds in vite.config.ts. Set initial thresholds at current baseline (estimate 80%+ given 90 passing tests) and enforce in CI. Coverage reports are a Definition of Done requirement per testing-pragmatic-tdd.md but currently unavailable.",
+      "evidence_refs": [
+        "context.md:112-113 - 'Code Coverage: Not captured'",
+        "vite.config.ts:23-30 - test config has no coverage section",
+        "testing-pragmatic-tdd.md - test coverage is DoD requirement"
+      ],
+      "acceptance_criteria": "npm test -- --coverage generates HTML report with per-file coverage; CI fails if coverage drops below threshold; coverage badge added to README",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/vite.config.ts",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/package.json",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Replace generic icon tests with specific icon verification",
+      "description": "StatusBadge icon tests use querySelector('svg') which doesn't verify correct icon type. Replace with testid or aria-label assertions per icon (Check for pass, X for fail, Pause for hold, Clock for stale). Review flagged this as M4 but it's a flaky test risk - tests pass even if wrong icon is rendered.",
+      "evidence_refs": [
+        "context.md:127 - M4: StatusBadge icon tests generic",
+        "StatusBadge.test.tsx:25-47 - all icon tests use querySelector('svg')",
+        "StatusBadge.tsx:1-66 - imports Check, X, Pause, Clock from lucide-react"
+      ],
+      "acceptance_criteria": "Each icon test verifies correct icon component is rendered (by testid, aria-label, or data-icon attribute); test fails if Check icon is accidentally swapped with X icon",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/StatusBadge.test.tsx",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/StatusBadge.tsx"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P1",
+      "title": "Add edge case tests for ProtectedRoute auth flows",
+      "description": "ProtectedRoute has only 3 tests and no coverage for failure scenarios. Add tests for: login() throws error, auth state changes after component mount but before useEffect, component unmounts before login() completes. These are high-risk paths because security failures are production-critical.",
+      "evidence_refs": [
+        "ProtectedRoute.test.tsx:1-57 - only 3 tests, no error paths",
+        "ProtectedRoute.tsx:1-19 - useEffect calls login() with no error handling",
+        "testing-pragmatic-tdd.md:35-36 - 'at least one negative case' required"
+      ],
+      "acceptance_criteria": "Tests verify: login() error shows error boundary, multiple auth state flips don't cause infinite loop, abort signal cancels login on unmount",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/features/auth/ProtectedRoute.test.tsx"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add ErrorBoundary logging verification test",
+      "description": "ErrorBoundary suppresses console.error in tests but doesn't verify errors are actually logged. Add test that restores console.error mock and asserts error details are logged (for debugging and observability in production).",
+      "evidence_refs": [
+        "ErrorBoundary.test.tsx:11-17 - console.error mocked but never verified",
+        "testing-pragmatic-tdd.md:24 - 'Prioritize tests for high-risk paths'"
+      ],
+      "acceptance_criteria": "Test verifies console.error is called with Error object and component stack when ErrorBoundary catches error",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/ErrorBoundary.test.tsx"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add ViewportGuard cleanup test for memory leak prevention",
+      "description": "ViewportGuard adds event listener but test doesn't verify it's removed on unmount. Add test that unmounts component and verifies removeEventListener was called to prevent memory leaks in SPA navigation.",
+      "evidence_refs": [
+        "ViewportGuard.test.tsx:70-90 - tests addEventListener but not removeEventListener",
+        "ViewportGuard.tsx:14-16 - useEffect returns cleanup function"
+      ],
+      "acceptance_criteria": "Test unmounts ViewportGuard and asserts mql.removeEventListener was called exactly once",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/ViewportGuard.test.tsx"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add negative test cases for UI components",
+      "description": "Components have no tests for invalid props, missing required props, or boundary conditions. Add tests for: ActionButton with loading=true but no loadingText, EmptyState with actionLabel but no onAction, StatusBadge with undefined status. Aligns with Pragmatic TDD principle of testing negative cases.",
+      "evidence_refs": [
+        "testing-pragmatic-tdd.md:35-36 - 'at least one negative case (invalid input)'",
+        "ActionButton.test.tsx - no test for loadingText fallback to children",
+        "EmptyState.test.tsx - no test for actionLabel without onAction"
+      ],
+      "acceptance_criteria": "Each component has at least 2 negative test cases covering invalid/missing props; tests verify graceful degradation or clear error messages",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/ActionButton.test.tsx",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/EmptyState.test.tsx",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/web/src/components/StatusBadge.test.tsx"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P2",
+      "title": "Document test naming conventions in testing-standards.md",
+      "description": "Frontend test naming is inconsistent: some use 'should [behavior] when [scenario]' (ViewportGuard), others use 'renders [element]' (HomePage, AppHeader). Update testing-standards.md to show preferred pattern and rationale. Current standard says 'should [expected behavior] when [scenario]' but is not consistently followed.",
+      "evidence_refs": [
+        "testing-standards.md:48-56 - states frontend convention but examples vary",
+        "HomePage.test.tsx:20 - uses 'renders heading' not 'should render'",
+        "ViewportGuard.test.tsx:30 - uses 'renders children when' (hybrid style)"
+      ],
+      "acceptance_criteria": "testing-standards.md updated with 3 good/bad examples; decision recorded on whether 'should' prefix is required or optional",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ]
+    },
+    {
+      "type": "hook_update",
+      "priority": "P0",
+      "title": "Promote pending anti-patterns to permanent after validation",
+      "description": "Three anti-patterns added during Stories 1.4-1.5 are still pending: animate-pulse prefers-reduced-motion guard, toast duration assertion, Navigate to /login. All three have been fixed and validated (I3, I1, C1 in review). Promote to permanent anti-patterns.txt to enforce in future stories.",
+      "evidence_refs": [
+        "anti-patterns-pending.txt:3-5 - three entries from 1.4-1.5",
+        "context.md:120-123 - all three issues fixed in review",
+        "index.css:125-134 - prefers-reduced-motion guard applied",
+        "Toast.test.tsx:59-84 - duration assertions added",
+        "ProtectedRoute.tsx:8-12 - uses login() not Navigate"
+      ],
+      "acceptance_criteria": "All three patterns moved from anti-patterns-pending.txt to anti-patterns.txt; anti-patterns-pending.txt is empty; pre-commit hook enforces all three patterns",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.claude/hooks/anti-patterns-pending.txt",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.claude/hooks/anti-patterns.txt"
+      ]
+    }
+  ]
+}

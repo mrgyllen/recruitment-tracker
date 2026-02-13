@@ -1,0 +1,141 @@
+{
+  "lens": "delivery",
+  "wins": [
+    "High commit velocity: 28 commits in ~35 minutes with 10,258 insertions (Story 1.4: 8,934 lines, Story 1.5: 1,299 lines). Atomic, descriptive commit messages follow conventional format (feat/fix/docs prefix).",
+    "Strong test coverage: 90 tests across 16 test files, 100% pass rate, 1,004 LOC test code. Test-first applied systematically (7/9 tasks in 1.4, 5/8 tasks in 1.5). All custom components have comprehensive test suites (StatusBadge: 17 tests, ActionButton: 11, etc.).",
+    "Low complexity custom components: 7 components in web/src/components/ average 45 LOC each (range 23-66). Clean separation of concerns: StatusBadge uses config object pattern, no conditional complexity. RootLayout is 22 lines with clear structure.",
+    "Minimal rework: Only 4 fix commits in 28 total (14%). Review findings addressed in dedicated commits (33d18d0, d307016) without polluting feature commits. All 3 Important issues from Story 1.4 review resolved before merge.",
+    "Zero build/lint friction: Build completes in 2.22s with no errors. Only 6 lint warnings, all documented as unavoidable (vi.mock must precede imports). No ESLint config thrash — single override added for shadcn/ui pattern."
+  ],
+  "risks": [
+    "No code coverage metrics: Coverage tool not configured (context.md §3). Test count (90) is strong, but blind spots unknown. Custom components StatusBadge/ActionButton/EmptyState are foundation for all features — untested edge cases compound.",
+    "Large shadcn installation churn: 19 shadcn/ui components installed in one story (8,934 insertions in 1.4). Components are 'copied' not imported (architecture decision), but increases surface area for future maintenance — no upstream patches.",
+    "Lint warnings deferred, not resolved: 6 warnings persist in vi.mock files (import-x/order). Acknowledged as 'unavoidable' but no eslint-disable comment or tooling adjustment. Warnings normalize over time (broken windows).",
+    "Anti-pattern detection lagging implementation: 3 anti-patterns captured (animate-pulse, duration assertions, Navigate to login) but all discovered post-review, not during coding. Gate hook runs too late — patterns already in codebase by the time review identifies them.",
+    "Test infrastructure coupling risk: test-utils.tsx now wraps 4 providers (QueryClient, AuthProvider, MemoryRouter, Toaster). Story 1.5 added 2 more. Provider order matters (QueryClient above RouterProvider) but no tests verify provider interaction — future provider additions may break existing tests silently.",
+    "Missing implementation artifact hygiene: Dev Agent Record not found at expected path (bmad-output/dev-agent-records/), only implementation-artifacts/*.md exist. Process doc references dev-agent-records structure but actual location differs — documentation drift.",
+    "Story task checkboxes incomplete: Minor findings M3 (Story 1.4) and M2 (Story 1.5) note task checkboxes still [ ] instead of [x]. Low-severity but indicates story artifacts not finalized — may hinder future reference."
+  ],
+  "missing_evidence": [
+    "Code coverage percentage (lines/branches/statements) — no vitest coverage config in package.json or vite.config.ts",
+    "Bundle size impact from shadcn components (19 components installed) — build output shows 374.26 kB JS total but no per-component breakdown or budget tracking",
+    "Commit timing distribution — first commit 22:28, last commit 23:01 (33 min wall time) but no data on time spent per story (1.4 vs 1.5) or per-task granularity",
+    "Accessibility audit results beyond automated axe — no manual screen reader testing logged, no keyboard nav verification (skip-to-content link, focus management)",
+    "Review finding resolution time — I1/I2/I3 for Story 1.4 fixed in commit 33d18d0, C1 for Story 1.5 fixed in d307016, but no delta between review identification and fix commit"
+  ],
+  "action_items": [
+    {
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "title": "Add code coverage minimum threshold to CI pipeline",
+      "description": "Configure vitest coverage (v8 or istanbul) with minimum thresholds: 80% statements, 75% branches, 80% functions, 80% lines. Custom components (StatusBadge, ActionButton, EmptyState, ErrorBoundary) are foundation for all features — uncaught regressions compound across epics. Generate HTML report for CI artifacts.",
+      "evidence_refs": [
+        "context.md §3: 'Code Coverage: Not captured (no coverage tool configured)'",
+        "context.md §5: '90 tests, 90 passed' but no coverage percentage"
+      ],
+      "acceptance_criteria": "CI fails if coverage drops below thresholds. Coverage report uploaded as GitHub Actions artifact. web/package.json has 'test:coverage' script.",
+      "files_to_touch": [
+        "web/vite.config.ts",
+        "web/package.json",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "observability",
+      "priority": "P1",
+      "title": "Add bundle size budget tracking with size-limit",
+      "description": "Install size-limit and configure budget: 150kB gzipped total, 10kB per custom component, 50kB for shadcn/ui bundle. Current output: 117.81 kB gzipped (context.md §3). No per-component breakdown — shadcn 'copy' pattern means no tree-shaking visibility. Catch bloat before it ships.",
+      "evidence_refs": [
+        "context.md §3: 'JS (374.26 kB / 117.81 kB gzipped)' — total only",
+        "context.md §2: '19 shadcn/ui components installed' — no size breakdown",
+        "1.4 implementation artifact: 'shadcn/ui components are copied into web/src/components/ui/' — no upstream patches"
+      ],
+      "acceptance_criteria": "size-limit config in package.json with budgets for main bundle and custom components. CI fails if budget exceeded. Readable error shows which import caused bloat.",
+      "files_to_touch": [
+        "web/package.json",
+        ".size-limit.json",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "hook_update",
+      "priority": "P1",
+      "title": "Move anti-pattern gate from pre-commit to pre-push",
+      "description": "gate-anti-patterns.sh runs pre-commit but 3/3 anti-patterns (animate-pulse, duration, Navigate) discovered during review, not during coding. Developers fix issues before commit, then review finds patterns anyway. Move gate to pre-push (runs less frequently, higher friction acceptable) or add watch mode for real-time feedback during coding.",
+      "evidence_refs": [
+        "context.md §5: 'I1/I2/I3 for Story 1.4, C1 for Story 1.5' — all added to anti-patterns-pending.txt post-review",
+        "context.md §4: 'I1: Toast auto-dismiss timing zero test coverage → FIXED' — pattern caught in review, not by hook"
+      ],
+      "acceptance_criteria": ".git/hooks/pre-push runs gate-anti-patterns.sh. Or add npm script 'lint:patterns' that runs on file watch. Hook exit code 1 blocks push when pending patterns found.",
+      "files_to_touch": [
+        ".claude/hooks/setup-hooks.sh",
+        ".claude/hooks/pre-push",
+        "web/package.json (optional watch script)"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P1",
+      "title": "Promote all 3 pending anti-patterns to permanent with regression tests",
+      "description": "anti-patterns-pending.txt has 3 patterns (animate-pulse, duration, Navigate to login). All validated by review fixes (33d18d0 added prefers-reduced-motion CSS, 33d18d0 added duration spy tests, d307016 replaced Navigate with login()). Promote to permanent anti-patterns.txt and add grep-based regression tests to CI.",
+      "evidence_refs": [
+        "anti-patterns-pending.txt: 'animate-pulse|web/src/**/*.tsx|animate-pulse must be disabled under prefers-reduced-motion'",
+        "anti-patterns-pending.txt: 'duration|web/src/**/*.test.tsx|Toast/timer tests must assert exact duration values'",
+        "anti-patterns-pending.txt: 'Navigate to=\"/login\"|web/src/**/*.tsx|Do not use <Navigate> to auth routes'",
+        "context.md §4: 'I1/I2/I3 for Story 1.4 → FIXED', 'C1 for Story 1.5 → FIXED'"
+      ],
+      "acceptance_criteria": "All 3 patterns in .claude/hooks/anti-patterns.txt (not pending). CI runs gate-anti-patterns.sh and fails if patterns detected. Add test case to verify gate catches violations.",
+      "files_to_touch": [
+        ".claude/hooks/anti-patterns.txt",
+        ".claude/hooks/anti-patterns-pending.txt",
+        ".github/workflows/ci.yml",
+        ".claude/hooks/gate-anti-patterns.test.sh (new)"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add test-utils provider interaction tests",
+      "description": "test-utils.tsx wraps 4 providers (QueryClient, AuthProvider, MemoryRouter, Toaster) as of Story 1.5. Provider order matters (QueryClient above RouterProvider per 1.5 implementation artifact) but no test verifies provider stack integrity. Future provider additions may silently break render. Add smoke test that renders a component using all providers.",
+      "evidence_refs": [
+        "test-utils.tsx lines 18-30: '4 providers nested'",
+        "1.5 implementation artifact: 'QueryClientProvider wraps the app (above RouterProvider, so all route components have access)'",
+        "context.md §2: 'web/src/test-utils.tsx — Updated with QueryClient + MemoryRouter'"
+      ],
+      "acceptance_criteria": "test-utils.test.tsx renders a component that uses auth (useAuth), routing (useNavigate), query (useQuery), and toast (useAppToast). Test passes without provider errors. Test fails if provider order reversed.",
+      "files_to_touch": [
+        "web/src/test-utils.test.tsx (new)"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P2",
+      "title": "Add ESLint warning suppression guideline to architecture patterns",
+      "description": "6 lint warnings persist (import-x/order in vi.mock files). Acknowledged as 'unavoidable' in context.md §3 but no eslint-disable comment in code and no guideline on when to suppress vs fix. Document the pattern: when vi.mock must precede imports, add eslint-disable-next-line with explanation comment.",
+      "evidence_refs": [
+        "context.md §3: 'All warnings: import-x/order in test files with vi.mock (unavoidable — vi.mock must precede mocked imports)'",
+        "context.md §4 (Story 1.5 M3): '6 lint warnings in vi.mock test files'"
+      ],
+      "acceptance_criteria": "architecture/testing-standards.md has section 'ESLint in Tests' with example of eslint-disable-next-line for vi.mock import order. Pattern added to anti-patterns.txt: 'test files with 6+ warnings without inline suppression justification'.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md",
+        ".claude/hooks/anti-patterns.txt (optional)"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "P2",
+      "title": "Enforce story task checkbox completion before PR merge",
+      "description": "Minor findings M3 (Story 1.4) and M2 (Story 1.5) note task checkboxes still [ ] instead of [x]. Low-severity but indicates story artifacts not finalized. Add GitHub Actions check that scans implementation-artifacts/*.md for [ ] in task sections and fails if found on PR to main.",
+      "evidence_refs": [
+        "context.md §4 (Story 1.4 M3): 'Story task checkboxes still [ ]'",
+        "context.md §4 (Story 1.5 M2): 'Story task checkboxes still [ ]'"
+      ],
+      "acceptance_criteria": "CI script checks for '- [ ]' in implementation-artifacts/*.md on PR to main/exp branches. Fails with message 'Story tasks incomplete: <file>'. Script skips backlog stories (status: backlog).",
+      "files_to_touch": [
+        ".github/workflows/story-checklist.yml (new)",
+        ".github/scripts/check-story-tasks.sh (new)"
+      ]
+    }
+  ]
+}
