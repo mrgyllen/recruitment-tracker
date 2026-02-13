@@ -4,17 +4,20 @@
 # Uses file glob matching for targeted checks.
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
 
 # Get content to check (Write uses .content, Edit uses .new_string)
-CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty')
+CONTENT=$(echo "$INPUT" | jq -r '.tool_input.content // .tool_input.new_string // empty' 2>/dev/null)
 
 if [ -z "$CONTENT" ]; then
   exit 0
 fi
 
+# Use CLAUDE_PROJECT_DIR for project-relative paths (hooks may run from any cwd)
+PROJECT_DIR="${CLAUDE_PROJECT_DIR:-.}"
+
 # Check both anti-pattern files
-for AP_FILE in .claude/hooks/anti-patterns.txt .claude/hooks/anti-patterns-pending.txt; do
+for AP_FILE in "$PROJECT_DIR/.claude/hooks/anti-patterns.txt" "$PROJECT_DIR/.claude/hooks/anti-patterns-pending.txt"; do
   [ -f "$AP_FILE" ] || continue
 
   while IFS='|' read -r PATTERN GLOB MESSAGE; do

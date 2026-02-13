@@ -3,7 +3,7 @@
 # Non-blocking reminder after git commit if sprint-status wasn't updated.
 
 INPUT=$(cat)
-COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty')
+COMMAND=$(echo "$INPUT" | jq -r '.tool_input.command // empty' 2>/dev/null)
 
 if ! echo "$COMMAND" | grep -q "git commit"; then
   exit 0

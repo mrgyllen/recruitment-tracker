@@ -4,8 +4,8 @@
 # Pure logging, no blocking.
 
 INPUT=$(cat)
-FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty')
-SESSION_ID=$(echo "$INPUT" | jq -r '.session_id')
+FILE_PATH=$(echo "$INPUT" | jq -r '.tool_input.file_path // empty' 2>/dev/null)
+SESSION_ID=$(echo "$INPUT" | jq -r '.session_id' 2>/dev/null)
 READS_FILE="/tmp/claude-reads-${SESSION_ID}"
 echo "$FILE_PATH" >> "$READS_FILE"
 exit 0
