@@ -1,9 +1,7 @@
 import { Check, Clock, Pause, X } from 'lucide-react'
-
+import type { StatusBadgeProps, StatusVariant } from './StatusBadge.types'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
-
-import type { StatusBadgeProps, StatusVariant } from './StatusBadge.types'
 
 const variantConfig: Record<
   StatusVariant,

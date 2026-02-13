@@ -1,10 +1,9 @@
 import { render as rtlRender } from '@testing-library/react'
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
-import { axe } from 'vitest-axe'
 import { describe, expect, it, vi } from 'vitest'
-
+import { axe } from 'vitest-axe'
 import { ActionButton } from './ActionButton'
+import { render, screen } from '@/test-utils'
 
 describe('ActionButton', () => {
   it('should render primary variant', () => {

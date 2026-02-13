@@ -1,6 +1,5 @@
 import { render as rtlRender, screen } from '@testing-library/react'
 import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
-
 import { ErrorBoundary } from './ErrorBoundary'
 
 function ThrowingComponent({ shouldThrow }: { shouldThrow: boolean }) {

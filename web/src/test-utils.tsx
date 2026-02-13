@@ -1,10 +1,8 @@
 import { render } from '@testing-library/react'
-
-import { Toaster } from '@/components/ui/sonner'
-
 import { AuthProvider } from './features/auth/AuthContext'
 import type { RenderOptions } from '@testing-library/react'
 import type { ReactElement } from 'react'
+import { Toaster } from '@/components/ui/sonner'
 
 function AllProviders({ children }: { children: React.ReactNode }) {
   return (

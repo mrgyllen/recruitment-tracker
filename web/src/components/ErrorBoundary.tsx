@@ -1,7 +1,7 @@
 import { Component } from 'react'
+import { ActionButton } from './ActionButton'
 import type { ErrorInfo, ReactNode } from 'react'
 
-import { ActionButton } from './ActionButton'
 
 interface ErrorBoundaryProps {
   children: ReactNode

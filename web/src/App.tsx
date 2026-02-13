@@ -1,8 +1,6 @@
 import { useState } from 'react'
-
-import { Toaster } from '@/components/ui/sonner'
-
 import reactLogo from './assets/react.svg'
+import { Toaster } from '@/components/ui/sonner'
 import viteLogo from '/vite.svg'
 
 function App() {

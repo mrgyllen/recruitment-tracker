@@ -1,10 +1,9 @@
 import { render as rtlRender } from '@testing-library/react'
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
-import { axe } from 'vitest-axe'
 import { describe, expect, it, vi } from 'vitest'
-
+import { axe } from 'vitest-axe'
 import { EmptyState } from './EmptyState'
+import { render, screen } from '@/test-utils'
 
 describe('EmptyState', () => {
   it('should render heading at h2 level by default', () => {

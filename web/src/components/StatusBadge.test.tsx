@@ -1,10 +1,9 @@
 import { render as rtlRender } from '@testing-library/react'
-import { render, screen } from '@/test-utils'
-import { axe } from 'vitest-axe'
 import { describe, expect, it } from 'vitest'
-
+import { axe } from 'vitest-axe'
 import { StatusBadge } from './StatusBadge'
 import type { StatusVariant } from './StatusBadge.types'
+import { render, screen } from '@/test-utils'
 
 describe('StatusBadge', () => {
   const variants: { status: StatusVariant; label: string; hasIcon: boolean }[] =

@@ -1,7 +1,6 @@
-import { render } from '@/test-utils'
 import { describe, expect, it } from 'vitest'
-
 import { SkeletonLoader } from './SkeletonLoader'
+import { render } from '@/test-utils'
 
 describe('SkeletonLoader', () => {
   it('should render card variant with expected structure', () => {
