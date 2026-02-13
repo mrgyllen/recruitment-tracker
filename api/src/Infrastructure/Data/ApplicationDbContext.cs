@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using api.Application.Common.Interfaces;
 using api.Domain.Entities;
 using api.Infrastructure.Identity;
@@ -11,9 +11,10 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplica
 {
     public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : base(options) { }
 
-    public DbSet<TodoList> TodoLists => Set<TodoList>();
-
-    public DbSet<TodoItem> TodoItems => Set<TodoItem>();
+    public DbSet<Recruitment> Recruitments => Set<Recruitment>();
+    public DbSet<Candidate> Candidates => Set<Candidate>();
+    public DbSet<ImportSession> ImportSessions => Set<ImportSession>();
+    public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

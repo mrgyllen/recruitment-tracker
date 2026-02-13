@@ -1,12 +1,13 @@
-﻿using api.Domain.Entities;
+using api.Domain.Entities;
 
 namespace api.Application.Common.Interfaces;
 
 public interface IApplicationDbContext
 {
-    DbSet<TodoList> TodoLists { get; }
-
-    DbSet<TodoItem> TodoItems { get; }
+    DbSet<Recruitment> Recruitments { get; }
+    DbSet<Candidate> Candidates { get; }
+    DbSet<ImportSession> ImportSessions { get; }
+    DbSet<AuditEntry> AuditEntries { get; }
 
     Task<int> SaveChangesAsync(CancellationToken cancellationToken);
 }
