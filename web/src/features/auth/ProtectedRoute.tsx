@@ -1,11 +1,18 @@
-import { Navigate, Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { Outlet } from 'react-router'
 import { useAuth } from './AuthContext'
 
 export function ProtectedRoute() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, login } = useAuth()
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      login()
+    }
+  }, [isAuthenticated, login])
 
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />
+    return <p>Redirecting to login...</p>
   }
 
   return <Outlet />

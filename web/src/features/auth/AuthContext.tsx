@@ -9,6 +9,7 @@ interface AuthUser {
 interface AuthContextValue {
   isAuthenticated: boolean
   user: AuthUser | null
+  login: () => void
   signOut: () => void
 }
 
@@ -30,6 +31,7 @@ function DevAuthBridge({ children }: { children: ReactNode }) {
     () => ({
       isAuthenticated,
       user: currentUser,
+      login: () => setPersona('dev-user-a'),
       signOut: () => setPersona('unauthenticated'),
     }),
     [isAuthenticated, currentUser, setPersona],
@@ -45,6 +47,9 @@ function MsalAuthProvider({ children }: { children: ReactNode }) {
     () => ({
       isAuthenticated: false,
       user: null,
+      login: () => {
+        // Will call msalInstance.loginRedirect() when wired up
+      },
       signOut: () => {
         // Will call msalInstance.logoutRedirect() when wired up
       },

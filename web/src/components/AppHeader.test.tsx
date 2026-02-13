@@ -18,6 +18,7 @@ describe('AppHeader', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: mockSignOut,
     })
     mockSignOut.mockClear()
@@ -60,6 +61,7 @@ describe('AppHeader', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       user: null,
+      login: vi.fn(),
       signOut: mockSignOut,
     })
 

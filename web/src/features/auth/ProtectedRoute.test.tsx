@@ -18,7 +18,6 @@ function renderProtectedRoute(initialEntry = '/') {
         element: <ProtectedRoute />,
         children: [{ path: '/', element: <p>Protected content</p> }],
       },
-      { path: '/login', element: <p>Login page</p> },
     ],
     { initialEntries: [initialEntry] },
   )
@@ -31,6 +30,7 @@ describe('ProtectedRoute', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: vi.fn(),
     })
 
@@ -39,16 +39,19 @@ describe('ProtectedRoute', () => {
     expect(screen.getByText('Protected content')).toBeInTheDocument()
   })
 
-  it('redirects to /login when user is unauthenticated', () => {
+  it('calls login() and shows redirect message when unauthenticated', () => {
+    const mockLogin = vi.fn()
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       user: null,
+      login: mockLogin,
       signOut: vi.fn(),
     })
 
     renderProtectedRoute()
 
     expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
-    expect(screen.getByText('Login page')).toBeInTheDocument()
+    expect(screen.getByText('Redirecting to login...')).toBeInTheDocument()
+    expect(mockLogin).toHaveBeenCalledOnce()
   })
 })

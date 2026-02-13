@@ -44,6 +44,7 @@ describe('Route definitions', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: vi.fn(),
     })
 
@@ -59,6 +60,7 @@ describe('Route definitions', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: vi.fn(),
     })
 
@@ -73,6 +75,7 @@ describe('Route definitions', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: vi.fn(),
     })
 
@@ -83,11 +86,13 @@ describe('Route definitions', () => {
     expect(skipLink).toHaveAttribute('href', '#main-content')
   })
 
-  it('redirects unauthenticated user away from /', () => {
+  it('calls login and shows redirect message for unauthenticated user', () => {
     mockMatchMedia(true)
+    const mockLogin = vi.fn()
     mockUseAuth.mockReturnValue({
       isAuthenticated: false,
       user: null,
+      login: mockLogin,
       signOut: vi.fn(),
     })
 
@@ -96,6 +101,8 @@ describe('Route definitions', () => {
     expect(
       screen.queryByRole('heading', { name: /create your first recruitment/i }),
     ).not.toBeInTheDocument()
+    expect(screen.getByText('Redirecting to login...')).toBeInTheDocument()
+    expect(mockLogin).toHaveBeenCalledOnce()
   })
 
   it('renders main content area with correct id', () => {
@@ -103,6 +110,7 @@ describe('Route definitions', () => {
     mockUseAuth.mockReturnValue({
       isAuthenticated: true,
       user: { id: 'dev-user-a', name: 'Alice Dev' },
+      login: vi.fn(),
       signOut: vi.fn(),
     })
 
