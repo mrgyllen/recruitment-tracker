@@ -1,15 +1,34 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render } from '@testing-library/react'
-import { AuthProvider } from './features/auth/AuthContext'
-import type { RenderOptions } from '@testing-library/react'
-import type { ReactElement } from 'react'
+import { MemoryRouter } from 'react-router'
+
 import { Toaster } from '@/components/ui/sonner'
 
+import { AuthProvider } from './features/auth/AuthContext'
+
+import type { RenderOptions } from '@testing-library/react'
+import type { ReactElement } from 'react'
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
+}
+
 function AllProviders({ children }: { children: React.ReactNode }) {
+  const queryClient = createTestQueryClient()
   return (
-    <AuthProvider>
-      {children}
-      <Toaster position="bottom-right" visibleToasts={1} />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <MemoryRouter>
+          {children}
+        </MemoryRouter>
+        <Toaster position="bottom-right" visibleToasts={1} />
+      </AuthProvider>
+    </QueryClientProvider>
   )
 }
 
