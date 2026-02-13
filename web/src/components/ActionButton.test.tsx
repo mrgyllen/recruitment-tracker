@@ -21,6 +21,15 @@ describe('ActionButton', () => {
     expect(screen.getByRole('button', { name: 'Remove' })).toBeInTheDocument()
   })
 
+  it('should use outlined style for destructive variant (never solid red fill)', () => {
+    render(<ActionButton variant="destructive">Remove</ActionButton>)
+    const button = screen.getByRole('button', { name: 'Remove' })
+    expect(button.className).toMatch(/bg-transparent/)
+    expect(button.className).toMatch(/border/)
+    expect(button.className).not.toMatch(/bg-destructive(?![\w-])/)
+    expect(button.className).not.toMatch(/bg-status-fail(?!-)/)
+  })
+
   it('should disable button and show loading text in loading state', () => {
     render(
       <ActionButton variant="primary" loading loadingText="Creating...">
