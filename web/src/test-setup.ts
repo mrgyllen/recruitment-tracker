@@ -1,6 +1,9 @@
 import '@testing-library/jest-dom'
-import { afterAll, afterEach, beforeAll } from 'vitest'
+import { afterAll, afterEach, beforeAll, expect } from 'vitest'
+import * as axeMatchers from 'vitest-axe/matchers'
 import { server } from './mocks/server'
+
+expect.extend(axeMatchers)
 
 // Node 25+ has a built-in localStorage that conflicts with jsdom.
 // Replace it with a simple Map-based implementation for tests.
