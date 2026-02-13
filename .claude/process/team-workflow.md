@@ -138,6 +138,9 @@ Run after the **last story in the current prompt scope** is completed. Fully aut
 - The new retro skips stories already covered by a previous retro
 - The new retro checks whether deferred items from previous retros were addressed
 - The final retro is a **synthesis retro** — covers new stories plus validates all previous retro actions were applied
+- **Previous deferred items MUST be resolved** — a deferred item surviving two retros is a process failure. If the item is still valid, fix it NOW regardless of scope. If it's no longer relevant, explicitly close it with justification.
+
+**CRITICAL: Retro scope ≠ fix scope.** The retro EVALUATES stories in scope, but it FIXES everything outstanding — including items from previous retros and items outside the current story domain. A frontend retro that finds outstanding backend doc updates must apply them. The only valid reason to skip a fix is if it would destabilize code that wasn't touched in this sprint.
 
 ### Phase 1: Evidence Assembly
 
@@ -249,16 +252,20 @@ This is where the retro becomes self-healing. Team Lead works through the action
 |------------|-----------|
 | `refactor` (P2) | Fix now if ≤1 story point of effort. Otherwise add as a tracked task in sprint-status.yaml under the current epic. |
 | `test_gap` (P2) | Assign to Dev Agent now — test gaps compound if left open. |
-| `docs_update` (P2) | Apply immediately — docs updates are always low-risk. |
-| `security_hardening` (P1/P2) | Fix now. Security items should not be deferred. |
+| `docs_update` (ANY priority) | Apply immediately — ALWAYS. Docs updates are zero-risk. A docs_update must never be deferred. |
+| `security_hardening` (ANY priority) | Fix now. Security items must never be deferred. |
+| `observability` (P2) | Fix now if config-level. Defer only if it requires new infrastructure. |
 
 **Rules for Phase 4:**
 - P0 actions are ALWAYS applied immediately — never deferred
-- P1 actions are applied immediately if they are `hook_update`, `guideline_gap`, `docs_update`, or `process_change` (these are low-risk edits)
-- P1 actions that require code changes (test_gap, security_hardening) are assigned to Dev Agent now
-- P2 actions are fixed immediately if effort is small (≤1 story point). Only defer if the fix is a substantial refactor that would destabilize existing code
-- If a P2 action IS deferred, it MUST be added as a task in `sprint-status.yaml` under the current epic — NOT "deferred to next sprint" (which is a black hole with no tracking)
+- P1 actions are ALWAYS applied immediately — either by Team Lead (docs, hooks, process) or by Dev Agent (code changes)
+- P2 `docs_update` and `security_hardening` are NEVER deferred — these are non-negotiable
+- P2 `test_gap` is assigned to Dev Agent now — test gaps compound if left open
+- P2 `refactor` may be deferred ONLY if effort exceeds 1 story point AND the refactor would destabilize code not touched this sprint
+- If a P2 action IS deferred, it MUST be added as a task in `sprint-status.yaml` under the current epic with a clear key (e.g., `epic-1-deferred-description`) — NOT "deferred to next sprint"
+- **An item carried from a previous retro cannot be deferred again.** Fix it or explicitly close it with justification.
 - The retro is NOT done until all P0, P1, and applicable P2 actions are applied or assigned
+- **Expected outcome: 0-2 deferred items per retro.** If more than 2 items are deferred, the retro is being too permissive.
 
 ### Phase 5: Finalize
 
