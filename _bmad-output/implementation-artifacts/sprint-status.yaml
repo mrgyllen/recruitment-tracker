@@ -49,15 +49,15 @@ development_status:
   1-5-app-shell-empty-state-landing: done
   epic-1-retrospective: done
   # Deferred items from Epic 1 retros (tracked for next sprint)
-  epic-1-deferred-coverage: backlog          # B7: Code coverage thresholds
-  epic-1-deferred-protectedroute-tests: backlog  # B8: ProtectedRoute edge case tests
-  epic-1-deferred-csp-headers: backlog       # B9: CSP and security headers
-  epic-1-deferred-msal-auth: backlog         # B10: Complete MSAL production auth
-  epic-1-deferred-bundle-budget: backlog     # B11: Bundle size budget tracking
+  epic-1-deferred-coverage: done              # B7: Code coverage thresholds
+  epic-1-deferred-protectedroute-tests: done     # B8: ProtectedRoute edge case tests
+  epic-1-deferred-csp-headers: done          # B9: CSP and security headers
+  epic-1-deferred-msal-auth: done            # B10: Closed - deployment-specific config
+  epic-1-deferred-bundle-budget: done        # B11: Bundle size budget tracking
 
   # Epic 2: Recruitment & Team Setup
   epic-2: in-progress
-  2-1-create-recruitment-with-workflow-steps: ready-for-dev
+  2-1-create-recruitment-with-workflow-steps: done
   2-2-recruitment-list-navigation: ready-for-dev
   2-3-edit-recruitment-manage-workflow-steps: ready-for-dev
   2-4-team-membership-management: ready-for-dev
