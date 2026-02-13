@@ -1,6 +1,8 @@
-﻿using api.Application.Common.Exceptions;
-using Microsoft.AspNetCore.Diagnostics;
+﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
+using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
+using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
+using ValidationException = api.Application.Common.Exceptions.ValidationException;
 
 namespace api.Web.Infrastructure;
 

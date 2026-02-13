@@ -1,13 +1,12 @@
 import { render, screen } from '@testing-library/react'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
+import { useAuth } from './AuthContext'
 import { ProtectedRoute } from './ProtectedRoute'
 
 vi.mock('./AuthContext', () => ({
   useAuth: vi.fn(),
 }))
-
-import { useAuth } from './AuthContext'
 
 const mockUseAuth = vi.mocked(useAuth)
 

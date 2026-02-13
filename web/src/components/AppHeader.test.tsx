@@ -2,12 +2,11 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { AppHeader } from './AppHeader'
+import { useAuth } from '@/features/auth/AuthContext'
 
 vi.mock('@/features/auth/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
-
-import { useAuth } from '@/features/auth/AuthContext'
 
 const mockUseAuth = vi.mocked(useAuth)
 

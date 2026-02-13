@@ -1,58 +1,81 @@
-import { render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { http, HttpResponse } from 'msw'
+import { describe, expect, it } from 'vitest'
 import { HomePage } from './HomePage'
-
-vi.mock('sonner', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('sonner')>()
-  return {
-    ...actual,
-    toast: {
-      ...actual.toast,
-      info: vi.fn(actual.toast.info),
-    },
-  }
-})
-
-import { toast } from 'sonner'
+import { server } from '@/mocks/server'
+import { render, screen, waitFor } from '@/test-utils'
 
 describe('HomePage', () => {
-  it('renders heading "Create your first recruitment"', () => {
-    render(<HomePage />)
-
-    expect(
-      screen.getByRole('heading', { name: /create your first recruitment/i }),
-    ).toBeInTheDocument()
-  })
-
-  it('renders value proposition description', () => {
-    render(<HomePage />)
-
-    expect(
-      screen.getByText(
-        /track candidates from screening to offer/i,
-      ),
-    ).toBeInTheDocument()
-  })
-
-  it('renders "Create Recruitment" CTA button', () => {
-    render(<HomePage />)
-
-    expect(
-      screen.getByRole('button', { name: /create recruitment/i }),
-    ).toBeInTheDocument()
-  })
-
-  it('shows toast when CTA is clicked', async () => {
-    const user = userEvent.setup()
-    render(<HomePage />)
-
-    await user.click(
-      screen.getByRole('button', { name: /create recruitment/i }),
+  it('should render empty state when no recruitments exist', async () => {
+    server.use(
+      http.get('/api/recruitments', () => {
+        return HttpResponse.json({
+          items: [],
+          totalCount: 0,
+          page: 1,
+          pageSize: 50,
+        })
+      }),
     )
 
-    expect(toast.info).toHaveBeenCalledWith('Coming in Epic 2', {
-      duration: 5000,
+    render(<HomePage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', {
+          name: /create your first recruitment/i,
+        }),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('should render recruitment list when recruitments exist', async () => {
+    server.use(
+      http.get('/api/recruitments', () => {
+        return HttpResponse.json({
+          items: [
+            {
+              id: 'test-id',
+              title: 'Senior Developer',
+              description: 'A test recruitment',
+              status: 'Active',
+              createdAt: new Date().toISOString(),
+              closedAt: null,
+              stepCount: 3,
+              memberCount: 1,
+            },
+          ],
+          totalCount: 1,
+          page: 1,
+          pageSize: 50,
+        })
+      }),
+    )
+
+    render(<HomePage />)
+
+    await waitFor(() => {
+      expect(screen.getByText('Senior Developer')).toBeInTheDocument()
+    })
+  })
+
+  it('should render "Create Recruitment" CTA in empty state', async () => {
+    server.use(
+      http.get('/api/recruitments', () => {
+        return HttpResponse.json({
+          items: [],
+          totalCount: 0,
+          page: 1,
+          pageSize: 50,
+        })
+      }),
+    )
+
+    render(<HomePage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /create recruitment/i }),
+      ).toBeInTheDocument()
     })
   })
 })
