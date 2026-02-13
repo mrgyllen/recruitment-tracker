@@ -1,0 +1,203 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Autonomous Retrospective Output",
+  "description": "Machine-readable output from the autonomous retrospective pipeline. Designed for self-healing consumption.",
+  "type": "object",
+  "required": ["run_id", "scope", "summary", "actions", "lens_reports"],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "description": "ISO 8601 timestamp identifying this retro run (e.g., 2026-02-12T120000Z)"
+    },
+    "scope": {
+      "type": "object",
+      "required": ["level", "items", "git"],
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["task", "stories", "epic"],
+          "description": "Granularity of the work being reviewed"
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": {
+              "id": { "type": "string", "description": "Story or task identifier" },
+              "title": { "type": "string" },
+              "acceptance_criteria": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        },
+        "git": {
+          "type": "object",
+          "required": ["base", "head"],
+          "properties": {
+            "base": { "type": "string", "description": "Base commit SHA" },
+            "head": { "type": "string", "description": "Head commit SHA" }
+          }
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "required": ["wins", "problems"],
+      "properties": {
+        "wins": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 5
+        },
+        "problems": {
+          "type": "array",
+          "items": { "type": "string" },
+          "maxItems": 7
+        },
+        "root_cause_hypotheses": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "missing_evidence": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "actions": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 10,
+      "items": {
+        "$ref": "#/$defs/action_item"
+      }
+    },
+    "experiments": {
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": ["id", "hypothesis", "how", "success_metric"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^E-\\d{3}$" },
+          "hypothesis": { "type": "string" },
+          "how": { "type": "string" },
+          "success_metric": { "type": "string" }
+        }
+      }
+    },
+    "lens_reports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["persona", "wins", "problems"],
+        "properties": {
+          "persona": { "type": "string" },
+          "wins": {
+            "type": "array",
+            "items": { "type": "string" },
+            "maxItems": 5
+          },
+          "problems": {
+            "type": "array",
+            "items": { "type": "string" },
+            "maxItems": 7
+          },
+          "missing_evidence": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "candidate_actions": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Action IDs proposed by this lens"
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "action_item": {
+      "type": "object",
+      "required": ["id", "title", "type", "priority", "owner_persona", "rationale", "evidence_refs", "acceptance_criteria", "risk_if_ignored"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^A-\\d{3}$",
+          "description": "Stable ID within this run"
+        },
+        "title": {
+          "type": "string",
+          "description": "Short imperative title (e.g., 'Add smoke test for X')"
+        },
+        "type": {
+          "type": "string",
+          "enum": [
+            "docs_update",
+            "hook_update",
+            "guideline_gap",
+            "test_gap",
+            "quality_gate_gap",
+            "refactor",
+            "architecture_alignment",
+            "security_hardening",
+            "observability",
+            "process_change"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": ["P0", "P1", "P2"]
+        },
+        "owner_persona": {
+          "type": "string",
+          "description": "Which lens owns this action (helps routing)"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Why this matters"
+        },
+        "evidence_refs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Concrete references: file paths, commit IDs, snippet IDs"
+        },
+        "acceptance_criteria": {
+          "type": "array",
+          "items": { "type": "string" },
+          "minItems": 1,
+          "description": "Verifiable checks — machine-checkable where possible"
+        },
+        "automation_hints": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "How a bot could implement this"
+        },
+        "files_to_touch": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Likely file paths to modify"
+        },
+        "hooks_to_add_or_change": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "change"],
+            "properties": {
+              "name": { "type": "string" },
+              "change": { "type": "string" }
+            }
+          }
+        },
+        "risk_if_ignored": {
+          "type": "string",
+          "description": "Consequence of not addressing this"
+        }
+      }
+    }
+  }
+}

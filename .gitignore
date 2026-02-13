@@ -18,8 +18,11 @@ temp/
 *.pid
 *.seed
 
-# Tool-local state
-.claude/
+# Tool-local state — ignore .claude/ except process, hooks, and retro
+.claude/*
+!.claude/process/
+!.claude/hooks/
+!.claude/retro/
 
 # Node
 node_modules/

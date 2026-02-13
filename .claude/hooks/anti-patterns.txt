@@ -1,0 +1,20 @@
+# Known anti-patterns — permanent entries curated by retrospectives
+# Format: REGEX|FILE_GLOB|MESSAGE
+
+# Test framework
+\[Fact\]|*.cs|Use [Test] (NUnit), not [Fact] (xUnit). See architecture/testing-standards.md
+\[Theory\]|*.cs|Use [TestCase] (NUnit), not [Theory] (xUnit). See architecture/testing-standards.md
+UseInMemoryDatabase|*.cs|Use Testcontainers with real SQL Server. InMemoryDatabase is forbidden
+using Moq;|*.cs|Use NSubstitute, not Moq. See architecture/testing-standards.md
+
+# Template cleanup (promoted from pending — recurring in Stories 1.1-1.3)
+AutoMapper|api/**/*.csproj|Architecture forbids AutoMapper — use manual DTO mapping only
+Shouldly|api/**/*.csproj|Use FluentAssertions, not Shouldly
+AddDefaultIdentity|api/**/*.cs|Do not register ASP.NET Identity — architecture uses Entra ID exclusively
+
+# Domain model rules (promoted from pending — Story 1.3)
+\[NotMapped\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API builder.Ignore()
+\[Required\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API
+\[MaxLength\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API
+\[Column\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API
+\[Table\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API

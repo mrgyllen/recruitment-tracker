@@ -1,0 +1,3 @@
+# Pending anti-patterns — added by mini-retro during sprint
+# Will be promoted to permanent or removed by autonomous retro
+# (All entries from Stories 1.1-1.3 promoted to anti-patterns.txt by retro 2026-02-13T002800Z)
