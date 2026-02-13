@@ -1,2 +1,4 @@
 # Pending anti-patterns — added by mini-retro during sprint
 # Will be promoted to permanent or removed by autonomous retro
+animate-pulse|web/src/**/*.tsx|animate-pulse must be disabled under prefers-reduced-motion — add CSS guard
+duration|web/src/**/*.test.tsx|Toast/timer tests must assert exact duration values, not just render content
