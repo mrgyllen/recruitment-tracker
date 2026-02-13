@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router'
 import { useRecruitments } from '../hooks/useRecruitments'
 import { EmptyState } from '@/components/EmptyState'
+import { Button } from '@/components/ui/button'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -31,12 +32,9 @@ export function HomePage() {
     <div className="mx-auto max-w-4xl p-6">
       <div className="mb-6 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Recruitments</h1>
-        <button
-          onClick={() => void navigate('/recruitments/new')}
-          className="bg-primary text-primary-foreground rounded-md px-4 py-2 text-sm font-medium"
-        >
+        <Button onClick={() => void navigate('/recruitments/new')}>
           Create Recruitment
-        </button>
+        </Button>
       </div>
       <ul className="space-y-3">
         {data.items.map((item) => (

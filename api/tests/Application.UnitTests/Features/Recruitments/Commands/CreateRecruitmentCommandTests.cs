@@ -118,4 +118,21 @@ public class CreateRecruitmentCommandTests
 
         result.Should().NotBeEmpty();
     }
+
+    [Test]
+    public async Task Handle_WithJobRequisitionId_PersistsIt()
+    {
+        var handler = new CreateRecruitmentCommandHandler(_dbContext, _user);
+        var command = new CreateRecruitmentCommand
+        {
+            Title = "Dev Role",
+            JobRequisitionId = "REQ-2026-042",
+            Steps = []
+        };
+
+        await handler.Handle(command, CancellationToken.None);
+
+        _dbContext.Recruitments.Received(1).Add(Arg.Is<Recruitment>(r =>
+            r.JobRequisitionId == "REQ-2026-042"));
+    }
 }

@@ -19,14 +19,8 @@ public class CreateRecruitmentCommandHandler : IRequestHandler<CreateRecruitment
         var recruitment = Recruitment.Create(
             request.Title,
             request.Description,
-            Guid.Parse(_user.Id!));
-
-        if (!string.IsNullOrEmpty(request.JobRequisitionId))
-        {
-            // JobRequisitionId is set via Create factory in the future.
-            // For now, the domain model doesn't expose a setter — we'll need to add it.
-            // This is acceptable because the field is optional and read-only after creation.
-        }
+            Guid.Parse(_user.Id!),
+            request.JobRequisitionId);
 
         foreach (var step in request.Steps.OrderBy(s => s.Order))
         {

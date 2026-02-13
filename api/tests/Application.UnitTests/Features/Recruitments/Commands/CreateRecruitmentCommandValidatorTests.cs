@@ -122,4 +122,43 @@ public class CreateRecruitmentCommandValidatorTests
 
         result.IsValid.Should().BeTrue();
     }
+
+    [Test]
+    public async Task Validate_NonContiguousStepOrders_HasValidationError()
+    {
+        var command = new CreateRecruitmentCommand
+        {
+            Title = "Dev Role",
+            Steps =
+            [
+                new WorkflowStepDto { Name = "Screening", Order = 1 },
+                new WorkflowStepDto { Name = "Interview", Order = 3 },
+                new WorkflowStepDto { Name = "Offer", Order = 5 }
+            ]
+        };
+
+        var result = await _validator.ValidateAsync(command);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().Contain(e => e.ErrorMessage.Contains("contiguous"));
+    }
+
+    [Test]
+    public async Task Validate_ContiguousStepOrders_IsValid()
+    {
+        var command = new CreateRecruitmentCommand
+        {
+            Title = "Dev Role",
+            Steps =
+            [
+                new WorkflowStepDto { Name = "Screening", Order = 1 },
+                new WorkflowStepDto { Name = "Interview", Order = 2 },
+                new WorkflowStepDto { Name = "Offer", Order = 3 }
+            ]
+        };
+
+        var result = await _validator.ValidateAsync(command);
+
+        result.IsValid.Should().BeTrue();
+    }
 }

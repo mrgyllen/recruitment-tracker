@@ -26,12 +26,13 @@ public class Recruitment : GuidEntity
 
     private Recruitment() { } // EF Core
 
-    public static Recruitment Create(string title, string? description, Guid createdByUserId)
+    public static Recruitment Create(string title, string? description, Guid createdByUserId, string? jobRequisitionId = null)
     {
         var recruitment = new Recruitment
         {
             Title = title,
             Description = description,
+            JobRequisitionId = jobRequisitionId,
             Status = RecruitmentStatus.Active,
             CreatedAt = DateTimeOffset.UtcNow,
             CreatedByUserId = createdByUserId,

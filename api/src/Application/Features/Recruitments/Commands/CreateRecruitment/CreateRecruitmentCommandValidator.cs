@@ -22,6 +22,15 @@ public class CreateRecruitmentCommandValidator : AbstractValidator<CreateRecruit
             .When(x => x.Steps.Count > 0)
             .WithMessage("Workflow step names must be unique.");
 
+        RuleFor(x => x.Steps)
+            .Must(steps =>
+            {
+                var orders = steps.Select(s => s.Order).OrderBy(o => o).ToList();
+                return orders.SequenceEqual(Enumerable.Range(1, steps.Count));
+            })
+            .When(x => x.Steps.Count > 0)
+            .WithMessage("Workflow step orders must be contiguous starting from 1.");
+
         RuleForEach(x => x.Steps).ChildRules(step =>
         {
             step.RuleFor(s => s.Name)
