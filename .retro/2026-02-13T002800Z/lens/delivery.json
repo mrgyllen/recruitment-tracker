@@ -1,0 +1,182 @@
+{
+  "lens": "delivery",
+  "wins": [
+    "Clean Architecture separation works well - Domain (133 LOC Recruitment.cs) is pure logic with no infrastructure dependencies",
+    "CI pipeline is minimal but functional - both api and web jobs pass with format/lint enforcement",
+    "Testing standards enforced via Testcontainers for integration tests - avoids InMemoryDatabase false positives",
+    "Anti-pattern detection hooks operational - caught AutoMapper, Shouldly, [NotMapped] violations during sprint",
+    "Frontend test coverage strong - 19/19 passing with MSW, Testing Library, test-utils provider wrappers"
+  ],
+  "risks": [
+    "Template cleanup is recurring bottleneck - Stories 1.1, 1.2, 1.3 all had Critical/Important findings from leftover template code (AutoMapper, ASP.NET Identity registration, Web.AcceptanceTests, 40+ Bicep files)",
+    "Dev Agent Record empty in 2 of 3 stories - missing implementation rationale/decision log reduces knowledge transfer",
+    "Integration tests require Docker runtime - 8 tenant isolation tests compile but need Testcontainers+Docker to execute, not verified in local evidence",
+    "Global query filter uses Guid.ToString() comparison (M2 finding Story 1.3) - type mismatch between UserId string and Guid may cause performance/index issues",
+    "ASP.NET Identity still registered in Infrastructure - DependencyInjection.cs line 36-39 calls AddDefaultIdentity despite architecture forbidding it (anti-pattern rule exists but not enforced)",
+    "No backend security test automation in CI - 8 mandatory tenant isolation tests exist but evidence shows they only compile, unclear if they run in CI or only locally",
+    "EditorConfig severity levels remain lenient - Story 1.1 I2 finding not addressed, most rules are 'suggestion' or 'silent' instead of 'warning/error'"
+  ],
+  "missing_evidence": [
+    "CI test execution logs - evidence bundle shows 'compile, need Docker' but no confirmation tests run in GitHub Actions",
+    "Build time metrics - no data on restore/build/test duration to identify bottlenecks",
+    "Code coverage reports - no coverage percentage for domain/application layers",
+    "Deployment pipeline - no staging/production deployment configuration visible",
+    "Dependency vulnerability scanning - no Dependabot or security scan results"
+  ],
+  "action_items": [
+    {
+      "type": "hook_update",
+      "priority": "P0",
+      "title": "Add template cleanup verification hook",
+      "description": "Create pre-commit hook that scans for common template artifacts: AutoMapper in .csproj, Shouldly in .csproj, AddDefaultIdentity in .cs, Web.AcceptanceTests project references, api/infra/ directory. Block commit if found. Template cleanup was the #1 source of Critical/Important findings across all 3 stories.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 86-96 (Story 1.1 findings)",
+        ".retro/2026-02-13T002800Z/context.md line 119 (recurring pattern)",
+        "api/src/Infrastructure/DependencyInjection.cs lines 36-39 (ASP.NET Identity still present)"
+      ],
+      "acceptance_criteria": "Hook blocks commit with clear message if any template artifact detected. Run against clean main branch (should pass) and commit 971dc3a (should fail on AutoMapper).",
+      "files_to_touch": [
+        ".claude/hooks/gate-template-cleanup.sh",
+        ".claude/hooks/anti-patterns.txt"
+      ]
+    },
+    {
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "title": "Enforce EditorConfig severity levels to error/warning",
+      "description": "Update .editorconfig to change key rules from 'suggestion/silent' to 'warning/error': dotnet_style_readonly_field (already warning), csharp_prefer_braces (already warning), interfaces naming (already warning), private field naming (already warning), methods/properties naming (already warning). Then run dotnet format --verify-no-changes in CI. Story 1.1 I2 identified this gap but it was not fixed.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 88 (I2 finding)",
+        "api/.editorconfig lines 77, 118, 200-270 (severity levels)"
+      ],
+      "acceptance_criteria": "CI job 'dotnet format --verify-no-changes' passes on main, fails on intentional violation (e.g., public field lowercase name). At least 10 key rules upgraded to warning/error.",
+      "files_to_touch": [
+        "api/.editorconfig"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P0",
+      "title": "Verify integration tests run in CI with Testcontainers",
+      "description": "Confirm Infrastructure.IntegrationTests (8 tenant isolation tests) execute in CI pipeline, not just compile. GitHub Actions ubuntu-latest runners support Docker. If tests don't run, add explicit 'dotnet test Infrastructure.IntegrationTests' step. Evidence shows 'compile, need Docker' but no execution confirmation.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 75 (test results)",
+        ".github/workflows/ci.yml line 19 (dotnet test api/api.slnx)"
+      ],
+      "acceptance_criteria": "CI logs show 'Passed! - Failed: 0, Passed: 8' for Infrastructure.IntegrationTests. Testcontainer startup logs visible in CI output.",
+      "files_to_touch": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "title": "Remove ASP.NET Identity registration from Infrastructure",
+      "description": "Lines 36-39 of Infrastructure/DependencyInjection.cs call AddDefaultIdentity<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>(). Architecture forbids ASP.NET Identity (Entra ID only). Anti-pattern rule exists but this slipped through. Remove registration, verify ApplicationUser/IdentityService are only used for Entra ID claims mapping.",
+      "evidence_refs": [
+        "api/src/Infrastructure/DependencyInjection.cs lines 36-39",
+        ".claude/hooks/anti-patterns.txt line 7 (AddDefaultIdentity forbidden)",
+        "_bmad-output/planning-artifacts/architecture.md (Entra ID exclusive auth)"
+      ],
+      "acceptance_criteria": "AddDefaultIdentity removed, builds pass, all auth tests (5 functional + 19 frontend) pass. Grep for 'AddDefaultIdentity|AddIdentity' returns zero results in src/.",
+      "files_to_touch": [
+        "api/src/Infrastructure/DependencyInjection.cs",
+        "api/src/Infrastructure/Identity/IdentityService.cs",
+        "api/src/Infrastructure/Identity/ApplicationUser.cs"
+      ]
+    },
+    {
+      "type": "refactor",
+      "priority": "P1",
+      "title": "Fix Guid.ToString() in global query filter",
+      "description": "ApplicationDbContext.cs line 40 compares m.UserId.ToString() (Guid to string) with _tenantContext.UserId (string). This prevents index usage. Change ITenantContext.UserId to Guid? and update all consumers (CurrentUserService, TenantContext, httpClient dev headers). Story 1.3 M2 finding noted this but marked as minor.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs line 40",
+        ".retro/2026-02-13T002800Z/context.md line 114 (M2 finding)"
+      ],
+      "acceptance_criteria": "ITenantContext.UserId is Guid?, query filter compares m.UserId == _tenantContext.UserId directly, all 8 tenant isolation tests pass, no ToString() in query filter.",
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/ITenantContext.cs",
+        "api/src/Infrastructure/Identity/TenantContext.cs",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "P1",
+      "title": "Enforce Dev Agent Record completion in code review checklist",
+      "description": "Dev Agent Record was empty in Stories 1.2 and 1.3 (recurring pattern). Update code review checklist to require non-empty record with rationale for key decisions (testing mode, architecture tradeoffs, spike justifications). Reject PR if section is boilerplate/empty.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 102 (Story 1.2 I3)",
+        ".retro/2026-02-13T002800Z/context.md line 112 (Story 1.3 I3)",
+        ".retro/2026-02-13T002800Z/context.md line 120 (recurring pattern)"
+      ],
+      "acceptance_criteria": "Code review checklist has explicit item 'Dev Agent Record non-empty with rationale'. Reviewer rejects if empty. Apply to next 2 PRs and verify compliance.",
+      "files_to_touch": [
+        "_bmad/bmm/workflows/4-implementation/code-review/checklist.md"
+      ]
+    },
+    {
+      "type": "observability",
+      "priority": "P2",
+      "title": "Add build/test duration tracking to CI",
+      "description": "GitHub Actions supports duration metrics via workflow annotations. Add step timing to CI pipeline (restore, build, test, format) to identify bottlenecks. Current evidence has no timing data.",
+      "evidence_refs": [
+        ".github/workflows/ci.yml (no timing instrumentation)",
+        ".retro/2026-02-13T002800Z/context.md lines 66-76 (quality signals missing timing)"
+      ],
+      "acceptance_criteria": "CI logs show step durations (e.g., 'restore: 12s, build: 34s, test: 28s'). Baseline recorded for next retro comparison.",
+      "files_to_touch": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "title": "Add code coverage requirement to CI",
+      "description": "No code coverage metrics visible in evidence. Add coverlet to test projects, generate coverage report in CI, enforce minimum threshold (suggest 70% for Domain/Application, 50% for Infrastructure). Helps catch untested business logic.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 71-76 (test results but no coverage)",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md (no coverage mention)"
+      ],
+      "acceptance_criteria": "CI generates coverage report, fails if Domain coverage <70% or Application coverage <50%. Coverage badge added to repo README.",
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Domain.UnitTests.csproj",
+        "api/tests/Application.UnitTests/Application.UnitTests.csproj",
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P2",
+      "title": "Document template cleanup checklist in architecture",
+      "description": "Create dedicated 'Template Cleanup Checklist' shard in architecture/ that lists all known template artifacts to remove (AutoMapper, Shouldly, AddDefaultIdentity, Web.AcceptanceTests, api/infra/ Bicep, App.css, overly broad .gitignore). Reference from project-structure.md. Prevents recurring findings.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 86-96 (Story 1.1 findings)",
+        "_bmad-output/planning-artifacts/architecture/project-structure.md (no cleanup section)"
+      ],
+      "acceptance_criteria": "New file _bmad-output/planning-artifacts/architecture/template-cleanup-checklist.md exists with 10+ items. Referenced from project-structure.md. Reviewed by team.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/template-cleanup-checklist.md",
+        "_bmad-output/planning-artifacts/architecture/project-structure.md"
+      ]
+    },
+    {
+      "type": "security_hardening",
+      "priority": "P2",
+      "title": "Add Dependabot and security scanning to CI",
+      "description": "No evidence of dependency vulnerability scanning. Enable GitHub Dependabot for both NuGet (api) and npm (web). Add 'dotnet list package --vulnerable' and 'npm audit' to CI pipeline. Fail CI on high/critical vulnerabilities.",
+      "evidence_refs": [
+        ".github/workflows/ci.yml (no security scanning)",
+        "web/package.json (45 dependencies, no audit visible)",
+        "api/src/**/*.csproj (no vulnerability check)"
+      ],
+      "acceptance_criteria": "Dependabot config exists (.github/dependabot.yml). CI includes 'dotnet list package --vulnerable' and 'npm audit --audit-level=high'. No high/critical vulnerabilities in current dependencies.",
+      "files_to_touch": [
+        ".github/dependabot.yml",
+        ".github/workflows/ci.yml"
+      ]
+    }
+  ]
+}

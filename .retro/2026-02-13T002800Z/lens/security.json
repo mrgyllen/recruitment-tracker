@@ -1,0 +1,140 @@
+{
+  "lens": "security",
+  "wins": [
+    "Dev auth handler is properly guarded with runtime IsDevelopment() check (DependencyInjection.cs:29) per architecture requirement — no preprocessor directives used",
+    "Comprehensive tenant isolation testing with 8 Testcontainers-based integration tests covering cross-recruitment isolation, service context bypass, membership changes, and filter OR logic",
+    "Global query filter on Candidate entity enforces tenant isolation at data layer (ApplicationDbContext.cs:32-41) with three-tier access model (IsServiceContext, RecruitmentId scope, UserId membership)",
+    "No hardcoded secrets or credentials in codebase — placeholder values only in appsettings.json, .env.development uses safe defaults, .gitignore properly excludes .env files",
+    "Fallback authorization policy requires authentication for all endpoints (DependencyInjection.cs:39-42), explicit RequireAuthorization on test endpoint demonstrates pattern"
+  ],
+  "risks": [
+    "CRITICAL: AddDefaultIdentity still registered in Infrastructure/DependencyInjection.cs:37-39 despite architecture forbidding ASP.NET Identity and anti-pattern hook in place — creates unused ASP.NET Identity tables and potential confusion about auth source",
+    "HIGH: No TenantContextMiddleware implementation found — evidence bundle (context.md:112) mentions I2 'TenantContextMiddleware was a no-op' fixed in 491e125, but no middleware file exists in codebase. Unknown if ITenantContext.RecruitmentId/IsServiceContext are populated anywhere in production code",
+    "HIGH: ITenantContext has mutable setters (IsServiceContext, RecruitmentId) but grep found zero production code setting IsServiceContext=true — service context appears untested in production paths, only used in integration tests",
+    "MEDIUM: AuditBehaviour uses Guid.Empty for recruitmentId (AuditBehaviour.cs:34) with comment 'Set by specific command handlers in future stories' — audit trail exists but is not contextually useful yet, risk of shipping incomplete audit implementation",
+    "MEDIUM: No CORS configuration found in codebase — may be acceptable for same-origin deployment (Vite proxy in dev, reverse proxy in prod), but unclear if this is intentional or missing",
+    "LOW: Dev auth personas (User A/B/Admin) are hardcoded in DevAuthProvider.tsx with fixed GUIDs — may cause conflicts if tests assume specific UUIDs without coordination",
+    "LOW: Query filter uses string comparison for UserId (ApplicationDbContext.cs:40) despite UserId being Guid in domain — type mismatch noted as M2 in evidence bundle, marked as non-blocking but creates potential for runtime comparison bugs"
+  ],
+  "missing_evidence": [
+    "No TenantContextMiddleware found in source — cannot verify how ITenantContext.RecruitmentId or IsServiceContext are populated for import/GDPR service scenarios mentioned in architecture",
+    "No tests exist for scenarios where IsServiceContext=true in production paths (only integration tests set this via mocks)",
+    "No documentation or tests demonstrating how import service or GDPR job would authenticate and set service context flags",
+    "Unknown if NoindexMiddleware runs before or after authentication — middleware order matters for security headers but evidence bundle shows no test coverage",
+    "No evidence of authorization attribute usage on any actual endpoints (only test health-auth endpoint exists) — cannot verify authorization enforcement patterns for future endpoints"
+  ],
+  "action_items": [
+    {
+      "type": "security_hardening",
+      "priority": "P0",
+      "title": "Remove AddDefaultIdentity registration from Infrastructure layer",
+      "description": "Architecture explicitly forbids ASP.NET Identity (Entra ID only). Remove AddDefaultIdentity/AddRoles/AddEntityFrameworkStores from Infrastructure/DependencyInjection.cs:37-39. This creates unused Identity tables (AspNetUsers, AspNetRoles, etc.) and violates the security model where Entra ID is the sole identity source. IIdentityService and IdentityService can remain (used for testing) but should not register ASP.NET Core Identity middleware.",
+      "evidence_refs": [
+        "api/src/Infrastructure/DependencyInjection.cs:37-39",
+        ".claude/hooks/anti-patterns-pending.txt:7",
+        "_bmad-output/planning-artifacts/architecture.md (auth via Entra ID only)"
+      ],
+      "acceptance_criteria": "dotnet build succeeds, anti-pattern hook triggers if AddDefaultIdentity re-introduced, no AspNetUsers/AspNetRoles/AspNetUserRoles tables in future migrations",
+      "files_to_touch": [
+        "api/src/Infrastructure/DependencyInjection.cs"
+      ]
+    },
+    {
+      "type": "architecture_alignment",
+      "priority": "P0",
+      "title": "Implement TenantContextMiddleware for service context population",
+      "description": "Evidence bundle shows TenantContextMiddleware was 'a no-op' (I2 finding) but no middleware implementation exists in codebase. ITenantContext.IsServiceContext and RecruitmentId have setters but zero production code sets them. Need middleware to: (1) detect service-to-service calls (e.g., import background job) and set IsServiceContext=true, (2) extract RecruitmentId from route/headers for import service scoping, (3) document and test the authentication model for background services. Without this, the three-tier tenant isolation model (service/recruitment/user) cannot function beyond user-scoped requests.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:112 (I2 finding)",
+        "api/src/Application/Common/Interfaces/ITenantContext.cs:6-7 (mutable properties)",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs:34-36 (query filter branches for IsServiceContext and RecruitmentId)"
+      ],
+      "acceptance_criteria": "TenantContextMiddleware exists, registered in correct middleware pipeline order (after UseAuthentication, before UseAuthorization), sets IsServiceContext or RecruitmentId based on documented rules, integration tests verify middleware populates context for service scenarios",
+      "files_to_touch": [
+        "api/src/Infrastructure/Data/Middleware/TenantContextMiddleware.cs (new)",
+        "api/src/Web/Program.cs (register middleware)",
+        "api/tests/Infrastructure.IntegrationTests/Middleware/TenantContextMiddlewareTests.cs (new)"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P1",
+      "title": "Add functional tests for service context authentication model",
+      "description": "IsServiceContext flag exists but no production code sets it (only mocked in integration tests). Need functional tests that: (1) verify how GDPR background job authenticates (service principal? special header?), (2) confirm IsServiceContext bypass works end-to-end via HTTP request, (3) document the authentication model for import/GDPR services. Current tests only verify query filter logic with mocked ITenantContext — no evidence that the service->API authentication path works.",
+      "evidence_refs": [
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs:45,94,113,162 (IsServiceContext mocked)",
+        "_bmad-output/planning-artifacts/architecture.md (mentions GDPR job as IHostedService)"
+      ],
+      "acceptance_criteria": "Functional test demonstrates service context authentication flow, documentation in dev-auth-patterns.md or architecture/patterns-backend.md describes service principal setup or alternative auth model, test passes in CI",
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Authorization/ServiceContextTests.cs (new)",
+        "_bmad-output/planning-artifacts/architecture/dev-auth-patterns.md (document service auth model)"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P1",
+      "title": "Add authorization enforcement tests for endpoint patterns",
+      "description": "Only one endpoint exists (/api/health-auth) and it has explicit RequireAuthorization. Fallback policy exists but no tests verify it applies to minimal API endpoints or MediatR-based endpoints. Need tests that: (1) verify fallback policy blocks unauthenticated requests to endpoints without explicit AllowAnonymous, (2) confirm authorization attributes work with minimal API route handlers, (3) test recruitment membership-based authorization (when implemented). Current DevAuthenticationTests only verify auth handler mechanics, not endpoint-level enforcement.",
+      "evidence_refs": [
+        "api/src/Web/DependencyInjection.cs:39-42 (fallback policy)",
+        "api/src/Web/Program.cs:35-36 (single test endpoint)",
+        "api/tests/Application.FunctionalTests/Authentication/DevAuthenticationTests.cs (only tests auth handler)"
+      ],
+      "acceptance_criteria": "Functional tests verify unauthenticated requests to arbitrary endpoints return 401, authenticated requests succeed, tests use multiple endpoint types (minimal API, potential controller-based), documented pattern for adding per-recruitment authorization checks",
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Authorization/EndpointAuthorizationTests.cs (new)"
+      ]
+    },
+    {
+      "type": "observability",
+      "priority": "P1",
+      "title": "Add structured logging for tenant context resolution and query filter evaluation",
+      "description": "Tenant isolation is the primary security boundary but no logging exists to observe: (1) which tenant context (user/recruitment/service) was resolved per request, (2) when query filters return zero results due to missing context (MisconfiguredContext test scenario), (3) service context bypass events (audit trail for when IsServiceContext=true). This instrumentation gap makes security incidents difficult to investigate and legitimate access failures difficult to debug.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Identity/TenantContext.cs (no logging)",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs (query filter has no logging)",
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs:122-133 (MisconfiguredContext scenario exists but no telemetry)"
+      ],
+      "acceptance_criteria": "TenantContext logs resolved UserId/RecruitmentId/IsServiceContext at INFO level with correlation ID, query filter logs filter mode (service/recruitment/user/none) at DEBUG level, AuditBehaviour logs service context bypass events, no PII in log output (GUIDs only)",
+      "files_to_touch": [
+        "api/src/Infrastructure/Identity/TenantContext.cs",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/src/Application/Common/Behaviours/AuditBehaviour.cs"
+      ]
+    },
+    {
+      "type": "refactor",
+      "priority": "P2",
+      "title": "Fix UserId type mismatch in query filter (string vs Guid)",
+      "description": "ITenantContext.UserId is string (from ClaimsPrincipal) but RecruitmentMember.UserId is Guid. Query filter uses string comparison (m.UserId.ToString() == _tenantContext.UserId) which works but is inefficient and error-prone. Evidence bundle notes this as M2 finding. Refactor to: (1) parse UserId to Guid in TenantContext, expose both string and Guid properties, or (2) store UserId as string in ClaimsPrincipal and domain model consistently. Current approach creates potential for runtime bugs if UserId is not a valid Guid.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs:40",
+        "api/src/Infrastructure/Identity/TenantContext.cs:14",
+        ".retro/2026-02-13T002800Z/context.md:115 (M2 finding)"
+      ],
+      "acceptance_criteria": "Query filter uses type-safe Guid comparison, no .ToString() in query filter, TenantContext handles invalid Guid gracefully (return null/empty), existing tests pass",
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/ITenantContext.cs",
+        "api/src/Infrastructure/Identity/TenantContext.cs",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/tests/Application.UnitTests/Common/Identity/TenantContextTests.cs"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P2",
+      "title": "Document CORS policy and same-origin deployment model",
+      "description": "No CORS configuration exists in codebase. For dev (Vite proxy) and production (Azure Static Web Apps reverse proxy), same-origin deployment may be sufficient. However, lack of explicit CORS policy should be documented as intentional architectural decision, not an oversight. If future scenarios require cross-origin API calls (e.g., separate frontend domain, mobile app), absence of CORS will block them. Document the same-origin assumption and conditions under which CORS would be needed.",
+      "evidence_refs": [
+        "api/src/Web/DependencyInjection.cs (no AddCors call)",
+        "api/src/Web/Program.cs (no UseCors call)",
+        "_bmad-output/planning-artifacts/architecture.md (Static Web Apps + App Service hosting)"
+      ],
+      "acceptance_criteria": "Architecture document or patterns-backend.md includes section on CORS policy (or lack thereof), states same-origin assumption explicitly, describes conditions that would trigger CORS requirement (e.g., separate frontend domain)",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    }
+  ]
+}

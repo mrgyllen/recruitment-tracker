@@ -1,0 +1,207 @@
+{
+  "run_id": "2026-02-13T002800Z",
+  "scope": ["1.1", "1.2", "1.3"],
+  "lenses": ["delivery", "qa", "architecture", "docs", "security"],
+  "wins": [
+    {
+      "title": "DDD aggregate boundaries correctly enforced",
+      "description": "All child entities use internal static Create() methods, private constructors, and are modified only through aggregate root methods. Cross-aggregate references are IDs only. Zero bypass violations observed.",
+      "lenses": ["architecture", "delivery"]
+    },
+    {
+      "title": "Defense-in-depth tenant isolation with comprehensive tests",
+      "description": "Global query filter on Candidate entity with three-tier access model (service/recruitment/user). 8 Testcontainers-based integration tests cover all mandatory security scenarios including cross-recruitment isolation, service context bypass, and membership changes.",
+      "lenses": ["security", "qa", "architecture"]
+    },
+    {
+      "title": "Anti-pattern detection hooks caught violations during sprint",
+      "description": "Hooks caught AutoMapper, Shouldly, [NotMapped] violations. 4 anti-patterns added to pending.txt for future promotion. System is self-improving.",
+      "lenses": ["delivery", "docs"]
+    },
+    {
+      "title": "Architecture docs accurately predicted implementation structure",
+      "description": "8 entities, 3 aggregates, testing stack (NUnit/NSubstitute/FluentAssertions), project structure, dev auth dual-mode — all implemented as documented. Low drift between spec and code.",
+      "lenses": ["docs", "architecture"]
+    },
+    {
+      "title": "Review process caught critical security and invariant bugs",
+      "description": "Code review caught missing creator-removal invariant (C1 Story 1.3), missing security tests (I1 Story 1.3), non-JSON error crash (I1 Story 1.2). Fix cycle resolved all issues before approval.",
+      "lenses": ["qa", "security"]
+    }
+  ],
+  "action_items": [
+    {
+      "id": "A1",
+      "type": "security_hardening",
+      "priority": "P0",
+      "title": "Remove AddDefaultIdentity and ASP.NET Identity registration",
+      "description": "Infrastructure/DependencyInjection.cs still calls AddDefaultIdentity<ApplicationUser>().AddRoles<IdentityRole>().AddEntityFrameworkStores<ApplicationDbContext>() despite architecture mandating Entra ID only. Creates unused Identity tables and violates ADR-AUTH-001. Remove registration, clean up ApplicationUser/IdentityService. Anti-pattern hook exists but was not enforced.",
+      "evidence_refs": [
+        "api/src/Infrastructure/DependencyInjection.cs:37-39",
+        ".claude/hooks/anti-patterns-pending.txt:7",
+        "Flagged by: delivery, architecture, security lenses"
+      ],
+      "acceptance_criteria": "No AddDefaultIdentity call in codebase. ApplicationDbContext extends DbContext (not IdentityDbContext). Build passes. All 37 domain + 8 tenant isolation tests pass.",
+      "files_to_touch": [
+        "api/src/Infrastructure/DependencyInjection.cs",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/src/Infrastructure/Identity/ApplicationUser.cs",
+        "api/src/Infrastructure/Identity/IdentityService.cs"
+      ]
+    },
+    {
+      "id": "A2",
+      "type": "docs_update",
+      "priority": "P0",
+      "title": "Document Fluent API pattern for ignoring domain event collections",
+      "description": "patterns-backend.md forbids data annotations but doesn't explain how to ignore DomainEvents without [NotMapped]. BaseEntity.cs still uses [NotMapped]. Add section with builder.Ignore(e => e.DomainEvents) example. Prevents recurring [NotMapped] violations.",
+      "evidence_refs": [
+        "api/src/Domain/Common/BaseEntity.cs ([NotMapped] still present)",
+        ".retro/2026-02-13T002800Z/context.md:113 (M1 finding)",
+        "Flagged by: docs lens"
+      ],
+      "acceptance_criteria": "patterns-backend.md has 'Domain Event Collections' section with Fluent API example. Anti-patterns.txt has permanent entry for [NotMapped] in domain.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    },
+    {
+      "id": "A3",
+      "type": "docs_update",
+      "priority": "P1",
+      "title": "Add template cleanup checklist to starter-templates.md",
+      "description": "Template cleanup was the #1 source of review findings across all 3 stories (AutoMapper, Shouldly, AddDefaultIdentity, AcceptanceTests, Bicep files). Add explicit checklist to prevent recurring issues in future scaffolding.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:86-96 (Story 1.1 findings)",
+        ".retro/2026-02-13T002800Z/context.md:119 (recurring pattern)",
+        "Flagged by: docs, delivery lenses"
+      ],
+      "acceptance_criteria": "starter-templates.md has 'Template Cleanup Checklist' section with 10+ specific items covering all known template artifacts.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/starter-templates.md"
+      ]
+    },
+    {
+      "id": "A4",
+      "type": "docs_update",
+      "priority": "P1",
+      "title": "Document ASP.NET Core middleware pipeline ordering rules",
+      "description": "Story 1.2 review found ExceptionHandler registered after endpoints. No doc explains correct middleware order. Add canonical sequence with rationale.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:100 (I2 finding)",
+        "api/src/Web/Program.cs (current correct order)",
+        "Flagged by: docs, architecture lenses"
+      ],
+      "acceptance_criteria": "patterns-backend.md has 'Middleware Pipeline Order' section with numbered sequence and rationale for each position.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    },
+    {
+      "id": "A5",
+      "type": "process_change",
+      "priority": "P1",
+      "title": "Enforce Dev Agent Record completion in review checklist",
+      "description": "Dev Agent Record was empty in Stories 1.2 and 1.3 (recurring in 2/3 stories). Add explicit review checklist item. Document what should go in this section.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:102,112 (I3 findings)",
+        "Flagged by: delivery, qa, docs lenses"
+      ],
+      "acceptance_criteria": "team-workflow.md updated with Dev Agent Record requirements. Review checklist includes non-empty check.",
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ]
+    },
+    {
+      "id": "A6",
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "title": "Consolidate IUser and ICurrentUserService into single abstraction",
+      "description": "Two parallel identity abstractions exist: IUser (Web) and ICurrentUserService (Application). Both extract same claim. TenantContext depends on ICurrentUserService. Consolidate to single IUser in Application layer.",
+      "evidence_refs": [
+        "api/src/Web/Services/CurrentUser.cs",
+        "api/src/Infrastructure/Identity/CurrentUserService.cs",
+        "api/src/Application/Common/Interfaces/ICurrentUserService.cs",
+        "Flagged by: architecture lens"
+      ],
+      "acceptance_criteria": "Single IUser interface in Application layer. Single implementation in Infrastructure. TenantContext uses IUser. No ICurrentUserService references remain. All tests pass.",
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/ICurrentUserService.cs",
+        "api/src/Infrastructure/Identity/CurrentUserService.cs",
+        "api/src/Infrastructure/Identity/TenantContext.cs",
+        "api/src/Web/Services/CurrentUser.cs",
+        "api/src/Web/DependencyInjection.cs",
+        "api/src/Infrastructure/DependencyInjection.cs"
+      ]
+    },
+    {
+      "id": "A7",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "title": "Promote recurring anti-patterns from pending to permanent",
+      "description": "AutoMapper and Shouldly anti-patterns were caught across multiple stories. Promote to permanent anti-patterns.txt. Add [NotMapped] for domain entities. Add data annotation regex for broader coverage.",
+      "evidence_refs": [
+        ".claude/hooks/anti-patterns-pending.txt (4 entries)",
+        "Flagged by: docs, architecture lenses"
+      ],
+      "acceptance_criteria": "anti-patterns.txt has permanent entries for AutoMapper, Shouldly, AddDefaultIdentity, data annotations in domain. Pending entries for one-time items removed.",
+      "files_to_touch": [
+        ".claude/hooks/anti-patterns.txt",
+        ".claude/hooks/anti-patterns-pending.txt"
+      ]
+    },
+    {
+      "id": "A8",
+      "type": "refactor",
+      "priority": "P2",
+      "title": "Fix Guid.ToString() type mismatch in global query filter",
+      "description": "ApplicationDbContext query filter compares m.UserId.ToString() with string ITenantContext.UserId. Forces SQL CAST, prevents index usage. Change ITenantContext.UserId to Guid?.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs:40",
+        "Flagged by: delivery, architecture, security lenses"
+      ],
+      "acceptance_criteria": "Query filter uses type-safe Guid comparison. No ToString() in filter. All 8 tenant isolation tests pass.",
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/ITenantContext.cs",
+        "api/src/Infrastructure/Identity/TenantContext.cs",
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs"
+      ]
+    },
+    {
+      "id": "A9",
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add domain event payload verification tests",
+      "description": "Domain tests assert event type (ContainSingle) but not payload. Event data could be wrong and tests would pass. Add payload assertions for key events.",
+      "evidence_refs": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs:32-36",
+        "Flagged by: qa lens"
+      ],
+      "acceptance_criteria": "Event tests assert RecruitmentId, Title, MemberId match expected values.",
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs",
+        "api/tests/Domain.UnitTests/Entities/CandidateTests.cs"
+      ]
+    },
+    {
+      "id": "A10",
+      "type": "docs_update",
+      "priority": "P2",
+      "title": "Document CORS policy and same-origin deployment assumption",
+      "description": "No CORS configuration exists. Document this as intentional (same-origin via Vite proxy / reverse proxy) and conditions that would require CORS.",
+      "evidence_refs": [
+        "api/src/Web/DependencyInjection.cs (no AddCors)",
+        "Flagged by: security lens"
+      ],
+      "acceptance_criteria": "patterns-backend.md has section on CORS policy documenting same-origin assumption.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    }
+  ],
+  "deferred_to_next_sprint": [
+    "A8: Fix Guid.ToString() type mismatch in query filter (P2 refactor)",
+    "A9: Add domain event payload verification tests (P2 test gap)",
+    "A10: Document CORS policy (P2 docs update)"
+  ]
+}

@@ -1,0 +1,163 @@
+{
+  "lens": "qa",
+  "wins": [
+    "All 37 domain unit tests passing with comprehensive coverage of aggregate invariants, state transitions, and business rules (RecruitmentTests, CandidateTests, ImportSessionTests)",
+    "Security-first testing: 8/8 mandatory tenant isolation scenarios now covered via Testcontainers integration tests after review fix (I1 resolved)",
+    "Consistent use of FluentAssertions across all backend tests (anti-pattern hooks prevented Shouldly and Moq)",
+    "Frontend tests validate both happy paths and error handling (401 AuthError, 502 fallback, non-JSON responses) with MSW mocking",
+    "Test-first approach successfully enforced for Story 1.3 domain logic (c662291 failing tests before 82cfacc implementation)"
+  ],
+  "risks": [
+    "Application.UnitTests and Application.FunctionalTests require ASP.NET runtime to execute — CI verification unknown, no evidence of dotnet test passing in CI logs",
+    "No integration test coverage for AuditBehaviour transactional behavior despite M3 finding (separate SaveChangesAsync) — risk of audit entries missing on command failure",
+    "Frontend test suite only 19 tests across 5 files — no tests for future UI components, API integration layers, or error boundary behavior",
+    "DevAuthenticationTests use localdb connection string — may fail in CI without SQL Server LocalDB or Testcontainers",
+    "No mutation testing or code coverage metrics — unknown whether tests actually exercise failure paths or just green-path assertions",
+    "Web.AcceptanceTests breaks CI (Playwright not installed per I3 finding) but no evidence of removal or fix — blocker for E2E testing",
+    "No observable tests for domain events propagation or MediatR pipeline integration beyond AuditBehaviour unit tests"
+  ],
+  "missing_evidence": [
+    "CI test execution logs — evidence bundle shows 'dotnet build' success but no 'dotnet test' output for Application.UnitTests, Application.FunctionalTests, or Infrastructure.IntegrationTests",
+    "Code coverage reports — no baseline coverage percentage, no trend data, no enforcement gate",
+    "Test execution time metrics — no evidence of slow tests, flaky tests, or Testcontainers startup overhead tracking",
+    "Dev Agent Record sections empty for Stories 1.2 and 1.3 (recurring pattern) — missing context on test design decisions, spike vs test-first rationale, edge cases considered"
+  ],
+  "action_items": [
+    {
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "title": "Add CI test execution gate for all test projects",
+      "description": "CI pipeline currently only runs 'dotnet build' — add 'dotnet test' step for Application.UnitTests, Application.FunctionalTests, Infrastructure.IntegrationTests, and Domain.UnitTests. Configure Testcontainers to use GitHub Actions services or Testcontainers Cloud.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:68-76 (test results show compile only, no execution evidence)",
+        ".github/workflows/*.yml (CI definition files)"
+      ],
+      "acceptance_criteria": "CI pipeline runs 'dotnet test --no-build' for all test projects and fails the build if any test fails. Integration tests using Testcontainers execute successfully in CI.",
+      "files_to_touch": [
+        ".github/workflows/ci.yml"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P0",
+      "title": "Add integration test for AuditBehaviour transactional behavior",
+      "description": "M3 review finding identified AuditBehaviour calls separate SaveChangesAsync (transactional gap risk). Current AuditBehaviourTests are unit tests with mocked DbContext — cannot verify that audit entries are rolled back when command SaveChangesAsync fails. Add Testcontainers-based integration test: execute command that throws after business logic but before SaveChanges, verify audit entry is NOT persisted.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:115 (M3 finding)",
+        "api/tests/Application.UnitTests/Common/Behaviours/AuditBehaviourTests.cs (only mocks, no transaction verification)"
+      ],
+      "acceptance_criteria": "New test AuditBehaviour_CommandFailsAfterLogic_RollsBackAuditEntry passes. Test uses real DbContext via Testcontainers, throws exception after command logic, asserts AuditEntries table is empty.",
+      "files_to_touch": [
+        "api/tests/Infrastructure.IntegrationTests/Behaviours/AuditBehaviourTransactionTests.cs"
+      ]
+    },
+    {
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "title": "Remove or fix Web.AcceptanceTests blocker",
+      "description": "Story 1.1 review finding I3: Web.AcceptanceTests breaks CI because Playwright is not installed. Project is currently scaffolded but not functional. Either remove the test project entirely or add Playwright setup to CI and fix tests. Leaving broken tests in the repo creates normalization-of-deviance risk.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:89 (I3 finding)",
+        "api/tests/Web.AcceptanceTests/ (broken test project)"
+      ],
+      "acceptance_criteria": "Either: (A) Web.AcceptanceTests project deleted and removed from solution, OR (B) Playwright installed in CI, tests execute and pass, and at least one smoke test exists for a real user workflow.",
+      "files_to_touch": [
+        "api/tests/Web.AcceptanceTests/ (delete or fix)",
+        ".github/workflows/ci.yml (add Playwright setup if keeping)",
+        "api/api.slnx (remove project reference if deleting)"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P1",
+      "title": "Add negative test cases for domain aggregate methods",
+      "description": "Domain unit tests cover many happy paths and exception cases, but missing systematic negative coverage. Examples: Recruitment.AddStep with null/empty name, Candidate.RecordOutcome with Guid.Empty stepId, ImportSession.MarkCompleted with negative counts. Pragmatic TDD policy requires 'at least one negative case' per DoD.",
+      "evidence_refs": [
+        "docs/testing-pragmatic-tdd.md:36 (DoD: negative case required)",
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs (no null/empty validation tests)",
+        "api/tests/Domain.UnitTests/Entities/CandidateTests.cs (no Guid.Empty tests)"
+      ],
+      "acceptance_criteria": "Each aggregate root entity test class has at least one test per public method validating invalid input behavior (ArgumentNullException, ArgumentException, or domain exception). Test naming follows MethodName_InvalidInput_ThrowsException convention.",
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs",
+        "api/tests/Domain.UnitTests/Entities/CandidateTests.cs",
+        "api/tests/Domain.UnitTests/Entities/ImportSessionTests.cs"
+      ]
+    },
+    {
+      "type": "observability",
+      "priority": "P1",
+      "title": "Add code coverage collection and baseline reporting",
+      "description": "No evidence of code coverage metrics in evidence bundle. Without coverage data, cannot measure test effectiveness or identify untested paths. Add coverlet to test projects, configure CI to collect coverage, and publish reports. Set initial baseline (no gate yet) to establish trend.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md (no coverage metrics in quality signals)"
+      ],
+      "acceptance_criteria": "CI pipeline collects code coverage using coverlet, publishes coverage report as artifact, and logs coverage percentage summary. Baseline coverage percentage documented in testing-standards.md. No enforcement gate yet — data collection only.",
+      "files_to_touch": [
+        "api/tests/**/*.csproj (add coverlet.collector package)",
+        ".github/workflows/ci.yml (add coverage step)",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md (document baseline)"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "P1",
+      "title": "Enforce Dev Agent Record completion in story template",
+      "description": "Dev Agent Record section empty in both Story 1.2 and Story 1.3 reviews (recurring pattern per evidence). This section documents testing mode decisions (test-first/spike/characterization), edge cases considered, and risks covered — critical for QA retrospective and knowledge transfer. Update story template checklist to make this section required, and add to code review checklist.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:102 (I3 Story 1.2)",
+        ".retro/2026-02-13T002800Z/context.md:112 (I3 Story 1.3)",
+        ".retro/2026-02-13T002800Z/context.md:120 (recurring pattern)"
+      ],
+      "acceptance_criteria": "Story implementation plan template has Dev Agent Record as required field with examples. Code review checklist includes 'Dev Agent Record section completed with testing mode rationale and risk coverage'. Next story (1.4 or 1.5) has non-empty Dev Agent Record section.",
+      "files_to_touch": [
+        "_bmad/bmm/workflows/4-implementation/create-story/template.md",
+        "_bmad/bmm/workflows/4-implementation/code-review/checklist.md"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add frontend error boundary and loading state tests",
+      "description": "Frontend test suite only has 19 tests across 5 files. No tests for React error boundaries, loading states, or API integration error scenarios beyond httpClient unit tests. As UI components are added in Stories 1.4+ (Shared UI Components, App Shell), test coverage will lag. Establish pattern now with test for App-level error boundary.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md:76 (19 frontend tests)",
+        "web/src/ (no error boundary tests found)"
+      ],
+      "acceptance_criteria": "New test file web/src/App.errorBoundary.test.tsx verifies error boundary catches render errors and displays fallback UI. Serves as example pattern for future component tests.",
+      "files_to_touch": [
+        "web/src/App.errorBoundary.test.tsx"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P2",
+      "title": "Document Testcontainers best practices and CI optimization",
+      "description": "TenantContextFilterTests uses Testcontainers successfully, but no documentation on patterns: OneTimeSetUp vs SetUp trade-offs, container reuse strategies, CI-specific configuration (Testcontainers Cloud vs GitHub services), or local dev Docker requirements. As more integration tests are added, lack of guidance will lead to inconsistent patterns and slow CI.",
+      "evidence_refs": [
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs (OneTimeSetUp pattern)",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md:71-96 (has example but no best practices)"
+      ],
+      "acceptance_criteria": "testing-standards.md has new 'Testcontainers Best Practices' section with: container lifecycle patterns, local Docker prerequisites, CI configuration options, and performance tips (container reuse, parallel test execution). Section references actual TenantContextFilterTests as canonical example.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add domain event verification to aggregate tests",
+      "description": "Domain events are raised (RecruitmentCreatedEvent, MembershipChangedEvent, etc.) but tests only verify 'ContainSingle' assertion without checking event payload. Risk: event data could be wrong (e.g., wrong RecruitmentId in MembershipChangedEvent) and tests would still pass. Add payload assertions for at least RecruitmentCreatedEvent and MembershipChangedEvent.",
+      "evidence_refs": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs:32-36 (only type check, no payload)",
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs:149-150 (only type check, no payload)"
+      ],
+      "acceptance_criteria": "RecruitmentCreatedEvent test asserts event.RecruitmentId == recruitment.Id and event.Title == recruitment.Title. MembershipChangedEvent test asserts event.RecruitmentId and event.MemberId match the removed member. Pattern documented in testing-standards.md.",
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs",
+        "api/tests/Domain.UnitTests/Entities/CandidateTests.cs",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ]
+    }
+  ]
+}

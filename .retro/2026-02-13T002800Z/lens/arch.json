@@ -1,0 +1,136 @@
+{
+  "lens": "architecture",
+  "wins": [
+    "Strong DDD aggregate boundary enforcement: All child entities (WorkflowStep, RecruitmentMember, CandidateOutcome, CandidateDocument) use internal static Create() methods and are modified only through aggregate root methods. No direct DbContext.Add() bypasses observed.",
+    "Correct cross-aggregate reference pattern: Candidate holds RecruitmentId (Guid) only, not a navigation property to Recruitment. CandidateOutcome references WorkflowStepId by ID. Cross-aggregate boundaries respected.",
+    "Defense-in-depth tenant isolation: Global query filter on Candidate entity uses EF.Property<Recruitment> shadow navigation + membership check. Testcontainers-based integration tests cover 8 security scenarios including cross-recruitment isolation, service context bypass, misconfigured context, and membership changes.",
+    "Clean domain event usage: Aggregates raise domain events (RecruitmentCreatedEvent, CandidateImportedEvent, OutcomeRecordedEvent, MembershipChangedEvent) at appropriate state transitions. Events implement proper past-tense naming. DispatchDomainEventsInterceptor in Infrastructure layer ensures events are dispatched on SaveChanges.",
+    "Proper EF Core configuration separation: All entity configurations use Fluent API in Infrastructure/Data/Configurations. Domain entities have no data annotations. Configuration files properly ignore DomainEvents property and use PropertyAccessMode.Field for private backing fields."
+  ],
+  "risks": [
+    "AddDefaultIdentity registered despite architecture forbidding ASP.NET Identity: Infrastructure/DependencyInjection.cs line 37 calls AddDefaultIdentity<ApplicationUser>().AddRoles<IdentityRole>(). Architecture.md explicitly states 'Do not register ASP.NET Identity — architecture uses Entra ID exclusively'. This creates unused database tables (AspNetUsers, AspNetRoles, etc.) and violates ADR-AUTH-001.",
+    "Duplicate IUser/ICurrentUserService abstractions create confusion: Web/Services/CurrentUser.cs implements IUser (Web layer), Infrastructure/Identity/CurrentUserService.cs implements ICurrentUserService (Application layer). Both extract ClaimTypes.NameIdentifier from IHttpContextAccessor. TenantContext depends on ICurrentUserService. This layering inconsistency creates two parallel identity abstractions when one suffices.",
+    "Shadow navigation property in query filter couples Infrastructure to Domain structure: ApplicationDbContext.cs line 39 uses EF.Property<Recruitment>(c, 'Recruitment') to access a shadow navigation that doesn't exist on Candidate domain entity. While technically valid EF Core, this creates a hidden dependency between Infrastructure configuration and Domain structure that's invisible to domain layer.",
+    "AuditBehaviour creates separate SaveChangesAsync transaction: AuditBehaviour.cs line 42 calls _dbContext.SaveChangesAsync after the main handler completes (line 23). This creates a separate database transaction for audit entries. If the audit save fails, the command succeeds but the audit is lost. Violates M3 finding from Story 1.3 review (fixed per evidence but pattern still risky for future commands).",
+    "Missing TenantContextMiddleware: Architecture documents reference TenantContextMiddleware for populating ITenantContext from web requests, but no middleware file exists in Web/Middleware. TenantContext reads directly from ICurrentUserService (which reads from HttpContext claims). This works but lacks explicit middleware boundary for context population — makes debugging request-scoped tenant context harder.",
+    "No domain event handlers implemented: Domain events are raised (RecruitmentCreatedEvent, MembershipChangedEvent, etc.) and DispatchDomainEventsInterceptor is registered, but no INotificationHandler<TEvent> implementations exist in Application layer. Events are dispatched to void. While acceptable for MVP foundation work, this leaves the domain event infrastructure untested in practice.",
+    "AuditEntry.RecruitmentId defaults to Guid.Empty: AuditBehaviour.cs line 34 sets recruitmentId: Guid.Empty with comment 'Set by specific command handlers in future stories'. This creates audit entries with invalid recruitment context. While noted as future work, it means current audit trail is not usable for per-recruitment audit queries."
+  ],
+  "missing_evidence": [
+    "No evidence of domain event handler telemetry or error handling: DispatchDomainEventsInterceptor registered but no logging/monitoring of event dispatch failures. If an event handler throws, behavior is unknown.",
+    "No middleware registration order validation: Program.cs shows UseAuthentication/UseAuthorization but no validation that they precede endpoint mapping. Middleware order bugs are common security issues.",
+    "No evidence of ITenantContext scope validation: TenantContext registered as Scoped but no tests verify it's properly scoped per-request. Multi-threaded request scenarios untested.",
+    "No smoke test for AddDefaultIdentity impact: While architecture forbids it, no test validates that Identity tables are unused or that Identity middleware doesn't interfere with Entra ID auth."
+  ],
+  "action_items": [
+    {
+      "type": "architecture_alignment",
+      "priority": "P0",
+      "title": "Remove AddDefaultIdentity registration and ASP.NET Identity dependencies",
+      "description": "Remove AddDefaultIdentity<ApplicationUser>().AddRoles<IdentityRole>() from Infrastructure/DependencyInjection.cs line 37. Remove ApplicationUser class. Remove IdentityDbContext base class from ApplicationDbContext (change to DbContext). Remove all AspNet* tables from migrations. Architecture explicitly forbids ASP.NET Identity — Entra ID is the sole auth provider. This violation creates 10+ unused database tables and violates ADR-AUTH-001.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/DependencyInjection.cs:37",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture.md:278",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.retro/2026-02-13T002800Z/context.md:129"
+      ],
+      "acceptance_criteria": "ApplicationDbContext extends DbContext (not IdentityDbContext). No AddDefaultIdentity call in DependencyInjection. No AspNetUsers/AspNetRoles tables in database. All 37 Domain.UnitTests and 8 tenant isolation tests still pass.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/DependencyInjection.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Identity/ApplicationUser.cs"
+      ]
+    },
+    {
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "title": "Consolidate IUser and ICurrentUserService into single abstraction",
+      "description": "Eliminate duplicate identity abstractions. Keep IUser in Application.Common.Interfaces (correct layer per Clean Architecture). Remove ICurrentUserService. Update TenantContext to depend on IUser instead of ICurrentUserService. Move CurrentUser implementation to Infrastructure/Identity (not Web/Services). This aligns with Clean Architecture dependency rules: Application defines interfaces, Infrastructure implements them, Web consumes them.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Web/Services/CurrentUser.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Identity/CurrentUserService.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Identity/TenantContext.cs:9"
+      ],
+      "acceptance_criteria": "Single IUser interface in Application layer. Single implementation in Infrastructure layer. TenantContext depends on IUser. No ICurrentUserService references remain. All tests pass.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Application/Common/Interfaces/ICurrentUserService.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Identity/CurrentUserService.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Identity/TenantContext.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Web/Services/CurrentUser.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Web/DependencyInjection.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/DependencyInjection.cs"
+      ]
+    },
+    {
+      "type": "refactor",
+      "priority": "P1",
+      "title": "Add explicit Recruitment navigation to Candidate configuration to document shadow property",
+      "description": "CandidateConfiguration.cs currently configures HasOne<Recruitment>() but this shadow navigation is invisible in the domain entity and only used in ApplicationDbContext query filter. Add XML comment in CandidateConfiguration explaining this is a shadow navigation for query filter support, not a domain relationship. Consider adding extension method RecruitmentExtensions.GetCandidatesFiltered(recruitmentId) that encapsulates the query filter logic to reduce coupling between DbContext and domain structure.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/ApplicationDbContext.cs:39",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/Configurations/CandidateConfiguration.cs:28"
+      ],
+      "acceptance_criteria": "XML comment in CandidateConfiguration.cs documents shadow navigation purpose. Optional: Extension method encapsulates query filter logic. Tenant isolation tests still pass.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/Configurations/CandidateConfiguration.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/ApplicationDbContext.cs"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P2",
+      "title": "Document middleware order requirements and add validation",
+      "description": "Program.cs has correct middleware order (UseAuthentication → UseAuthorization → endpoints) but this is implicit. Add XML comment in Program.cs explaining required order and why. Add startup validation in Web/DependencyInjection.cs or Program.cs that throws if authentication/authorization middleware is missing or misordered. This prevents future regressions when adding new middleware.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Web/Program.cs:29-30",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture.md:280"
+      ],
+      "acceptance_criteria": "XML comment in Program.cs documents middleware order. Optional: Startup validation detects misordered middleware. Documentation in architecture/patterns-backend.md section on middleware order.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Web/Program.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add integration test for ITenantContext scope lifetime",
+      "description": "TenantContext is registered as Scoped but no test validates per-request scope isolation. Add Application.FunctionalTests test that simulates concurrent requests with different user contexts and verifies no cross-contamination. This is critical for tenant isolation security but currently untested.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/DependencyInjection.cs:44",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture.md:286"
+      ],
+      "acceptance_criteria": "New test in Application.FunctionalTests verifies concurrent requests with different UserId contexts don't interfere. Test passes.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/tests/Application.FunctionalTests/Security/TenantContextScopeTests.cs"
+      ]
+    },
+    {
+      "type": "observability",
+      "priority": "P2",
+      "title": "Add structured logging to DispatchDomainEventsInterceptor",
+      "description": "Domain events are raised and dispatched but no logging of event dispatch success/failure. Add ILogger to DispatchDomainEventsInterceptor. Log event type, aggregate ID, and handler count at Information level. Log handler exceptions at Error level. This makes domain event flow visible in Application Insights for debugging cross-aggregate coordination.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/_bmad-output/planning-artifacts/architecture.md:157"
+      ],
+      "acceptance_criteria": "DispatchDomainEventsInterceptor logs event dispatch at Information level. Handler exceptions logged at Error level with correlation ID. No PII in logs.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/Data/Interceptors/DispatchDomainEventsInterceptor.cs"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P2",
+      "title": "Update anti-patterns registry with findings from Stories 1.1-1.3",
+      "description": "Evidence bundle shows anti-patterns-pending.txt has 4 patterns (AutoMapper, Shouldly, AddDefaultIdentity, [NotMapped]). Story 1.3 fixed [NotMapped] but AddDefaultIdentity is still present (P0 action item). Update .claude/hooks/anti-patterns-pending.txt to mark [NotMapped] as resolved and add notes on AddDefaultIdentity status. Add new pattern for duplicate IUser/ICurrentUserService abstractions to catch future similar violations.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.retro/2026-02-13T002800Z/context.md:126-131",
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Infrastructure/DependencyInjection.cs:37"
+      ],
+      "acceptance_criteria": ".claude/hooks/anti-patterns-pending.txt updated with current status. New pattern for duplicate abstractions added. Pre-commit hook detects AddDefaultIdentity if present.",
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/.claude/hooks/anti-patterns-pending.txt"
+      ]
+    }
+  ]
+}

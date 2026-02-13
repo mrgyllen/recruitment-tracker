@@ -1,0 +1,126 @@
+{
+  "lens": "docs",
+  "wins": [
+    "Architecture docs accurately predicted aggregate structure and enforcement patterns (8 entities, 3 aggregates) — all implemented as documented",
+    "Testing standards doc correctly specified NUnit/NSubstitute/FluentAssertions stack — all templates followed these standards",
+    "Project structure doc accurately mapped folder organization — all files placed in documented locations (e.g., Features/, Configurations/, Middleware/)",
+    "Dev auth patterns doc correctly described dual-mode architecture with runtime checks — implementation matches spec (IHostEnvironment.IsDevelopment() not #if DEBUG)",
+    "Testing mode declarations in implementation plans worked well — all 3 stories declared modes per task and followed through"
+  ],
+  "risks": [
+    "GuidEntity uses [NotMapped] data annotation on DomainEvents property but patterns-backend.md forbids data annotations in domain entities (line 173: 'Fluent API only — no [Required], [MaxLength]'). Review finding M1 correctly caught this. Docs say use Fluent API but don't explain HOW to ignore domain events without NotMapped.",
+    "Dev Agent Record sections were empty in both 1.2 and 1.3 implementation plans (evidence context.md lines 102, 112). Team workflow doc does not explain what should go in this section or when it applies.",
+    "Architecture docs do not document that BaseEntity (template) uses [NotMapped] for DomainEvents. GuidEntity copied this pattern, creating a conflict with the 'no data annotations' rule. Missing guidance: 'If copying template patterns, validate against architecture rules first.'",
+    "Template cleanup patterns are not documented. Story 1.1, 1.2, and 1.3 all had template cleanup as the biggest source of review findings (evidence line 119), but no doc explains the cleanup workflow or provides a checklist.",
+    "Testing standards doc says NUnit but doesn't explain what to do with template's xUnit artifacts. Story 1.1 review finding I1 caught Shouldly usage (template default) vs required FluentAssertions. Missing: 'Template cleanup checklist: remove Shouldly, ensure NUnit not xUnit, remove Moq references.'",
+    "Anti-pattern detection workflow not documented. The .claude/hooks/anti-patterns-pending.txt file exists (evidence line 126) but no doc explains: when to add patterns, how they're promoted to permanent, or the review cycle.",
+    "Story 1.2 and 1.3 both had ExceptionHandler/middleware ordering issues caught in review. No doc explains ASP.NET Core middleware pipeline ordering rules or provides a reference sequence."
+  ],
+  "missing_evidence": [
+    "No evidence of which architecture shards were actually loaded before implementation — gate-shard-reads hook exists (team-workflow.md line 278) but no log of which shards were read",
+    "No measurement of how many review findings could have been prevented by better docs vs those requiring runtime verification",
+    "No tracking of which anti-patterns were caught by hooks vs manual review — can't measure hook effectiveness"
+  ],
+  "action_items": [
+    {
+      "type": "docs_update",
+      "priority": "P0",
+      "title": "Document how to ignore domain event collections without NotMapped",
+      "description": "patterns-backend.md line 173 forbids data annotations but doesn't explain the EF Core Fluent API pattern for ignoring collections. Add section: 'Ignoring Domain Event Collections' with code example showing `builder.Ignore(e => e.DomainEvents)` in entity configuration. Mark [NotMapped] on BaseEntity/GuidEntity as technical debt to be removed once all configurations are in place.",
+      "evidence_refs": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-exp4-opus/api/src/Domain/Common/GuidEntity.cs (no NotMapped visible but BaseEntity.cs has it)",
+        ".retro/2026-02-13T002800Z/context.md line 113 (M1: GuidEntity uses [NotMapped] data annotation)"
+      ],
+      "acceptance_criteria": "patterns-backend.md has new section 'Domain Event Collections' with Fluent API example. Verification checklist updated to flag [NotMapped] in domain entities.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md",
+        ".claude/hooks/anti-patterns.txt (add: \\[NotMapped\\]|api/src/Domain/**/*.cs|Do not use [NotMapped] in domain entities — use Fluent API builder.Ignore())"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P1",
+      "title": "Add template cleanup checklist to starter-templates.md",
+      "description": "Template cleanup was the biggest source of review findings (evidence line 119). Add 'Template Cleanup Checklist' section to starter-templates.md with specific tasks: (1) Remove Shouldly, add FluentAssertions. (2) Remove Moq, add NSubstitute. (3) Verify NUnit not xUnit (check for [Fact]/[Theory]). (4) Remove AutoMapper if present. (5) Delete template entities (TodoItem, TodoList, WeatherForecast). (6) Run dotnet format before first commit. This checklist should be referenced in Story 1.1 ACs.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 87-96 (Story 1.1 review findings: C1 AutoMapper, I1 Shouldly, I3 Playwright breaks CI)",
+        "docs/plans/2026-02-12-project-scaffolding-ci-pipeline.md Task 7 (verification step but no cleanup checklist)"
+      ],
+      "acceptance_criteria": "starter-templates.md has 'Template Cleanup Checklist' section with 10+ specific items. Section is linked from scaffolding story template.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/starter-templates.md"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P1",
+      "title": "Document ASP.NET Core middleware ordering rules",
+      "description": "Story 1.2 review finding I2: ExceptionHandler registered after endpoint mapping (should be before). Add 'Middleware Pipeline Order' section to api-patterns.md or patterns-backend.md with canonical sequence: (1) UseHttpsRedirection, (2) UseExceptionHandler, (3) UseAuthentication, (4) UseAuthorization, (5) Custom middleware (TenantContext, Noindex), (6) MapOpenApi, (7) MapEndpoints. Include rationale for each position.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 100 (I2: ExceptionHandler registered after endpoint mapping)",
+        "docs/plans/2026-02-13-sso-authentication.md Task 2 Step 6 (Program.cs modifications show ordering)"
+      ],
+      "acceptance_criteria": "patterns-backend.md or api-patterns.md has 'Middleware Pipeline Order' section with numbered sequence and rationale. Verification checklist updated to check middleware order.",
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ]
+    },
+    {
+      "type": "process_change",
+      "priority": "P1",
+      "title": "Document Dev Agent Record section purpose in implementation plan template",
+      "description": "Dev Agent Record sections were empty in both Story 1.2 and 1.3 (evidence lines 102, 112). Either remove this section from plan templates or document what it's for. Hypothesis: it should capture key decisions, non-obvious implementation choices, or deviations from architecture during execution. If unused, remove it to reduce template noise.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 102, 112 (Story 1.2 I3, Story 1.3 I3: Dev Agent Record section empty)"
+      ],
+      "acceptance_criteria": "Either: (A) Implementation plan template has 'Dev Agent Record' section with clear instructions on what to capture, OR (B) section is removed from template and team-workflow.md is updated to remove reference.",
+      "files_to_touch": [
+        ".claude/process/team-workflow.md (section on writing-plans skill)",
+        "Story implementation plan templates (if they exist)"
+      ]
+    },
+    {
+      "type": "docs_update",
+      "priority": "P2",
+      "title": "Add anti-pattern workflow documentation",
+      "description": "Anti-patterns-pending.txt exists (evidence line 126) but no doc explains the workflow: when patterns are added, how they're promoted from pending to permanent, what the review cycle is, or how they feed into hooks. Add 'Anti-Pattern Detection Workflow' section to team-workflow.md explaining: (1) Add to pending.txt during mini-retro after review findings. (2) Patterns recurring 2+ times are promoted to anti-patterns.txt. (3) One-off patterns are removed from pending. (4) Architecture-level patterns become docs_update action items.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md lines 126-131 (anti-patterns-pending.txt contents)",
+        ".claude/process/team-workflow.md lines 246-255 (mini-retro mentions anti-patterns but doesn't explain workflow)"
+      ],
+      "acceptance_criteria": "team-workflow.md has 'Anti-Pattern Detection Workflow' section with 4-step process (add, promote, remove, escalate). Example showing AutoMapper pattern lifecycle from pending to permanent.",
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ]
+    },
+    {
+      "type": "guideline_gap",
+      "priority": "P1",
+      "title": "Add hook to detect data annotations in domain entities",
+      "description": "M1 finding caught [NotMapped] in GuidEntity but only in manual review. Add anti-pattern regex to catch data annotations in domain entities: `\\[(Required|MaxLength|NotMapped|Column|Table|Key|ForeignKey)\\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API in EF configurations`. This prevents future violations.",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 113 (M1: GuidEntity uses [NotMapped] data annotation)",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md line 173 (Fluent API only rule)"
+      ],
+      "acceptance_criteria": "Anti-pattern added to .claude/hooks/anti-patterns.txt. Test by running hook against api/src/Domain/Common/BaseEntity.cs — should flag [NotMapped]. Mark as known exception until refactored.",
+      "files_to_touch": [
+        ".claude/hooks/anti-patterns.txt"
+      ]
+    },
+    {
+      "type": "test_gap",
+      "priority": "P2",
+      "title": "Add integration test for RemoveMember creator-cannot-be-removed invariant",
+      "description": "Story 1.3 review finding C1: RemoveMember() missing creator-cannot-be-removed invariant. Unit test exists for 'cannot remove last leader' but no test for 'cannot remove creator even if other leaders exist'. Add test: Create recruitment with creator as leader, add second leader, attempt to remove creator — should throw. This is a security-critical invariant (prevents ownership hijacking).",
+      "evidence_refs": [
+        ".retro/2026-02-13T002800Z/context.md line 109 (C1: RemoveMember() missing creator-cannot-be-removed invariant)",
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs (has RemoveMember_LastLeader test but not creator-specific test)"
+      ],
+      "acceptance_criteria": "New test added: `RemoveMember_Creator_ThrowsInvalidOperationException`. Recruitment entity updated to track CreatedByUserId and enforce creator-removal constraint. Test must fail before implementation, pass after.",
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs",
+        "api/src/Domain/Entities/Recruitment.cs"
+      ]
+    }
+  ]
+}
