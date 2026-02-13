@@ -1,5 +1,4 @@
 import { Outlet } from 'react-router'
-
 import { AppHeader } from '@/components/AppHeader'
 import { ViewportGuard } from '@/components/ViewportGuard'
 

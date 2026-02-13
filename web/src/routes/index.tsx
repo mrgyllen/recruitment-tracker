@@ -1,9 +1,7 @@
 import { createBrowserRouter } from 'react-router'
-
+import { RootLayout } from './RootLayout'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
 import { HomePage } from '@/features/recruitments/pages/HomePage'
-
-import { RootLayout } from './RootLayout'
 
 export const routeConfig = [
   {

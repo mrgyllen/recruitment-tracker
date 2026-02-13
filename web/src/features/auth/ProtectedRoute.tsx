@@ -1,5 +1,4 @@
 import { Navigate, Outlet } from 'react-router'
-
 import { useAuth } from './AuthContext'
 
 export function ProtectedRoute() {

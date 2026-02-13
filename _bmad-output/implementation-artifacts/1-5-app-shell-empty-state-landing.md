@@ -415,9 +415,34 @@ web/src/
 ## Dev Agent Record
 
 ### Agent Model Used
+Claude Opus 4.6
 
 ### Debug Log References
+N/A
 
 ### Completion Notes List
+- **Testing mode:** Test-first for ProtectedRoute, ViewportGuard, AppHeader, HomePage, routes. Spike for package install, QueryClient config, test-utils update.
+- **Key decisions:**
+  - ProtectedRoute tests mock `useAuth` directly rather than relying on DevAuthProvider (DevAuthProvider always defaults to authenticated)
+  - Exported `routeConfig` array separately from `router` so tests can use `createMemoryRouter` with same config
+  - App.test.tsx rewritten to smoke-test App directly (bare `render` without test-utils to avoid nested router)
+  - 6 remaining lint warnings are import-order in vi.mock files (unavoidable -- mock must precede mocked import)
+  - AC4 (httpClient apiPut/apiDelete) was already implemented in story 1-2; verified existing tests pass
+- **Risk:** ViewportGuard uses JS `matchMedia` listener for reactivity; CSS-only approach would avoid JS but wouldn't conditionally render children
 
 ### File List
+- `web/src/routes/index.tsx` — Route definitions (createBrowserRouter)
+- `web/src/routes/RootLayout.tsx` — App shell: ViewportGuard + header + main + skip link
+- `web/src/routes/routes.test.tsx` — 5 route integration tests
+- `web/src/features/auth/ProtectedRoute.tsx` — Auth guard with Navigate redirect
+- `web/src/features/auth/ProtectedRoute.test.tsx` — 2 tests (auth/unauth)
+- `web/src/features/recruitments/pages/HomePage.tsx` — Empty state landing
+- `web/src/features/recruitments/pages/HomePage.test.tsx` — 4 tests
+- `web/src/components/AppHeader.tsx` — 48px header with user info + sign out
+- `web/src/components/AppHeader.test.tsx` — 6 tests
+- `web/src/components/ViewportGuard.tsx` — 1280px minimum viewport guard
+- `web/src/components/ViewportGuard.test.tsx` — 4 tests
+- `web/src/lib/queryClient.ts` — TanStack Query client config
+- `web/src/App.tsx` — Rewritten with RouterProvider + QueryClientProvider + AuthProvider
+- `web/src/App.test.tsx` — Updated smoke test
+- `web/src/test-utils.tsx` — Updated with QueryClient + MemoryRouter

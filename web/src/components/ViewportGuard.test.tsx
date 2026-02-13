@@ -1,6 +1,5 @@
 import { act, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-
 import { ViewportGuard } from './ViewportGuard'
 
 function mockMatchMedia(matches: boolean) {

@@ -1,6 +1,6 @@
+import { ActionButton } from './ActionButton'
 import { useAuth } from '@/features/auth/AuthContext'
 
-import { ActionButton } from './ActionButton'
 
 export function AppHeader() {
   const { user, signOut } = useAuth()
