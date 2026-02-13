@@ -56,12 +56,12 @@ development_status:
   epic-1-deferred-bundle-budget: backlog     # B11: Bundle size budget tracking
 
   # Epic 2: Recruitment & Team Setup
-  epic-2: backlog
-  2-1-create-recruitment-with-workflow-steps: backlog
-  2-2-recruitment-list-navigation: backlog
-  2-3-edit-recruitment-manage-workflow-steps: backlog
-  2-4-team-membership-management: backlog
-  2-5-close-recruitment-read-only-view: backlog
+  epic-2: in-progress
+  2-1-create-recruitment-with-workflow-steps: ready-for-dev
+  2-2-recruitment-list-navigation: ready-for-dev
+  2-3-edit-recruitment-manage-workflow-steps: ready-for-dev
+  2-4-team-membership-management: ready-for-dev
+  2-5-close-recruitment-read-only-view: ready-for-dev
   epic-2-retrospective: optional
 
   # Epic 3: Candidate Import & Document Management
