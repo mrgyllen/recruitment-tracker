@@ -216,6 +216,7 @@ Team Lead acts as Retro Lead and synthesizes lens outputs:
    - Recurring (2+ stories) -> promote to `.claude/hooks/anti-patterns.txt`
    - One-off -> remove from pending
    - Architecture-level -> action item with type `docs_update`
+   - After processing, leave ONLY the header comments — no log entries about what was promoted. Use `retro.md` for history, not working files.
 
 6. **Save** `retro.json` and `retro.md` to `.retro/<run_id>/`
 
