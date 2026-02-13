@@ -125,13 +125,14 @@ public class RecruitmentTests
     [Test]
     public void RemoveMember_LastLeader_ThrowsInvalidOperationException()
     {
+        // Creator is always a leader and always protected by the creator guard.
+        // The last-leader guard is defense-in-depth; creator guard fires first here.
         var recruitment = CreateRecruitment();
-        var creatorMemberId = recruitment.Members.First().Id;
 
-        var act = () => recruitment.RemoveMember(creatorMemberId);
+        var act = () => recruitment.RemoveMember(recruitment.Members.First().Id);
 
         act.Should().Throw<InvalidOperationException>()
-            .WithMessage("*at least one Recruiting Leader*");
+            .WithMessage("*creator*");
     }
 
     [Test]
@@ -147,6 +148,22 @@ public class RecruitmentTests
 
         recruitment.DomainEvents.Should().ContainSingle()
             .Which.Should().BeOfType<MembershipChangedEvent>();
+    }
+
+    [Test]
+    public void RemoveMember_Creator_ThrowsInvalidOperationException()
+    {
+        var creatorId = Guid.NewGuid();
+        var recruitment = Recruitment.Create("Test", null, creatorId);
+        // Add a second leader so the "last leader" guard doesn't fire first
+        var secondLeaderId = Guid.NewGuid();
+        recruitment.AddMember(secondLeaderId, "Recruiting Leader");
+        var creatorMemberId = recruitment.Members.First(m => m.UserId == creatorId).Id;
+
+        var act = () => recruitment.RemoveMember(creatorMemberId);
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*creator*");
     }
 
     [Test]

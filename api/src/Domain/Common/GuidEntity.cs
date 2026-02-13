@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
-
 namespace api.Domain.Common;
 
 public abstract class GuidEntity
@@ -8,7 +6,6 @@ public abstract class GuidEntity
 
     private readonly List<BaseEvent> _domainEvents = new();
 
-    [NotMapped]
     public IReadOnlyCollection<BaseEvent> DomainEvents => _domainEvents.AsReadOnly();
 
     public void AddDomainEvent(BaseEvent domainEvent)

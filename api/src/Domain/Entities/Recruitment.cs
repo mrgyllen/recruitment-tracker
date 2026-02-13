@@ -97,6 +97,12 @@ public class Recruitment : GuidEntity
         var member = _members.FirstOrDefault(m => m.Id == memberId)
             ?? throw new InvalidOperationException($"Member {memberId} not found.");
 
+        // Cannot remove the creator
+        if (member.UserId == CreatedByUserId)
+        {
+            throw new InvalidOperationException("Cannot remove the creator of the recruitment.");
+        }
+
         // Cannot remove the last Recruiting Leader
         if (member.Role == "Recruiting Leader" &&
             _members.Count(m => m.Role == "Recruiting Leader") <= 1)

@@ -1,6 +1,6 @@
 # Story 1.3: Core Data Model & Tenant Isolation
 
-Status: ready-for-dev
+Status: done
 
 ## Story
 
@@ -473,8 +473,85 @@ modelBuilder.Entity<Candidate>().HasQueryFilter(c =>
 
 ### Agent Model Used
 
+Claude Opus 4.6 (claude-opus-4-6)
+
 ### Debug Log References
+
+- Cascading compile errors when deleting template artifacts (Colour.cs -> TodoItem.cs -> GlobalUsings.cs)
+- ApplicationDbContext constructor change broke SqlTestcontainersTestDatabase.cs and SqlTestDatabase.cs -- added ITenantContext mock
+- MediatR 13 RequestHandlerDelegate takes CancellationToken -- changed test lambda from `()` to `(_)`
+- Application.UnitTests require ASP.NET Core runtime (not installed locally) -- compile-only verification, runs in CI
 
 ### Completion Notes List
 
+- All 3 aggregate roots implemented with invariants: Recruitment (with WorkflowStep, RecruitmentMember), Candidate (with CandidateOutcome, CandidateDocument), ImportSession
+- AuditEntry standalone append-only entity
+- GuidEntity base class (parallel to template's BaseEntity) for Guid IDs + domain events
+- Global query filter on Candidate via shadow navigation property to Recruitment
+- AuditBehaviour MediatR pipeline for command auditing
+- Template code fully removed (TodoItem/TodoList/WeatherForecasts)
+- Review fix: Creator-cannot-be-removed invariant added to Recruitment.RemoveMember()
+- Review fix: No-op TenantContextMiddleware removed (lazy DI handles resolution)
+- Review fix: [NotMapped] removed from GuidEntity (configs already Ignore())
+- Review fix: 4 additional tenant isolation security tests (tests 5-8)
+
 ### File List
+
+**Created:**
+- `api/src/Domain/Common/GuidEntity.cs`
+- `api/src/Domain/Enums/OutcomeStatus.cs`
+- `api/src/Domain/Enums/ImportMatchConfidence.cs`
+- `api/src/Domain/Enums/RecruitmentStatus.cs`
+- `api/src/Domain/Enums/ImportSessionStatus.cs`
+- `api/src/Domain/ValueObjects/CandidateMatch.cs`
+- `api/src/Domain/ValueObjects/AnonymizationResult.cs`
+- `api/src/Domain/Events/CandidateImportedEvent.cs`
+- `api/src/Domain/Events/OutcomeRecordedEvent.cs`
+- `api/src/Domain/Events/DocumentUploadedEvent.cs`
+- `api/src/Domain/Events/RecruitmentCreatedEvent.cs`
+- `api/src/Domain/Events/RecruitmentClosedEvent.cs`
+- `api/src/Domain/Events/MembershipChangedEvent.cs`
+- `api/src/Domain/Exceptions/RecruitmentClosedException.cs`
+- `api/src/Domain/Exceptions/DuplicateCandidateException.cs`
+- `api/src/Domain/Exceptions/DuplicateStepNameException.cs`
+- `api/src/Domain/Exceptions/InvalidWorkflowTransitionException.cs`
+- `api/src/Domain/Exceptions/StepHasOutcomesException.cs`
+- `api/src/Domain/Entities/Recruitment.cs`
+- `api/src/Domain/Entities/WorkflowStep.cs`
+- `api/src/Domain/Entities/RecruitmentMember.cs`
+- `api/src/Domain/Entities/Candidate.cs`
+- `api/src/Domain/Entities/CandidateOutcome.cs`
+- `api/src/Domain/Entities/CandidateDocument.cs`
+- `api/src/Domain/Entities/ImportSession.cs`
+- `api/src/Domain/Entities/AuditEntry.cs`
+- `api/src/Infrastructure/Data/Configurations/RecruitmentConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/WorkflowStepConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/RecruitmentMemberConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/CandidateConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/CandidateOutcomeConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/CandidateDocumentConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/ImportSessionConfiguration.cs`
+- `api/src/Infrastructure/Data/Configurations/AuditEntryConfiguration.cs`
+- `api/src/Application/Common/Behaviours/AuditBehaviour.cs`
+- `api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs`
+- `api/tests/Domain.UnitTests/Entities/CandidateTests.cs`
+- `api/tests/Domain.UnitTests/Entities/ImportSessionTests.cs`
+- `api/tests/Domain.UnitTests/ValueObjects/CandidateMatchTests.cs`
+- `api/tests/Domain.UnitTests/ValueObjects/AnonymizationResultTests.cs`
+- `api/tests/Domain.UnitTests/Enums/EnumValueTests.cs`
+- `api/tests/Application.UnitTests/Common/Behaviours/AuditBehaviourTests.cs`
+- `api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs`
+
+**Modified:**
+- `api/src/Application/Common/Interfaces/IApplicationDbContext.cs` -- new DbSets
+- `api/src/Infrastructure/Data/ApplicationDbContext.cs` -- new DbSets, ITenantContext injection, global query filter
+- `api/src/Application/DependencyInjection.cs` -- AuditBehaviour registration
+- `api/src/Web/Program.cs` -- removed TenantContextMiddleware registration
+- `api/tests/Application.FunctionalTests/SqlTestcontainersTestDatabase.cs` -- ITenantContext mock
+- `api/tests/Application.FunctionalTests/SqlTestDatabase.cs` -- ITenantContext mock
+- `api/tests/Application.UnitTests/Common/Behaviours/RequestLoggerTests.cs` -- removed TodoItem reference
+- `api/tests/Infrastructure.IntegrationTests/Infrastructure.IntegrationTests.csproj` -- added project refs and packages
+
+**Deleted:**
+- Template artifacts: TodoItem.cs, TodoList.cs, Colour.cs, PriorityLevel.cs, ColourTests.cs, and all TodoItem/TodoList/WeatherForecast commands/queries/endpoints/configurations/tests
+- `api/src/Web/Middleware/TenantContextMiddleware.cs` -- was a no-op

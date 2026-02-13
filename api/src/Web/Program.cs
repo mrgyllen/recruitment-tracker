@@ -28,7 +28,6 @@ app.UseExceptionHandler(options => { });
 
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseMiddleware<TenantContextMiddleware>();
 app.UseMiddleware<NoindexMiddleware>();
 
 app.MapOpenApi();

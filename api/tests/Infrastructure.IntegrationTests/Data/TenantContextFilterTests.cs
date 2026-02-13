@@ -131,4 +131,101 @@ public class TenantContextFilterTests
 
         candidates.Should().BeEmpty();
     }
+
+    [Test]
+    public async Task UserIdAndRecruitmentIdBothSet_VerifiesOrLogic()
+    {
+        // Get Recruitment B's ID via service context
+        var serviceCtx = Substitute.For<ITenantContext>();
+        serviceCtx.IsServiceContext.Returns(true);
+        using var seedCtx = CreateDbContext(serviceCtx);
+        var recruitmentB = await seedCtx.Recruitments.FirstAsync(r => r.Title == "Recruitment B");
+
+        // User A is member of Recruitment A; set RecruitmentId to B.
+        // OR logic means candidates from EITHER match should be visible.
+        var tenantContext = Substitute.For<ITenantContext>();
+        tenantContext.UserId.Returns("aaaa0000-0000-0000-0000-000000000001");
+        tenantContext.RecruitmentId.Returns(recruitmentB.Id);
+        tenantContext.IsServiceContext.Returns(false);
+
+        using var ctx = CreateDbContext(tenantContext);
+        var candidates = await ctx.Candidates.ToListAsync();
+
+        candidates.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task IsServiceContext_OverridesUserIdFilter()
+    {
+        var tenantContext = Substitute.For<ITenantContext>();
+        tenantContext.UserId.Returns("aaaa0000-0000-0000-0000-000000000001");
+        tenantContext.IsServiceContext.Returns(true);
+
+        using var ctx = CreateDbContext(tenantContext);
+        var candidates = await ctx.Candidates.ToListAsync();
+
+        // Service context sees all candidates regardless of UserId
+        candidates.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task UserMemberOfMultipleRecruitments_SeesCandidatesFromAll()
+    {
+        var serviceCtx = Substitute.For<ITenantContext>();
+        serviceCtx.IsServiceContext.Returns(true);
+        using var seedCtx = CreateDbContext(serviceCtx);
+        var recruitmentB = await seedCtx.Recruitments.FirstAsync(r => r.Title == "Recruitment B");
+
+        // Add User A as member of Recruitment B as well
+        recruitmentB.AddMember(Guid.Parse("aaaa0000-0000-0000-0000-000000000001"), "SME/Collaborator");
+        await seedCtx.SaveChangesAsync(CancellationToken.None);
+
+        var tenantContext = Substitute.For<ITenantContext>();
+        tenantContext.UserId.Returns("aaaa0000-0000-0000-0000-000000000001");
+        tenantContext.IsServiceContext.Returns(false);
+
+        using var ctx = CreateDbContext(tenantContext);
+        var candidates = await ctx.Candidates.ToListAsync();
+
+        candidates.Should().HaveCount(2);
+    }
+
+    [Test]
+    public async Task UserRemovedFromRecruitment_LosesAccess()
+    {
+        var serviceCtx = Substitute.For<ITenantContext>();
+        serviceCtx.IsServiceContext.Returns(true);
+        using var seedCtx = CreateDbContext(serviceCtx);
+
+        // Recruitment A has User A as creator. Add a second leader, then remove User A.
+        // Wait -- creator can't be removed (C1 fix). Use a different user.
+        // Instead: add User C to Recruitment A, verify access, then remove User C.
+        var recruitmentA = await seedCtx.Recruitments
+            .Include(r => r.Members)
+            .FirstAsync(r => r.Title == "Recruitment A");
+        var userCId = Guid.Parse("cccc0000-0000-0000-0000-000000000003");
+        recruitmentA.AddMember(userCId, "SME/Collaborator");
+        await seedCtx.SaveChangesAsync(CancellationToken.None);
+
+        // User C can see candidates in Recruitment A
+        var tenantWithAccess = Substitute.For<ITenantContext>();
+        tenantWithAccess.UserId.Returns(userCId.ToString());
+        tenantWithAccess.IsServiceContext.Returns(false);
+        using var ctxBefore = CreateDbContext(tenantWithAccess);
+        var before = await ctxBefore.Candidates.ToListAsync();
+        before.Should().ContainSingle(c => c.Email == "alice@a.com");
+
+        // Remove User C from Recruitment A
+        var memberC = recruitmentA.Members.First(m => m.UserId == userCId);
+        recruitmentA.RemoveMember(memberC.Id);
+        await seedCtx.SaveChangesAsync(CancellationToken.None);
+
+        // User C loses access
+        var tenantWithoutAccess = Substitute.For<ITenantContext>();
+        tenantWithoutAccess.UserId.Returns(userCId.ToString());
+        tenantWithoutAccess.IsServiceContext.Returns(false);
+        using var ctxAfter = CreateDbContext(tenantWithoutAccess);
+        var after = await ctxAfter.Candidates.ToListAsync();
+        after.Should().BeEmpty();
+    }
 }
