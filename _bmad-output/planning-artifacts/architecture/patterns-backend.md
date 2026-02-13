@@ -156,6 +156,26 @@ public record AuditEvent(
 
 **Rule: No PII in audit event `Context`.** Use entity IDs, not names or emails. The audit trail references entities; it doesn't duplicate their data.
 
+## Middleware Pipeline Order
+
+ASP.NET Core middleware executes in registration order. Security-critical middleware must be registered early. The canonical order for this project:
+
+```csharp
+// Program.cs — middleware registration order
+app.UseHttpsRedirection();       // 1. HTTPS redirect (before anything else)
+app.UseExceptionHandler(...);    // 2. Exception handler (catches errors from ALL subsequent middleware)
+app.UseAuthentication();         // 3. Authentication (populates HttpContext.User)
+app.UseAuthorization();          // 4. Authorization (checks policies)
+// Custom middleware here:       // 5. NoindexMiddleware, any future middleware
+app.MapOpenApi();                // 6. OpenAPI docs
+app.MapEndpoints();              // 7. Application endpoints
+```
+
+**Why this order matters:**
+- ExceptionHandler MUST be before Authentication — if auth middleware throws, the error handler catches it
+- Authentication MUST be before Authorization — can't authorize without identity
+- Custom middleware (Noindex, etc.) goes after auth but before endpoints
+
 ## Verification Checkpoints
 
 _Scannable checklist for review agents. Derived from architecture docs — check each item during code review._
@@ -169,6 +189,24 @@ _Scannable checklist for review agents. Derived from architecture docs — check
 - [ ] One aggregate per transaction — no multi-aggregate saves in a single handler
 - [ ] Domain events raised for significant state changes
 - [ ] Domain exceptions thrown for business rule violations (never caught silently)
+
+### Domain Event Collections
+
+Domain entities inherit a `DomainEvents` collection from `BaseEntity`/`GuidEntity`. EF Core must be told to ignore this property. **Use Fluent API `builder.Ignore()` — never use `[NotMapped]` on domain entities.**
+
+```csharp
+// In each entity configuration file:
+public class RecruitmentConfiguration : IEntityTypeConfiguration<Recruitment>
+{
+    public void Configure(EntityTypeBuilder<Recruitment> builder)
+    {
+        builder.Ignore(e => e.DomainEvents);
+        // ... other configuration
+    }
+}
+```
+
+> **Note:** The template's `BaseEntity.cs` may still use `[NotMapped]` for `DomainEvents`. This is a known exception from the template — do not copy this pattern to new domain entities. Each EF configuration MUST call `builder.Ignore(e => e.DomainEvents)` regardless.
 
 ### EF Core
 

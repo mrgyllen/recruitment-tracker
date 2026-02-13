@@ -1,13 +1,11 @@
 using System.Reflection;
 using api.Application.Common.Interfaces;
 using api.Domain.Entities;
-using api.Infrastructure.Identity;
-using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace api.Infrastructure.Data;
 
-public class ApplicationDbContext : IdentityDbContext<ApplicationUser>, IApplicationDbContext
+public class ApplicationDbContext : DbContext, IApplicationDbContext
 {
     private readonly ITenantContext _tenantContext;
 

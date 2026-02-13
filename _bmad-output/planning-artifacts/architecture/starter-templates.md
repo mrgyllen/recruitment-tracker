@@ -128,3 +128,30 @@ SAS tokens (15-minute validity) make the URL self-authenticating. react-pdf prov
 Optimize to **path-filtered pipelines** (`api/**` triggers .NET, `web/**` triggers frontend, both trigger both) only if CI becomes a bottleneck. Premature pipeline optimization is real.
 
 **Note:** Project initialization using these commands should be the first implementation story.
+
+## Template Cleanup Checklist
+
+After scaffolding from the Jason Taylor Clean Architecture template, the following cleanup is **mandatory** before any feature work begins. These items were the #1 source of review findings during Epic 1.
+
+### Backend (api/)
+
+- [ ] **Remove AutoMapper** — Delete package from `Application.csproj` and `Directory.Packages.props`, remove DI registration from `DependencyInjection.cs`, delete `global using AutoMapper;` from `GlobalUsings.cs`, delete `MappingTests.cs`. Architecture mandates manual DTO mapping.
+- [ ] **Remove Shouldly** — Replace with FluentAssertions in all test `.csproj` files. Update assertion syntax (`ShouldBe` -> `Should().Be()`). FluentAssertions should already be in `Directory.Packages.props`.
+- [ ] **Remove AddDefaultIdentity** — Delete `AddDefaultIdentity<ApplicationUser>()` from `Infrastructure/DependencyInjection.cs`. Architecture uses Entra ID exclusively, not ASP.NET Identity.
+- [ ] **Remove or exclude Web.AcceptanceTests** — Template includes SpecFlow/Playwright tests that require browser install. Either remove from solution or add Playwright install to CI.
+- [ ] **Remove template entities** — Delete `TodoItem`, `TodoList`, `WeatherForecast`, `Colour` and all related commands/queries/DTOs/tests.
+- [ ] **Remove Angular ClientApp** — Template may include Angular SPA proxy and `ClientApp/` directory. Not needed with separate Vite frontend.
+- [ ] **Remove RazorPages** — Delete `Pages/` directory from Web project (Error.cshtml, _LoginPartial.cshtml, _ViewImports.cshtml) unless needed.
+- [ ] **Tighten .editorconfig** — Template defaults are too lenient (`:silent`/`:suggestion`). Raise key rules (braces, namespaces, naming) to `:warning` for CI enforcement via `dotnet format --verify-no-changes`.
+- [ ] **Verify test framework** — Ensure NUnit, not xUnit. Check for `[Fact]`/`[Theory]` (should be `[Test]`/`[TestCase]`).
+- [ ] **Verify NSubstitute** — Ensure NSubstitute, not Moq. Check for `using Moq;`.
+
+### Frontend (web/)
+
+- [ ] **Remove template demo files** — Delete `App.css` (Vite template styles), clean up default `App.tsx` content.
+- [ ] **Type MSW handlers** — Ensure `handlers.ts` exports typed array: `export const handlers: HttpHandler[] = []`.
+
+### Infrastructure
+
+- [ ] **Review api/infra/ Bicep files** — Template includes 40+ Bicep files for services not used by this project (Cosmos DB, AKS, CDN, etc.). Note for future cleanup but don't block on this.
+- [ ] **Review .gitignore** — Template may include patterns for irrelevant ecosystems (Python, Java, Go). Prune if desired but not blocking.

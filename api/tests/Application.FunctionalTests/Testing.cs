@@ -1,8 +1,5 @@
-﻿using api.Domain.Constants;
-using api.Infrastructure.Data;
-using api.Infrastructure.Identity;
+﻿using api.Infrastructure.Data;
 using MediatR;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -54,48 +51,24 @@ public partial class Testing
         return s_roles;
     }
 
-    public static async Task<string> RunAsDefaultUserAsync()
+    public static Task<string> RunAsDefaultUserAsync()
     {
-        return await RunAsUserAsync("test@local", "Testing1234!", Array.Empty<string>());
+        return RunAsUserAsync("test@local", Array.Empty<string>());
     }
 
-    public static async Task<string> RunAsAdministratorAsync()
+    public static Task<string> RunAsAdministratorAsync()
     {
-        return await RunAsUserAsync("administrator@local", "Administrator1234!", new[] { Roles.Administrator });
+        return RunAsUserAsync("administrator@local", new[] { "Administrator" });
     }
 
-    public static async Task<string> RunAsUserAsync(string userName, string password, string[] roles)
+    public static Task<string> RunAsUserAsync(string userName, string[] roles)
     {
-        using var scope = s_scopeFactory.CreateScope();
-
-        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
-
-        var user = new ApplicationUser { UserName = userName, Email = userName };
-
-        var result = await userManager.CreateAsync(user, password);
-
-        if (roles.Any())
-        {
-            var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
-
-            foreach (var role in roles)
-            {
-                await roleManager.CreateAsync(new IdentityRole(role));
-            }
-
-            await userManager.AddToRolesAsync(user, roles);
-        }
-
-        if (result.Succeeded)
-        {
-            s_userId = user.Id;
-            s_roles = roles.ToList();
-            return s_userId;
-        }
-
-        var errors = string.Join(Environment.NewLine, result.ToApplicationResult().Errors);
-
-        throw new Exception($"Unable to create {userName}.{Environment.NewLine}{errors}");
+        // With Entra ID authentication, user management is external
+        // For testing purposes, we simulate a user by setting test user ID and roles
+        // The actual authentication would be handled by Entra ID in production
+        s_userId = Guid.NewGuid().ToString();
+        s_roles = roles.ToList();
+        return Task.FromResult(s_userId);
     }
 
     public static async Task ResetState()

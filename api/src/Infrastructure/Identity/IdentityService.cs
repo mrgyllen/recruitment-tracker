@@ -1,81 +1,78 @@
+using System.Security.Claims;
 using api.Application.Common.Interfaces;
 using api.Application.Common.Models;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Http;
 
 namespace api.Infrastructure.Identity;
 
+/// <summary>
+/// Simplified IdentityService for Entra ID authentication.
+/// User management is handled by Entra ID, not ASP.NET Core Identity.
+/// </summary>
 public class IdentityService : IIdentityService
 {
-    private readonly UserManager<ApplicationUser> _userManager;
-    private readonly IUserClaimsPrincipalFactory<ApplicationUser> _userClaimsPrincipalFactory;
     private readonly IAuthorizationService _authorizationService;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
     public IdentityService(
-        UserManager<ApplicationUser> userManager,
-        IUserClaimsPrincipalFactory<ApplicationUser> userClaimsPrincipalFactory,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        IHttpContextAccessor httpContextAccessor)
     {
-        _userManager = userManager;
-        _userClaimsPrincipalFactory = userClaimsPrincipalFactory;
         _authorizationService = authorizationService;
+        _httpContextAccessor = httpContextAccessor;
     }
 
-    public async Task<string?> GetUserNameAsync(string userId)
+    public Task<string?> GetUserNameAsync(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        // In Entra ID, username is typically the email or UPN claim
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user == null) return Task.FromResult<string?>(null);
 
-        return user?.UserName;
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (currentUserId != userId) return Task.FromResult<string?>(null);
+
+        // Try to get the name from common claims
+        var userName = user.FindFirstValue(ClaimTypes.Name)
+                    ?? user.FindFirstValue(ClaimTypes.Email)
+                    ?? user.FindFirstValue("preferred_username")
+                    ?? userId;
+
+        return Task.FromResult<string?>(userName);
     }
 
-    public async Task<(Result Result, string UserId)> CreateUserAsync(string userName, string password)
+    public Task<(Result Result, string UserId)> CreateUserAsync(string userName, string password)
     {
-        var user = new ApplicationUser
-        {
-            UserName = userName,
-            Email = userName,
-        };
-
-        var result = await _userManager.CreateAsync(user, password);
-
-        return (result.ToApplicationResult(), user.Id);
+        // User creation is handled by Entra ID, not this application
+        throw new NotSupportedException("User creation is managed by Entra ID, not the application.");
     }
 
-    public async Task<bool> IsInRoleAsync(string userId, string role)
+    public Task<bool> IsInRoleAsync(string userId, string role)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user == null) return Task.FromResult(false);
 
-        return user != null && await _userManager.IsInRoleAsync(user, role);
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (currentUserId != userId) return Task.FromResult(false);
+
+        return Task.FromResult(user.IsInRole(role));
     }
 
     public async Task<bool> AuthorizeAsync(string userId, string policyName)
     {
-        var user = await _userManager.FindByIdAsync(userId);
+        var user = _httpContextAccessor.HttpContext?.User;
+        if (user == null) return false;
 
-        if (user == null)
-        {
-            return false;
-        }
+        var currentUserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (currentUserId != userId) return false;
 
-        var principal = await _userClaimsPrincipalFactory.CreateAsync(user);
-
-        var result = await _authorizationService.AuthorizeAsync(principal, policyName);
-
+        var result = await _authorizationService.AuthorizeAsync(user, policyName);
         return result.Succeeded;
     }
 
-    public async Task<Result> DeleteUserAsync(string userId)
+    public Task<Result> DeleteUserAsync(string userId)
     {
-        var user = await _userManager.FindByIdAsync(userId);
-
-        return user != null ? await DeleteUserAsync(user) : Result.Success();
-    }
-
-    public async Task<Result> DeleteUserAsync(ApplicationUser user)
-    {
-        var result = await _userManager.DeleteAsync(user);
-
-        return result.ToApplicationResult();
+        // User deletion is handled by Entra ID, not this application
+        throw new NotSupportedException("User deletion is managed by Entra ID, not the application.");
     }
 }
