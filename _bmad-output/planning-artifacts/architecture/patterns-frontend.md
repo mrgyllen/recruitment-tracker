@@ -11,7 +11,7 @@ _These patterns prevent AI agent implementation conflicts. All agents MUST follo
 | Element | Convention | Example |
 |---------|-----------|---------|
 | Components | PascalCase (file and export) | `CandidateList.tsx`, `OutcomeForm.tsx` |
-| Hooks | `use` prefix, camelCase file | `useRecruitmentOverview.ts` |
+| Hooks | `use` prefix, camelCase file. `useApp*` prefix for project wrappers around third-party hooks | `useRecruitmentOverview.ts`, `useAppToast.ts` |
 | Utilities / helpers | camelCase file | `formatDate.ts`, `handleResponse.ts` |
 | API modules | camelCase file | `recruitmentApi.ts`, `candidateApi.ts` |
 | API types | camelCase `.types.ts` suffix | `recruitmentApi.types.ts`, `candidateApi.types.ts` |
@@ -94,6 +94,15 @@ Never a blank void, never "No data found," never a spinner for empty data.
 | Backend | Before handler execution | FluentValidation pipeline behavior in MediatR |
 | **Rule** | Backend is authoritative | Frontend validation is UX convenience, not security |
 
+## Animation Accessibility
+
+**Rule: All animations MUST respect `prefers-reduced-motion`.** Wrap CSS animations in `@media (prefers-reduced-motion: no-preference)` or add a disable rule in `@media (prefers-reduced-motion: reduce)`. This applies to:
+- Tailwind's `animate-pulse` (used by SkeletonLoader)
+- Toast slide-in animations (sonner)
+- Any future CSS transitions or keyframe animations
+
+When reduced motion is preferred, transitions become instant (no animation). This is a WCAG 2.1 AA requirement.
+
 ## UI Consistency Rules
 
 ### Status Indicators (Shared `StatusBadge` Component)
@@ -116,7 +125,7 @@ Never a blank void, never "No data found," never a spinner for empty data.
 | Primary (Create, Save, Import) | Filled, accent color | Bottom-right or top-right |
 | Secondary (Cancel, Back) | Outlined | Left of primary |
 | Destructive (Remove, Close Recruitment) | Red text or outlined red | Separated from primary actions |
-| Navigation (View, Open) | Text link or ghost button | Inline |
+| Navigation (View, Open) | Text link or ghost button (Ghost deferred — use secondary until implemented) | Inline |
 
 ### Toast Notifications (Shared `Toast` System)
 

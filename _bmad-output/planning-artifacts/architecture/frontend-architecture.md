@@ -141,6 +141,16 @@ export const recruitmentApi = {
 };
 ```
 
+## Auth Guard Patterns
+
+Two separate patterns handle authentication at different layers:
+
+**Route guard (ProtectedRoute):** Uses `useEffect` + `login()` from `AuthContext` to redirect unauthenticated users. Renders a "Redirecting to login..." placeholder while the redirect fires. Does NOT use `<Navigate to="/login">` — there is no `/login` route. Instead, it calls the auth provider's `login()` method, which triggers `loginRedirect()` (MSAL production) or sets the default dev persona (dev mode).
+
+**API guard (httpClient):** On 401 response, calls `msalInstance.loginRedirect()` directly. This handles expired tokens during API calls.
+
+**Rule:** Never navigate to a `/login` route. Always call the auth provider's login method programmatically.
+
 ## Batch Screening Architecture
 
 - PDF pre-fetching via SAS URLs from candidate list response

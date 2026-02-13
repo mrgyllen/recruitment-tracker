@@ -12,6 +12,10 @@ AutoMapper|api/**/*.csproj|Architecture forbids AutoMapper — use manual DTO ma
 Shouldly|api/**/*.csproj|Use FluentAssertions, not Shouldly
 AddDefaultIdentity|api/**/*.cs|Do not register ASP.NET Identity — architecture uses Entra ID exclusively
 
+# Frontend patterns (promoted from pending — Stories 1.4-1.5)
+animate-pulse|web/src/**/*.tsx|animate-pulse must be disabled under prefers-reduced-motion — add CSS guard
+Navigate to="/login"|web/src/**/*.tsx|Do not use <Navigate> to auth routes — call login() from AuthContext instead
+
 # Domain model rules (promoted from pending — Story 1.3)
 \[NotMapped\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API builder.Ignore()
 \[Required\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API
