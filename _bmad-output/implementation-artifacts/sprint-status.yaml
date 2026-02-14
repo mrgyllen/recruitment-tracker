@@ -61,7 +61,7 @@ development_status:
   2-2-recruitment-list-navigation: done
   2-3-edit-recruitment-manage-workflow-steps: done
   2-4-team-membership-management: done
-  2-5-close-recruitment-read-only-view: ready-for-dev
+  2-5-close-recruitment-read-only-view: done
   epic-2-retrospective: optional
 
   # Epic 3: Candidate Import & Document Management
