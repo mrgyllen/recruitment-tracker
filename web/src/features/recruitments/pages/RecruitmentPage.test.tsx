@@ -111,4 +111,26 @@ describe('RecruitmentPage', () => {
     })
     expect(screen.getByDisplayValue('Screening')).toBeInTheDocument()
   })
+
+  it('renders close button for active recruitment', async () => {
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('button', { name: /close recruitment/i }),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('does not render close button for closed recruitment', async () => {
+    renderWithRoute(mockRecruitmentId2)
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Frontend Engineer')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.queryByRole('button', { name: /close recruitment/i }),
+    ).not.toBeInTheDocument()
+  })
 })

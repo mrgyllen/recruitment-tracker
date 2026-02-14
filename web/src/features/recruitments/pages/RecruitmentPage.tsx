@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router'
+import { CloseRecruitmentDialog } from '../CloseRecruitmentDialog'
 import { EditRecruitmentForm } from '../EditRecruitmentForm'
 import { useRecruitment } from '../hooks/useRecruitment'
 import { WorkflowStepEditor } from '../WorkflowStepEditor'
@@ -11,6 +13,7 @@ import { ApiError } from '@/lib/api/httpClient'
 export function RecruitmentPage() {
   const { recruitmentId } = useParams<{ recruitmentId: string }>()
   const { data, isPending, error } = useRecruitment(recruitmentId ?? '')
+  const [closeDialogOpen, setCloseDialogOpen] = useState(false)
 
   if (isPending) {
     return (
@@ -73,9 +76,19 @@ export function RecruitmentPage() {
     <div className="mx-auto max-w-4xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{data.title}</h1>
-        <Badge variant={data.status === 'Active' ? 'default' : 'secondary'}>
-          {data.status}
-        </Badge>
+        <div className="flex items-center gap-2">
+          {!isClosed && (
+            <Button
+              variant="destructive"
+              onClick={() => setCloseDialogOpen(true)}
+            >
+              Close Recruitment
+            </Button>
+          )}
+          <Badge variant={data.status === 'Active' ? 'default' : 'secondary'}>
+            {data.status}
+          </Badge>
+        </div>
       </div>
 
       <EditRecruitmentForm recruitment={data} />
@@ -88,6 +101,12 @@ export function RecruitmentPage() {
       />
 
       <MemberList recruitmentId={data.id} disabled={isClosed} />
+
+      <CloseRecruitmentDialog
+        recruitmentId={data.id}
+        open={closeDialogOpen}
+        onOpenChange={setCloseDialogOpen}
+      />
     </div>
   )
 }
