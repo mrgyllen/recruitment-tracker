@@ -65,6 +65,14 @@ public class Candidate : GuidEntity
         AddDomainEvent(new DocumentUploadedEvent(Id, document.Id));
     }
 
+    public void UpdateProfile(string fullName, string? phoneNumber, string? location, DateTimeOffset dateApplied)
+    {
+        FullName = fullName;
+        PhoneNumber = phoneNumber;
+        Location = location;
+        DateApplied = dateApplied;
+    }
+
     public void Anonymize()
     {
         FullName = null;
