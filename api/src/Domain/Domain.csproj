@@ -6,6 +6,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="api.Domain.UnitTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="MediatR.Contracts" />
   </ItemGroup>
 

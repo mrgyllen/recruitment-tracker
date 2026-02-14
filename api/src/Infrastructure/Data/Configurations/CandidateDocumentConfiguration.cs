@@ -20,6 +20,14 @@ public class CandidateDocumentConfiguration : IEntityTypeConfiguration<Candidate
             .IsRequired()
             .HasMaxLength(2048);
 
+        builder.Property(d => d.WorkdayCandidateId)
+            .HasMaxLength(50);
+
+        builder.Property(d => d.DocumentSource)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(30);
+
         builder.HasIndex(d => d.CandidateId)
             .HasDatabaseName("IX_CandidateDocuments_CandidateId");
 
