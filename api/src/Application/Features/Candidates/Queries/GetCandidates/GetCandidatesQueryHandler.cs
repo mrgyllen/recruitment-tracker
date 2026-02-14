@@ -1,6 +1,8 @@
 using api.Application.Common.Interfaces;
+using api.Application.Common.Models;
 using api.Domain.Entities;
 using api.Domain.Enums;
+using Microsoft.Extensions.Options;
 using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
@@ -9,7 +11,8 @@ namespace api.Application.Features.Candidates.Queries.GetCandidates;
 public class GetCandidatesQueryHandler(
     IApplicationDbContext dbContext,
     ITenantContext tenantContext,
-    IBlobStorageService blobStorage)
+    IBlobStorageService blobStorage,
+    IOptions<OverviewSettings> overviewSettings)
     : IRequestHandler<GetCandidatesQuery, PaginatedCandidateListDto>
 {
     private const string ContainerName = "documents";
@@ -71,6 +74,15 @@ public class GetCandidatesQueryHandler(
 
                 return true;
             });
+        }
+
+        if (request.StaleOnly == true)
+        {
+            var staleCutoff = DateTimeOffset.UtcNow.AddDays(-overviewSettings.Value.StaleDays);
+            filtered = filtered.Where(c =>
+                c.CurrentWorkflowStepId != null &&
+                !c.Outcomes.Any(o => o.WorkflowStepId == c.CurrentWorkflowStepId) &&
+                c.CreatedAt < staleCutoff);
         }
 
         var filteredList = filtered.ToList();

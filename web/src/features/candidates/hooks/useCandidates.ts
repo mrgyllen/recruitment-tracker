@@ -8,6 +8,7 @@ interface UseCandidatesParams {
   search?: string
   stepId?: string
   outcomeStatus?: string
+  staleOnly?: boolean
 }
 
 export function useCandidates({
@@ -17,12 +18,13 @@ export function useCandidates({
   search,
   stepId,
   outcomeStatus,
+  staleOnly,
 }: UseCandidatesParams) {
   return useQuery({
     queryKey: [
       'candidates',
       recruitmentId,
-      { page, pageSize, search, stepId, outcomeStatus },
+      { page, pageSize, search, stepId, outcomeStatus, staleOnly },
     ],
     queryFn: () =>
       candidateApi.getAll(
@@ -32,6 +34,7 @@ export function useCandidates({
         search,
         stepId,
         outcomeStatus,
+        staleOnly,
       ),
     enabled: !!recruitmentId,
   })

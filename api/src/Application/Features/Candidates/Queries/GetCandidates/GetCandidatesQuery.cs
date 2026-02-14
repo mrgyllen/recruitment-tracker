@@ -10,4 +10,5 @@ public record GetCandidatesQuery : IRequest<PaginatedCandidateListDto>
     public string? Search { get; init; }
     public Guid? StepId { get; init; }
     public OutcomeStatus? OutcomeStatus { get; init; }
+    public bool? StaleOnly { get; init; }
 }

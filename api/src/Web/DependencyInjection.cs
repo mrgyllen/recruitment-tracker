@@ -1,5 +1,6 @@
 ﻿using System.Threading.RateLimiting;
 using api.Application.Common.Interfaces;
+using api.Application.Common.Models;
 using api.Infrastructure.Data;
 using api.Web.Configuration;
 using api.Web.Infrastructure;
@@ -17,6 +18,9 @@ public static class DependencyInjection
 {
     public static void AddWebServices(this IHostApplicationBuilder builder)
     {
+        builder.Services.Configure<OverviewSettings>(
+            builder.Configuration.GetSection(OverviewSettings.SectionName));
+
         builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
         builder.Services.AddScoped<IUser, CurrentUser>();

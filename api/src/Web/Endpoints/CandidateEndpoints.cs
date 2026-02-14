@@ -57,7 +57,8 @@ public class CandidateEndpoints : EndpointGroupBase
         int pageSize = 50,
         string? search = null,
         Guid? stepId = null,
-        OutcomeStatus? outcomeStatus = null)
+        OutcomeStatus? outcomeStatus = null,
+        bool? staleOnly = null)
     {
         var result = await sender.Send(new GetCandidatesQuery
         {
@@ -67,6 +68,7 @@ public class CandidateEndpoints : EndpointGroupBase
             Search = search,
             StepId = stepId,
             OutcomeStatus = outcomeStatus,
+            StaleOnly = staleOnly,
         });
         return Results.Ok(result);
     }

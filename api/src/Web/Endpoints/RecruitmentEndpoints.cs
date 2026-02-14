@@ -5,6 +5,7 @@ using api.Application.Features.Recruitments.Commands.RemoveWorkflowStep;
 using api.Application.Features.Recruitments.Commands.ReorderWorkflowSteps;
 using api.Application.Features.Recruitments.Commands.UpdateRecruitment;
 using api.Application.Features.Recruitments.Queries.GetRecruitmentById;
+using api.Application.Features.Recruitments.Queries.GetRecruitmentOverview;
 using api.Application.Features.Recruitments.Queries.GetRecruitments;
 using api.Web.Infrastructure;
 using MediatR;
@@ -25,6 +26,7 @@ public class RecruitmentEndpoints : EndpointGroupBase
         group.MapDelete("/{id:guid}/steps/{stepId:guid}", RemoveWorkflowStep);
         group.MapPut("/{id:guid}/steps/reorder", ReorderWorkflowSteps);
         group.MapPost("/{id:guid}/close", CloseRecruitment);
+        group.MapGet("/{id:guid}/overview", GetRecruitmentOverview);
     }
 
     private static async Task<IResult> CreateRecruitment(
@@ -94,5 +96,13 @@ public class RecruitmentEndpoints : EndpointGroupBase
     {
         await sender.Send(new CloseRecruitmentCommand { RecruitmentId = id });
         return Results.NoContent();
+    }
+
+    private static async Task<IResult> GetRecruitmentOverview(
+        ISender sender,
+        Guid id)
+    {
+        var result = await sender.Send(new GetRecruitmentOverviewQuery { RecruitmentId = id });
+        return Results.Ok(result);
     }
 }

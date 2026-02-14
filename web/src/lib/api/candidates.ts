@@ -24,6 +24,7 @@ export const candidateApi = {
     search?: string,
     stepId?: string,
     outcomeStatus?: string,
+    staleOnly?: boolean,
   ) => {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -32,6 +33,7 @@ export const candidateApi = {
     if (search) params.set('search', search)
     if (stepId) params.set('stepId', stepId)
     if (outcomeStatus) params.set('outcomeStatus', outcomeStatus)
+    if (staleOnly) params.set('staleOnly', 'true')
     return apiGet<PaginatedCandidateList>(
       `/recruitments/${recruitmentId}/candidates?${params}`,
     )
