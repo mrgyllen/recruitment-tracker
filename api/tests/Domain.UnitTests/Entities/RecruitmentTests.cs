@@ -334,4 +334,29 @@ public class RecruitmentTests
 
         act.Should().Throw<RecruitmentClosedException>();
     }
+
+    [Test]
+    public void AddMember_WhenClosed_ThrowsRecruitmentClosedException()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.Close();
+
+        var act = () => recruitment.AddMember(Guid.NewGuid(), "SME/Collaborator");
+
+        act.Should().Throw<RecruitmentClosedException>();
+    }
+
+    [Test]
+    public void RemoveMember_WhenClosed_ThrowsRecruitmentClosedException()
+    {
+        var recruitment = CreateRecruitment();
+        var userId = Guid.NewGuid();
+        recruitment.AddMember(userId, "SME/Collaborator");
+        var memberId = recruitment.Members.First(m => m.UserId == userId).Id;
+        recruitment.Close();
+
+        var act = () => recruitment.RemoveMember(memberId);
+
+        act.Should().Throw<RecruitmentClosedException>();
+    }
 }
