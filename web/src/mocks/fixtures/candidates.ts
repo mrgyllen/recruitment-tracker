@@ -30,6 +30,8 @@ export const mockCandidates: CandidateResponse[] = [
     dateApplied: '2026-02-10T00:00:00Z',
     createdAt: '2026-02-10T12:00:00Z',
     document: mockCandidateDocument,
+    documentSasUrl:
+      'https://storage.blob.core.windows.net/documents/recruitment-1/cvs/doc-1.pdf?sv=2024&sig=mock',
     currentWorkflowStepId: mockStepId2,
     currentWorkflowStepName: 'Interview',
     currentOutcomeStatus: 'NotStarted',
@@ -44,6 +46,7 @@ export const mockCandidates: CandidateResponse[] = [
     dateApplied: '2026-02-12T00:00:00Z',
     createdAt: '2026-02-12T09:00:00Z',
     document: null,
+    documentSasUrl: null,
     currentWorkflowStepId: mockStepId1,
     currentWorkflowStepName: 'Screening',
     currentOutcomeStatus: 'NotStarted',

@@ -16,12 +16,16 @@ public class GetCandidatesQueryHandlerTests
 {
     private IApplicationDbContext _dbContext = null!;
     private ITenantContext _tenantContext = null!;
+    private IBlobStorageService _blobStorage = null!;
 
     [SetUp]
     public void SetUp()
     {
         _dbContext = Substitute.For<IApplicationDbContext>();
         _tenantContext = Substitute.For<ITenantContext>();
+        _blobStorage = Substitute.For<IBlobStorageService>();
+        _blobStorage.GenerateSasUri(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<TimeSpan>())
+            .Returns(new Uri("https://storage.blob.core.windows.net/documents/test.pdf?sig=mock"));
     }
 
     private (Recruitment recruitment, Guid userId) SetUpRecruitmentWithSteps()
@@ -58,7 +62,7 @@ public class GetCandidatesQueryHandlerTests
             recruitment.Id, "Bob", "bob@example.com", null, null, DateTimeOffset.UtcNow);
         SetUpCandidates(candidate1, candidate2);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -86,7 +90,7 @@ public class GetCandidatesQueryHandlerTests
             .AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(recruitmentMockSet);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -106,7 +110,7 @@ public class GetCandidatesQueryHandlerTests
             .AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(recruitmentMockSet);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = Guid.NewGuid(),
@@ -128,7 +132,7 @@ public class GetCandidatesQueryHandlerTests
             recruitment.Id, "Bob Smith", "bob@example.com", null, null, DateTimeOffset.UtcNow);
         SetUpCandidates(alice, bob);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -153,7 +157,7 @@ public class GetCandidatesQueryHandlerTests
             recruitment.Id, "Bob", "bob@contoso.com", null, null, DateTimeOffset.UtcNow);
         SetUpCandidates(alice, bob);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -185,7 +189,7 @@ public class GetCandidatesQueryHandlerTests
 
         SetUpCandidates(alice, bob);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -217,7 +221,7 @@ public class GetCandidatesQueryHandlerTests
 
         SetUpCandidates(alice, bob);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -254,7 +258,7 @@ public class GetCandidatesQueryHandlerTests
 
         SetUpCandidates(alice, bob, carol);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         // Filter: at Screening step AND Fail status => only Alice
         var query = new GetCandidatesQuery
         {
@@ -285,7 +289,7 @@ public class GetCandidatesQueryHandlerTests
 
         SetUpCandidates(candidates.ToArray());
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,
@@ -309,7 +313,7 @@ public class GetCandidatesQueryHandlerTests
             recruitment.Id, "Alice", "alice@example.com", null, null, DateTimeOffset.UtcNow);
         SetUpCandidates(candidate);
 
-        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext);
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage);
         var query = new GetCandidatesQuery
         {
             RecruitmentId = recruitment.Id,

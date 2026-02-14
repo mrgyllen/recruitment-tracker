@@ -15,13 +15,15 @@ public record CandidateDto
     public DateTimeOffset DateApplied { get; init; }
     public DateTimeOffset CreatedAt { get; init; }
     public DocumentDto? Document { get; init; }
+    public string? DocumentSasUrl { get; init; }
     public Guid? CurrentWorkflowStepId { get; init; }
     public string? CurrentWorkflowStepName { get; init; }
     public string? CurrentOutcomeStatus { get; init; }
 
     public static CandidateDto From(
         Candidate candidate,
-        IReadOnlyList<WorkflowStep> workflowSteps)
+        IReadOnlyList<WorkflowStep> workflowSteps,
+        string? documentSasUrl = null)
     {
         var (currentStep, outcomeStatus) = ComputeCurrentStep(candidate, workflowSteps);
 
@@ -38,6 +40,7 @@ public record CandidateDto
             Document = candidate.Documents.FirstOrDefault() is { } doc
                 ? DocumentDto.From(doc)
                 : null,
+            DocumentSasUrl = documentSasUrl,
             CurrentWorkflowStepId = currentStep?.Id,
             CurrentWorkflowStepName = currentStep?.Name,
             CurrentOutcomeStatus = outcomeStatus?.ToString(),

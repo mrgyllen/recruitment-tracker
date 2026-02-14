@@ -8,6 +8,7 @@ export interface CandidateResponse {
   dateApplied: string
   createdAt: string
   document: CandidateDocumentDto | null
+  documentSasUrl: string | null
   currentWorkflowStepId: string | null
   currentWorkflowStepName: string | null
   currentOutcomeStatus: string | null

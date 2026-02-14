@@ -8,9 +8,12 @@ namespace api.Application.Features.Candidates.Queries.GetCandidates;
 
 public class GetCandidatesQueryHandler(
     IApplicationDbContext dbContext,
-    ITenantContext tenantContext)
+    ITenantContext tenantContext,
+    IBlobStorageService blobStorage)
     : IRequestHandler<GetCandidatesQuery, PaginatedCandidateListDto>
 {
+    private const string ContainerName = "documents";
+    private static readonly TimeSpan SasValidity = TimeSpan.FromMinutes(15);
     public async Task<PaginatedCandidateListDto> Handle(
         GetCandidatesQuery request,
         CancellationToken cancellationToken)
@@ -79,7 +82,14 @@ public class GetCandidatesQueryHandler(
 
         return new PaginatedCandidateListDto
         {
-            Items = items.Select(c => CandidateDto.From(c, orderedSteps)).ToList(),
+            Items = items.Select(c =>
+            {
+                var doc = c.Documents.FirstOrDefault();
+                var sasUrl = doc is not null
+                    ? blobStorage.GenerateSasUri(ContainerName, doc.BlobStorageUrl, SasValidity).ToString()
+                    : null;
+                return CandidateDto.From(c, orderedSteps, sasUrl);
+            }).ToList(),
             TotalCount = totalCount,
             Page = request.Page,
             PageSize = request.PageSize,
