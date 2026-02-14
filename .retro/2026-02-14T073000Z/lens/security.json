@@ -1,0 +1,184 @@
+{
+  "persona": "Security Lens",
+  "wins": [
+    "Fallback authorization policy requires authenticated user on all endpoints by default (SetFallbackPolicy in Web/DependencyInjection.cs:40), eliminating the risk of accidentally unprotected endpoints.",
+    "Development authentication (DevAuth) is properly gated behind IsDevelopment() environment check (Web/DependencyInjection.cs:29-31), preventing dev auth bypass from reaching production.",
+    "All Epic 3 command and query handlers inject ITenantContext and perform explicit membership verification before data access (verified across 8 handlers: CreateCandidate, RemoveCandidate, GetCandidates, StartImport, GetImportSession, ResolveMatchConflict, UploadDocument, AssignDocument).",
+    "Global query filter on Candidate entity (ApplicationDbContext.cs:30-38) enforces data isolation at the EF Core level, with comprehensive integration tests covering 8 scenarios including cross-tenant isolation, service context bypass, and membership removal.",
+    "File upload validation enforces type restrictions (.xlsx/.pdf) and size limits (10MB for XLSX, 100MB for PDF, 10MB for individual uploads) via FluentValidation validators on StartImportCommand and UploadDocumentCommand."
+  ],
+  "problems": [
+    "Story 3.2 C1 (CRITICAL): GetImportSessionQueryHandler shipped without ITenantContext membership verification, reproducing the exact same authorization gap pattern from Epic 2 Story 2.3 despite E-001 experiment targeting this. The fix (commit 340e888) was caught by review, not by automated tooling or process.",
+    "No global query filter on Recruitment or ImportSession entities (only Candidate has HasQueryFilter in ApplicationDbContext.cs:30). Authorization for these entities relies entirely on handler-level checks, creating a fragile defense where any new handler that forgets the check introduces a data leak.",
+    "AssignDocumentCommand accepts an arbitrary DocumentBlobUrl string from the client (AssignDocumentCommand.cs:6) with no validation that the URL belongs to the same recruitment's blob storage path. A team member could supply a blob URL from another recruitment's documents container, bypassing data isolation at the storage layer.",
+    "GenerateSasUri in BlobStorageService.cs:47-57 accepts an unbounded TimeSpan validity parameter with no maximum enforcement. Callers can request arbitrarily long SAS token lifetimes. No callers were found in application features during this epic, but the interface is ready for misuse.",
+    "NotFoundException leaks entity type name and primary key GUID in its message (NotFoundException.cs:21: 'Entity \"{name}\" ({key}) was not found.'), and CustomExceptionHandler passes exception.Message directly to ProblemDetails.Detail (CustomExceptionHandler.cs:67). This reveals internal entity structure to API consumers.",
+    "ImportPipelineHostedService logs import session IDs in error messages (lines 32, 140, 158, 203) without structured logging redaction. While session IDs are not PII themselves, the pattern of logging exception messages at LogError (line 141: session.MarkFailed(ex.Message)) could capture PII from malformed XLSX rows if exception messages contain candidate data.",
+    "Channel<T> for the import pipeline is unbounded (DependencyInjection.cs:53-56, also noted as review finding M5 in Story 3.2). While accepted for current scale, an unbounded channel under sustained upload volume could lead to memory exhaustion denial-of-service."
+  ],
+  "missing_evidence": [
+    "GenerateSasUri is defined but no application-layer callers were found in Epic 3 features -- it is unknown whether SAS tokens are used for document download or if blob URLs are served directly. The SAS token lifetime enforcement cannot be verified.",
+    "No code coverage metrics were captured (context.md Section 3: 'Not measured -- pre-existing gap'). It is unknown what percentage of authorization checks are exercised by tests.",
+    "Application.UnitTests cannot execute locally (context.md Section 3: 'ASP.NET Core 10 runtime not installed'). The authorization-related unit tests may or may not pass; their status is unverified in the local development environment.",
+    "No evidence of CORS configuration was found. It is unknown whether cross-origin requests to the API are restricted.",
+    "No evidence of rate limiting on file upload endpoints (ImportEndpoints, CandidateEndpoints UploadDocument). Upload abuse could exhaust blob storage or server memory."
+  ],
+  "candidate_actions": [
+    {
+      "id": "SEC-001",
+      "title": "Add global query filters on Recruitment and ImportSession entities",
+      "type": "security_hardening",
+      "priority": "P1",
+      "rationale": "Only Candidate has a global query filter (ApplicationDbContext.cs:30). Recruitment and ImportSession authorization depends entirely on handler-level checks, which have already failed once (Story 3.2 C1, commit 340e888). Adding EF Core query filters creates defense-in-depth that prevents data leaks even when handler-level checks are omitted.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs:30 (only Candidate filter)",
+        "context.md Section 4: Story 3.2 C1 -- GetImportSessionQueryHandler missing auth",
+        "context.md Section 6: E-001 FAIL -- auth gap recurred despite process change"
+      ],
+      "acceptance_criteria": [
+        "HasQueryFilter configured on Recruitment entity scoped to ITenantContext membership",
+        "HasQueryFilter configured on ImportSession entity scoped to ITenantContext (via Recruitment relationship)",
+        "TenantContextFilterTests expanded with cross-tenant tests for Recruitment and ImportSession queries",
+        "All existing tests continue to pass"
+      ],
+      "automation_hints": [
+        "Add filter in ApplicationDbContext.OnModelCreating for Recruitment: builder.Entity<Recruitment>().HasQueryFilter(r => tenantContext.IsServiceContext || r.Members.Any(m => m.UserId == tenantContext.UserGuid))",
+        "Add filter for ImportSession via navigation to Recruitment"
+      ],
+      "files_to_touch": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs"
+      ],
+      "risk_if_ignored": "Any future handler that queries Recruitment or ImportSession without explicit ITenantContext check will leak data across tenants, reproducing the Story 3.2 C1 pattern."
+    },
+    {
+      "id": "SEC-002",
+      "title": "Validate AssignDocumentCommand.DocumentBlobUrl belongs to the same recruitment's storage path",
+      "type": "security_hardening",
+      "priority": "P1",
+      "rationale": "AssignDocumentCommand accepts an arbitrary blob URL string from the client with no validation that it belongs to the target recruitment's path prefix. A team member on Recruitment A could supply a blob URL from Recruitment B's document storage, attaching another recruitment's CV to their candidate and bypassing data isolation at the storage layer.",
+      "evidence_refs": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommand.cs:6 -- DocumentBlobUrl is free-form string",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandValidator.cs -- only checks NotEmpty, no path validation",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs:40 -- passes URL directly to ReplaceDocument"
+      ],
+      "acceptance_criteria": [
+        "AssignDocumentCommandValidator or handler verifies DocumentBlobUrl starts with expected recruitment path prefix (e.g., '{recruitmentId}/cvs/')",
+        "Alternatively, handler verifies the blob URL corresponds to an ImportDocument in the same recruitment's ImportSession",
+        "Unit test confirms rejection of cross-recruitment blob URLs"
+      ],
+      "automation_hints": [
+        "Add FluentValidation rule: RuleFor(x => x.DocumentBlobUrl).Must((cmd, url) => url.StartsWith($\"{cmd.RecruitmentId}/\"))",
+        "Or validate in handler by checking ImportDocument belongs to a session with matching RecruitmentId"
+      ],
+      "files_to_touch": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandValidator.cs",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment document access via blob URL injection, allowing a team member to attach documents from other recruitments to their candidates."
+    },
+    {
+      "id": "SEC-003",
+      "title": "Cap GenerateSasUri validity to 15 minutes maximum",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "The architecture specifies 15-minute maximum SAS token validity, but BlobStorageService.GenerateSasUri accepts any TimeSpan with no upper bound. While no application-layer callers were identified in this epic, the interface is ready for misuse when document download is implemented.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Services/BlobStorageService.cs:47-57 -- unbounded validity parameter",
+        "security-lens.md Focus Area 3: 'Are SAS tokens short-lived (15-minute max)?'"
+      ],
+      "acceptance_criteria": [
+        "BlobStorageService.GenerateSasUri throws ArgumentException or clamps to 15 minutes if validity exceeds TimeSpan.FromMinutes(15)",
+        "Unit test verifies the maximum is enforced",
+        "IBlobStorageService XML doc updated to document the 15-minute maximum"
+      ],
+      "automation_hints": [
+        "Add guard: if (validity > TimeSpan.FromMinutes(15)) throw new ArgumentOutOfRangeException(nameof(validity));",
+        "Or clamp: validity = TimeSpan.FromMinutes(Math.Min(validity.TotalMinutes, 15));"
+      ],
+      "files_to_touch": [
+        "api/src/Infrastructure/Services/BlobStorageService.cs",
+        "api/src/Application/Common/Interfaces/IBlobStorageService.cs"
+      ],
+      "risk_if_ignored": "A future caller could generate long-lived SAS tokens that remain valid after user access revocation, violating least-privilege principles."
+    },
+    {
+      "id": "SEC-004",
+      "title": "Redact entity keys from NotFoundException ProblemDetails responses",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "NotFoundException includes entity type and GUID in its message ('Entity \"Recruitment\" (guid) was not found'), and CustomExceptionHandler passes this directly to ProblemDetails.Detail. This reveals internal entity naming and primary key structure to API consumers, aiding enumeration attacks.",
+      "evidence_refs": [
+        "api/src/Application/Common/Exceptions/NotFoundException.cs:21 -- message format includes entity name and key",
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs:67 -- Detail = exception.Message"
+      ],
+      "acceptance_criteria": [
+        "ProblemDetails for 404 responses uses a generic message (e.g., 'The specified resource was not found.') without entity type or ID",
+        "Entity type and key are logged server-side at Warning level for debugging",
+        "Existing CustomExceptionHandler integration tests updated to verify no entity keys in response body"
+      ],
+      "automation_hints": [
+        "In HandleNotFoundException, set Detail to a fixed string instead of exception.Message",
+        "Log the original exception.Message at Warning level before writing the response"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs"
+      ],
+      "risk_if_ignored": "Information disclosure of internal entity structure aids attackers in mapping the API surface and enumerating resource IDs."
+    },
+    {
+      "id": "SEC-005",
+      "title": "Enforce authorization check presence via automated test or analyzer for all IRequestHandler implementations",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "E-001 experiment (mandatory authorization section in plans) failed to prevent the Story 3.2 auth gap, and the same pattern recurred from Epic 2. Process-based controls have proven insufficient across two epics. An automated architectural test that scans all IRequestHandler implementations for ITenantContext usage would catch missing checks before code review.",
+      "evidence_refs": [
+        "context.md Section 6: E-001 FAIL -- 'Story 3.2 C1 had GetImportSessionQueryHandler missing auth, same pattern as Epic 2 Story 2.3'",
+        "context.md Section 5: Fix cycle rate 80%, critical finding rate 40%",
+        "context.md Section 4: Story 3.2 C1 (CRITICAL) -- security finding"
+      ],
+      "acceptance_criteria": [
+        "An architectural test (e.g., using NetArchTest or reflection) verifies every IRequestHandler constructor accepts ITenantContext",
+        "Test fails if a new handler is added without ITenantContext dependency",
+        "Test is included in the domain test suite and runs in CI"
+      ],
+      "automation_hints": [
+        "Use reflection to find all types implementing IRequestHandler<,> and assert they have a constructor parameter of type ITenantContext",
+        "Alternatively, use NetArchTest: Types.InAssembly(appAssembly).That().ImplementInterface(typeof(IRequestHandler<,>)).Should().HaveDependencyOn('ITenantContext')"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/Architecture/AuthorizationArchitectureTests.cs"
+      ],
+      "risk_if_ignored": "Authorization gaps will continue to recur in future epics, requiring review cycles to catch what automated tooling could prevent. Two consecutive epics have demonstrated this failure mode."
+    },
+    {
+      "id": "SEC-006",
+      "title": "Add rate limiting middleware to file upload endpoints",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "File upload endpoints (ImportEndpoints POST, CandidateEndpoints POST document) load entire file contents into memory (ImportEndpoints.cs:22-23 uses MemoryStream + ToArray). Without rate limiting, sustained upload requests could exhaust server memory. The unbounded Channel<T> compounds this risk.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/ImportEndpoints.cs:22-23 -- MemoryStream + CopyToAsync + ToArray",
+        "api/src/Infrastructure/DependencyInjection.cs:53-56 -- Channel.CreateUnbounded",
+        "context.md Section 4: Story 3.2 M5 -- 'Channel<T> unbounded (acceptable for current scale)'"
+      ],
+      "acceptance_criteria": [
+        "Rate limiting middleware (e.g., ASP.NET Core RateLimiter) applied to file upload endpoints",
+        "Concurrent upload limit per user configured (e.g., max 3 simultaneous uploads)",
+        "Channel<T> bounded with a reasonable capacity (e.g., 100) and backpressure strategy"
+      ],
+      "automation_hints": [
+        "Use builder.Services.AddRateLimiter() with a fixed window or sliding window policy",
+        "Apply .RequireRateLimiting() to upload endpoint groups",
+        "Switch Channel.CreateUnbounded to Channel.CreateBounded with BoundedChannelFullMode.Wait"
+      ],
+      "files_to_touch": [
+        "api/src/Web/DependencyInjection.cs",
+        "api/src/Web/Endpoints/ImportEndpoints.cs",
+        "api/src/Web/Endpoints/CandidateEndpoints.cs",
+        "api/src/Infrastructure/DependencyInjection.cs"
+      ],
+      "risk_if_ignored": "Memory exhaustion denial-of-service via sustained file upload requests, compounded by unbounded channel queue growth."
+    }
+  ]
+}

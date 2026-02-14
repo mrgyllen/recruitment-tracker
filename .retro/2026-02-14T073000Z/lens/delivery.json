@@ -1,0 +1,191 @@
+{
+  "persona": "Delivery Engineer Lens",
+  "wins": [
+    "ImportPipelineHostedService uses Channel<T> with scoped DI correctly, cleanly separating HTTP request lifecycle from background processing (api/src/Infrastructure/Services/ImportPipelineHostedService.cs, commits 35e9c68-24b61ec)",
+    "Domain entities enforce invariants via private setters and guard methods (EnsureProcessing, EnsureCompleted, ValidateRowIndex) — aggregate root boundary discipline is maintained across ImportSession, Candidate, and ImportDocument (api/src/Domain/Entities/ImportSession.cs, Candidate.cs)",
+    "Story 3.4 achieved a clean pass (0C, 0I) on a complex PDF splitting feature, demonstrating that infrastructure-focused stories with well-defined boundaries and strong encapsulation (PdfSplitterService, BlobStorageService) are lower risk (context.md Section 4, Story 3.4 review)",
+    "Frontend wizard decomposition (ImportWizard, FileUploadStep, ImportProgress, ImportSummary, MatchReviewStep) follows single-responsibility principle well — each step is independently testable with 190+ frontend tests passing (web/src/features/candidates/ImportFlow/, context.md Section 3)",
+    "All fix cycles resolved in a single round — no multi-round fix cycles occurred across any of the 4 stories that required fixes, indicating review findings were clear and actionable (context.md Section 5)"
+  ],
+  "problems": [
+    "Authorization check pattern is copy-pasted across 16+ command/query handlers as a 3-line inline block (var userId = tenantContext.UserGuid; if (userId is null || !recruitment.Members.Any(...)) throw new ForbiddenAccessException()). This violates DRY and makes authorization logic fragile — a missed handler (as happened in Story 3.2 C1) is the predictable consequence of scattered inline auth (grep across api/src/Application/Features/)",
+    "ResolveMatchConflictCommand uses magic strings for Action ('Confirm'/'Reject') and ImportRowResult stores Resolution as magic strings ('Confirmed'/'Rejected'). These should be enums to prevent typos and enable compiler-checked exhaustiveness (api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommand.cs, api/src/Domain/ValueObjects/ImportRowResult.cs)",
+    "ImportPipelineHostedService.ProcessImportAsync is a 100+ line method handling XLSX parsing, candidate matching, PDF bundle dispatch, and document auto-matching in a single method — high cyclomatic complexity and multiple responsibilities make it the primary complexity hotspot (api/src/Infrastructure/Services/ImportPipelineHostedService.cs lines 37-208)",
+    "Fix cycle rate regressed from 60% (Epic 2) to 80% (Epic 3) despite three experiments (E-001, E-002, E-003) being applied. All three experiments were evaluated as FAIL or INCONCLUSIVE, suggesting the current quality gate strategy is not effective at preventing the observed defect categories (context.md Section 6)",
+    "Code coverage is not measured — this is a pre-existing gap carried forward from Epic 2. Without coverage data, there is no visibility into which code paths lack test coverage, making it impossible to assess whether the 81+ domain tests and 190+ frontend tests provide adequate protection (context.md Section 3, Code Coverage)",
+    "Application.UnitTests cannot execute locally due to missing ASP.NET Core 10 runtime — this means backend handler tests are only validated via CI, increasing the feedback loop for handler-level defects that were the source of 3/4 fix cycles (context.md Section 3, Test Results)",
+    "Deferred item A-007 (CloseRecruitment returns 200 instead of 204) is marked NOT RESOLVED in the evidence bundle, but code inspection shows it was actually fixed in commit 2d6aafc during the Epic 2 retro self-healing. The sprint-status tracker has stale information (context.md Section 10, api/src/Web/Endpoints/RecruitmentEndpoints.cs line 96)"
+  ],
+  "missing_evidence": [
+    "No code coverage metrics are collected — impossible to identify untested paths or validate that new code has adequate coverage",
+    "No cyclomatic complexity metrics are measured — the ImportPipelineHostedService complexity observation is qualitative, not quantitative",
+    "No performance benchmarks for XLSX parsing or PDF splitting — unknown whether Channel<T> backpressure or memory usage is a concern at production scale",
+    "Application.UnitTests execution results not available locally — handler-level test failures are only visible in CI, creating blind spots in the development feedback loop",
+    "No tracking of whether implementation plans include explicit Authorization sections as required by E-001 — the experiment cannot be validated without this instrumentation"
+  ],
+  "candidate_actions": [
+    {
+      "id": "DEL-001",
+      "title": "Extract authorization membership check into a shared extension or base handler method",
+      "type": "refactor",
+      "priority": "P0",
+      "rationale": "The identical 3-line authorization pattern is duplicated across 16+ handlers. Story 3.2 C1 (CRITICAL/SECURITY) was caused by a handler missing this check. Centralizing the check eliminates the category of defect entirely rather than relying on review to catch omissions.",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.2 C1",
+        "context.md Section 6 E-001 FAIL",
+        "api/src/Application/Features/Import/Commands/StartImport/StartImportCommandHandler.cs lines 26-29",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs lines 27-30",
+        "api/src/Application/Features/Import/Queries/GetImportSession/GetImportSessionQueryHandler.cs lines 26-29",
+        "grep: 16+ handler files with identical pattern"
+      ],
+      "acceptance_criteria": [
+        "A single shared method (e.g., ITenantContext.EnsureMemberOf(recruitment) or a MediatR pipeline behaviour) encapsulates the membership check",
+        "All existing handlers use the shared method instead of inline checks",
+        "A unit test verifies that a handler without the check throws ForbiddenAccessException",
+        "The authorization check is applied automatically or fails obviously when omitted"
+      ],
+      "automation_hints": [
+        "Option A: Add an extension method ITenantContextExtensions.EnsureMemberOf(Recruitment recruitment)",
+        "Option B: Create an AuthorizationBehaviour<TRequest, TResponse> MediatR pipeline that reads a [RequireRecruitmentMembership] attribute on commands/queries",
+        "Add an architectural test or Roslyn analyzer that flags handlers missing the membership check"
+      ],
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/ITenantContext.cs",
+        "api/src/Application/Common/Behaviours/AuthorizationBehaviour.cs",
+        "All 16+ handler files in api/src/Application/Features/"
+      ],
+      "risk_if_ignored": "Every new handler is a potential authorization bypass. The current approach relies on human review to catch omissions, which already failed in Story 3.2 (security finding) and could lead to unauthorized data access in production."
+    },
+    {
+      "id": "DEL-002",
+      "title": "Decompose ImportPipelineHostedService.ProcessImportAsync into focused orchestration steps",
+      "type": "refactor",
+      "priority": "P1",
+      "rationale": "ProcessImportAsync handles XLSX parsing, candidate matching/creation, PDF bundle dispatch, document auto-matching, and session state management in a single 100+ line method. This concentration of responsibility makes it the primary complexity hotspot and the hardest method to modify or debug.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Services/ImportPipelineHostedService.cs lines 37-208",
+        "context.md Section 2 Git Summary — 14 commits for Story 3.2 alone"
+      ],
+      "acceptance_criteria": [
+        "ProcessImportAsync orchestrates at most 3-4 named method calls (e.g., ProcessXlsxImport, DispatchPdfBundle, AutoMatchDocuments)",
+        "Each extracted method is independently unit-testable",
+        "No behavioral changes — existing tests continue to pass"
+      ],
+      "automation_hints": [
+        "Extract ProcessXlsxImport(request, session, db, parser, matcher, ct) method",
+        "Extract AutoMatchDocuments(sessionId, recruitmentId, db, ct) method",
+        "Keep PDF dispatch as-is (it already delegates to MediatR)"
+      ],
+      "files_to_touch": [
+        "api/src/Infrastructure/Services/ImportPipelineHostedService.cs"
+      ],
+      "risk_if_ignored": "Future modifications to the import pipeline (e.g., adding new file formats, changing matching logic) will require understanding the full 200-line method, increasing the chance of regressions and extending implementation time."
+    },
+    {
+      "id": "DEL-003",
+      "title": "Replace magic strings in ResolveMatchConflict with an enum type",
+      "type": "refactor",
+      "priority": "P1",
+      "rationale": "The Action field on ResolveMatchConflictCommand uses string 'Confirm'/'Reject' and ImportRowResult.Resolution uses 'Confirmed'/'Rejected'. These magic strings create fragile coupling between frontend, validator, handler, and domain — a typo or casing difference would cause silent failures.",
+      "evidence_refs": [
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommand.cs line 6",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs line 34",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandValidator.cs line 11",
+        "api/src/Domain/ValueObjects/ImportRowResult.cs lines 56, 65"
+      ],
+      "acceptance_criteria": [
+        "A MatchResolutionAction enum replaces the string Action parameter",
+        "A MatchResolutionStatus enum replaces the string Resolution property",
+        "The validator uses enum comparison instead of string comparison",
+        "Frontend sends the enum value as a string that deserializes correctly via System.Text.Json"
+      ],
+      "automation_hints": [
+        "Create api/src/Domain/Enums/MatchResolutionAction.cs with Confirm, Reject values",
+        "Use JsonStringEnumConverter for API serialization"
+      ],
+      "files_to_touch": [
+        "api/src/Domain/Enums/MatchResolutionAction.cs (new)",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommand.cs",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandValidator.cs",
+        "api/src/Domain/ValueObjects/ImportRowResult.cs"
+      ],
+      "risk_if_ignored": "A frontend or API change that alters the casing or spelling of action strings will produce runtime failures instead of compile-time errors, and the current validator provides weaker guarantees than type-safe enum binding."
+    },
+    {
+      "id": "DEL-004",
+      "title": "Enable code coverage collection and set minimum thresholds",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Code coverage has been a known gap since Epic 2 and was carried through Epic 3 without resolution. Without coverage data, there is no evidence that the 81+ domain tests and 190+ frontend tests cover the code paths where defects were found (auth handler, match indexing, DTO completeness).",
+      "evidence_refs": [
+        "context.md Section 3 Code Coverage: 'Not measured (pre-existing gap from Epic 2)'",
+        "context.md Section 5 Fix Cycle Analysis — defects in handler/DTO/frontend logic"
+      ],
+      "acceptance_criteria": [
+        "dotnet test produces a coverage report (e.g., Cobertura XML) for Domain.UnitTests",
+        "Frontend vitest produces a coverage report",
+        "CI pipeline fails if coverage drops below defined threshold (e.g., 80% line coverage for domain layer)",
+        "Coverage reports are accessible as CI artifacts"
+      ],
+      "automation_hints": [
+        "Add coverlet.collector NuGet package and configure in test projects",
+        "Add --coverage flag to vitest config",
+        "Add coverage threshold to .github/workflows/ci.yml"
+      ],
+      "files_to_touch": [
+        "api/tests/Domain.UnitTests/Domain.UnitTests.csproj",
+        "web/vitest.config.ts",
+        ".github/workflows/ci.yml"
+      ],
+      "risk_if_ignored": "New features continue to ship without coverage visibility, and defect categories that coverage would catch (missing DTO fields, untested code paths) remain invisible until review."
+    },
+    {
+      "id": "DEL-005",
+      "title": "Resolve local Application.UnitTests execution environment gap",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Application.UnitTests build but cannot run locally due to missing ASP.NET Core 10 runtime. This means handler-level test results (where 3 of 4 fix-cycle defects originated) are only visible in CI, extending the feedback loop and reducing developer confidence before submitting for review.",
+      "evidence_refs": [
+        "context.md Section 3 Test Results: 'cannot execute locally (ASP.NET Core 10 runtime not installed)'",
+        "context.md Section 5 Fix Cycle Analysis — Stories 3.2, 3.3, 3.5 had handler-level defects"
+      ],
+      "acceptance_criteria": [
+        "Application.UnitTests execute successfully in the local development environment",
+        "A devcontainer or setup script installs the required .NET 10 runtime"
+      ],
+      "automation_hints": [
+        "Add .NET 10 SDK to devcontainer.json or a setup script",
+        "Document the required SDK version in CLAUDE.md or a CONTRIBUTING.md"
+      ],
+      "files_to_touch": [
+        ".devcontainer/devcontainer.json (if exists)",
+        "docs/dev-setup.md or CLAUDE.md"
+      ],
+      "risk_if_ignored": "Handler-level defects (the primary defect category in Epic 3) continue to be caught only in CI or review rather than during development, keeping the fix cycle rate elevated."
+    },
+    {
+      "id": "DEL-006",
+      "title": "Update sprint-status tracker to reflect A-007 resolution",
+      "type": "process_change",
+      "priority": "P2",
+      "rationale": "A-007 (CloseRecruitment returns 200 instead of 204) was fixed in commit 2d6aafc but the sprint-status snapshot still lists it as NOT RESOLVED. Stale status tracking erodes trust in the tracking system and wastes time in future retrospectives.",
+      "evidence_refs": [
+        "context.md Section 10 sprint-status: 'A-007: CloseRecruitment returns 200 instead of 204 -- NOT RESOLVED'",
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs line 96: return Results.NoContent()",
+        "git show 2d6aafc -- api/src/Web/Endpoints/RecruitmentEndpoints.cs"
+      ],
+      "acceptance_criteria": [
+        "Sprint-status reflects A-007 as resolved with commit reference 2d6aafc",
+        "A verification step is added to the retro process that cross-checks deferred item status against actual code state"
+      ],
+      "automation_hints": [
+        "Add a retro pre-check that greps for known deferred items and validates current code state"
+      ],
+      "files_to_touch": [
+        "docs/sprint-status.md or equivalent status tracker"
+      ],
+      "risk_if_ignored": "Future retros will continue reporting resolved items as outstanding, creating unnecessary action items and undermining the reliability of the tracking process."
+    }
+  ]
+}

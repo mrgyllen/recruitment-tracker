@@ -16,6 +16,9 @@ AddDefaultIdentity|api/**/*.cs|Do not register ASP.NET Identity — architecture
 animate-pulse|web/src/**/*.tsx|animate-pulse must be disabled under prefers-reduced-motion — add CSS guard
 Navigate to="/login"|web/src/**/*.tsx|Do not use <Navigate> to auth routes — call login() from AuthContext instead
 
+# Loading states (promoted from pending — Epic 2-3, recurring across multiple stories)
+Loading\.\.\.|web/src/features/**/*.tsx|Use SkeletonLoader component instead of plain 'Loading...' text — see patterns-frontend.md Loading States
+
 # Domain model rules (promoted from pending — Story 1.3)
 \[NotMapped\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API builder.Ignore()
 \[Required\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API

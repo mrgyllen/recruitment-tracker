@@ -58,7 +58,7 @@ public class TeamEndpoints : EndpointGroupBase
 }
 ```
 
-> **Evidence:** Story 2.4 used a static `MapTeamEndpoints()` extension method instead of EndpointGroupBase, creating an inconsistency with RecruitmentEndpoints. This is tracked as a refactoring item.
+> **Evidence:** Story 2.4 originally used a static `MapTeamEndpoints()` extension method instead of EndpointGroupBase — refactored to EndpointGroupBase in Epic 3 (deferred item A-006, commit 92f64e1). All endpoint classes now consistently use this pattern.
 
 ## Error Responses
 
@@ -78,6 +78,7 @@ RFC 9457 Problem Details. Validation errors include field-level detail. Import e
 | Async operation | 202 + status endpoint | `{ "importSessionId": "...", "statusUrl": "/api/import-sessions/..." }` |
 | Validation error | 400 + Problem Details | `{ "type": "...", "title": "Validation Failed", "errors": {...} }` |
 | Not found | 404 + Problem Details | `{ "type": "...", "title": "Not Found", "detail": "..." }` |
+| State change | 204 No Content | No response body (e.g., CloseRecruitment, ArchiveCandidate) |
 | Auth failure | 401/403 + Problem Details | Standard ASP.NET Core response |
 | Server error | 500 + Problem Details (no internals) | `{ "type": "...", "title": "Internal Server Error" }` |
 

@@ -6,7 +6,11 @@ public class AssignDocumentCommandValidator : AbstractValidator<AssignDocumentCo
     {
         RuleFor(x => x.RecruitmentId).NotEmpty();
         RuleFor(x => x.CandidateId).NotEmpty();
-        RuleFor(x => x.DocumentBlobUrl).NotEmpty();
+        RuleFor(x => x.DocumentBlobUrl)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty()
+            .Must((cmd, url) => url.StartsWith($"{cmd.RecruitmentId}/", StringComparison.OrdinalIgnoreCase))
+            .WithMessage("Document URL must belong to the target recruitment's storage path.");
         RuleFor(x => x.DocumentName).NotEmpty();
     }
 }

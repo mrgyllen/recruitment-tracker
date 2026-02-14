@@ -53,6 +53,8 @@ api/src/
     Enums/                 # OutcomeStatus, ImportMatchConfidence, etc.
     Events/                # Domain events
     Exceptions/            # Domain-specific exceptions
+    Services/              # Pure-function domain services (see below)
+    Models/                # Domain-internal DTOs/records (e.g., SplitDocument)
   Application/
     Common/                # Shared interfaces, behaviors, mappings
       Interfaces/          # IRecruitmentRepository, ITenantContext, etc.
@@ -83,6 +85,18 @@ api/src/
 ```
 
 **Rule: One command/query per folder.** Each command or query gets its own folder containing the request, validator, handler, and any DTOs. The `ca-usecase` scaffolding follows this pattern.
+
+## Domain Services (Pure Functions)
+
+Static classes with zero external dependencies and pure functions may live in `Domain/Services/`. These are domain-level helpers that operate only on domain types.
+
+| Placement | When | Example |
+|-----------|------|---------|
+| `Domain/Services/` | Pure function, no I/O, no DI dependencies, operates on domain types only | `NameNormalizer` (string normalization), `DocumentMatchingEngine` (matching logic) |
+| `Application/` | Needs DI, orchestrates multiple domain objects, or coordinates infrastructure | Command/query handlers |
+| `Infrastructure/Services/` | Requires I/O, external APIs, or third-party libraries | `XlsxParserService`, `PdfSplitterService`, `BlobStorageService` |
+
+Domain services are typically static classes (not injectable) since they have no dependencies. No interface is needed for stateless pure functions.
 
 ## DTO Mapping
 
@@ -144,16 +158,45 @@ public class AddWorkflowStepCommandHandler : IRequestHandler<AddWorkflowStepComm
 }
 ```
 
+### Query Handler Example
+
+**Query handlers are equally at risk as commands.** The same authorization gap recurred on query handlers in Epic 2 Story 2.3 AND Epic 3 Story 3.2. Do NOT skip this check on read paths.
+
+```csharp
+// Canonical query handler example — query handlers need the SAME check
+public class GetImportSessionQueryHandler : IRequestHandler<GetImportSessionQuery, ImportSessionDto>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ITenantContext _tenantContext;
+
+    public async Task<ImportSessionDto> Handle(GetImportSessionQuery request, CancellationToken ct)
+    {
+        var recruitment = await _context.Recruitments
+            .Include(r => r.Members)     // Must include members for check
+            .FirstOrDefaultAsync(r => r.Id == request.RecruitmentId, ct)
+            ?? throw new NotFoundException(nameof(Recruitment), request.RecruitmentId);
+
+        // MANDATORY: Verify current user is a member — even for queries
+        if (!recruitment.Members.Any(m => m.UserId == _tenantContext.UserGuid))
+        {
+            throw new ForbiddenAccessException();
+        }
+
+        // ... proceed with query logic
+    }
+}
+```
+
 ### When Is This Required?
 
 | Scenario | Authorization Check Required? |
 |----------|-------------------------------|
 | Command that modifies a recruitment | Yes — always |
-| Query that returns recruitment data | Yes — always |
+| Query that returns recruitment data | Yes — always (see query example above) |
 | Query that returns cross-recruitment list (e.g., GetRecruitments) | No — filtered by ITenantContext via global query filter |
 | SearchDirectory (global, not recruitment-scoped) | No — searches organizational directory |
 
-> **Evidence:** Story 2.3 had ALL 4 command handlers (UpdateRecruitment, AddWorkflowStep, RemoveWorkflowStep, ReorderWorkflowSteps) initially missing this check. Caught by review as C1 security finding, fixed in commit f1dee45.
+> **Evidence:** Story 2.3 had ALL 4 command handlers initially missing this check (fixed commit f1dee45). Story 3.2 had GetImportSessionQueryHandler missing this check (fixed commit 340e888). The same gap recurred because only command handlers were documented as examples.
 
 ## Error Handling
 

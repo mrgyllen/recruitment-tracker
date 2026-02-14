@@ -9,10 +9,12 @@ namespace api.Web.Infrastructure;
 
 public class CustomExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<CustomExceptionHandler> _logger;
     private readonly Dictionary<Type, Func<HttpContext, Exception, Task>> _exceptionHandlers;
 
-    public CustomExceptionHandler()
+    public CustomExceptionHandler(ILogger<CustomExceptionHandler> logger)
     {
+        _logger = logger;
         // Register known exception types and handlers.
         _exceptionHandlers = new()
             {
@@ -56,7 +58,7 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)
     {
-        var exception = (NotFoundException)ex;
+        _logger.LogWarning(ex, "Resource not found: {Message}", ex.Message);
 
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
 
@@ -65,7 +67,6 @@ public class CustomExceptionHandler : IExceptionHandler
             Status = StatusCodes.Status404NotFound,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
             Title = "The specified resource was not found.",
-            Detail = exception.Message
         });
     }
 
