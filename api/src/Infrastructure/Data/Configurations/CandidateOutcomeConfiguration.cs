@@ -17,6 +17,8 @@ public class CandidateOutcomeConfiguration : IEntityTypeConfiguration<CandidateO
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(o => o.Reason).HasMaxLength(500);
+
         builder.HasIndex(o => new { o.CandidateId, o.WorkflowStepId })
             .HasDatabaseName("IX_CandidateOutcomes_CandidateId_WorkflowStepId");
 
