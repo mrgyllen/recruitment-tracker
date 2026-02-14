@@ -1,6 +1,7 @@
 using api.Domain.Entities;
 using api.Domain.Enums;
 using api.Domain.Events;
+using api.Domain.Exceptions;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -211,4 +212,141 @@ public class CandidateTests
         doc.WorkdayCandidateId.Should().Be("WD-123");
         doc.DocumentSource.Should().Be(DocumentSource.BundleSplit);
     }
+
+    #region Workflow Enforcement (Story 4.3)
+
+    private static (Candidate candidate, Recruitment recruitment) CreateCandidateWithWorkflow()
+    {
+        var userId = Guid.NewGuid();
+        var recruitment = Recruitment.Create("Test Recruitment", null, userId);
+        recruitment.AddStep("Screening", 1);
+        recruitment.AddStep("Interview", 2);
+        recruitment.AddStep("Final", 3);
+        var orderedSteps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+
+        var candidate = Candidate.Create(
+            recruitment.Id, "Alice", "alice@example.com", null, null, DateTimeOffset.UtcNow);
+        candidate.AssignToWorkflowStep(orderedSteps[0].Id);
+
+        return (candidate, recruitment);
+    }
+
+    [Test]
+    public void RecordOutcome_ValidStep_CreatesOutcomeWithReason()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, Guid.NewGuid(), "Strong candidate", steps);
+
+        candidate.Outcomes.Should().HaveCount(1);
+        var outcome = candidate.Outcomes.First();
+        outcome.WorkflowStepId.Should().Be(steps[0].Id);
+        outcome.Status.Should().Be(OutcomeStatus.Pass);
+        outcome.Reason.Should().Be("Strong candidate");
+    }
+
+    [Test]
+    public void RecordOutcome_WrongStep_ThrowsInvalidWorkflowTransitionException()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+
+        var act = () => candidate.RecordOutcome(steps[2].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        act.Should().Throw<InvalidWorkflowTransitionException>();
+    }
+
+    [Test]
+    public void RecordOutcome_PassNotLastStep_AdvancesToNextStep()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        candidate.CurrentWorkflowStepId.Should().Be(steps[1].Id);
+        candidate.IsCompleted.Should().BeFalse();
+    }
+
+    [Test]
+    public void RecordOutcome_PassLastStep_SetsIsCompleted()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+        candidate.RecordOutcome(steps[1].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        candidate.RecordOutcome(steps[2].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        candidate.IsCompleted.Should().BeTrue();
+        candidate.CurrentWorkflowStepId.Should().Be(steps[2].Id);
+    }
+
+    [Test]
+    public void RecordOutcome_FailOrHold_StaysAtCurrentStep()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        var originalStepId = candidate.CurrentWorkflowStepId;
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Fail, Guid.NewGuid(), "Not qualified", steps);
+
+        candidate.CurrentWorkflowStepId.Should().Be(originalStepId);
+        candidate.IsCompleted.Should().BeFalse();
+    }
+
+    [Test]
+    public void RecordOutcome_ReRecord_ReplacesExistingOutcome()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        var userId = Guid.NewGuid();
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Fail, userId, "Initial", steps);
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, userId, "Reconsidered", steps);
+
+        candidate.Outcomes.Where(o => o.WorkflowStepId == steps[0].Id).Should().HaveCount(1);
+        candidate.Outcomes.First(o => o.WorkflowStepId == steps[0].Id).Status.Should().Be(OutcomeStatus.Pass);
+        candidate.Outcomes.First(o => o.WorkflowStepId == steps[0].Id).Reason.Should().Be("Reconsidered");
+    }
+
+    [Test]
+    public void RecordOutcome_NoCurrentStep_ThrowsInvalidOperationException()
+    {
+        var candidate = Candidate.Create(
+            Guid.NewGuid(), "Alice", "alice@example.com", null, null, DateTimeOffset.UtcNow);
+
+        var act = () => candidate.RecordOutcome(Guid.NewGuid(), OutcomeStatus.Pass, Guid.NewGuid(), null, new List<WorkflowStep>());
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not been assigned*");
+    }
+
+    [Test]
+    public void RecordOutcome_EnhancedMethod_RaisesOutcomeRecordedEvent()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        candidate.ClearDomainEvents();
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        candidate.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<OutcomeRecordedEvent>();
+    }
+
+    [Test]
+    public void RecordOutcome_HoldThenReRecordAsPass_AdvancesToNextStep()
+    {
+        var (candidate, recruitment) = CreateCandidateWithWorkflow();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Hold, Guid.NewGuid(), "Needs review", steps);
+
+        candidate.RecordOutcome(steps[0].Id, OutcomeStatus.Pass, Guid.NewGuid(), "Approved after review", steps);
+
+        candidate.CurrentWorkflowStepId.Should().Be(steps[1].Id);
+    }
+
+    #endregion
 }

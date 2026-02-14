@@ -1,6 +1,7 @@
 using api.Domain.Common;
 using api.Domain.Enums;
 using api.Domain.Events;
+using api.Domain.Exceptions;
 
 namespace api.Domain.Entities;
 
@@ -13,6 +14,8 @@ public class Candidate : GuidEntity
     public string? Location { get; private set; }
     public DateTimeOffset DateApplied { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
+    public Guid? CurrentWorkflowStepId { get; private set; }
+    public bool IsCompleted { get; private set; }
 
     private readonly List<CandidateOutcome> _outcomes = new();
     public IReadOnlyCollection<CandidateOutcome> Outcomes => _outcomes.AsReadOnly();
@@ -45,10 +48,59 @@ public class Candidate : GuidEntity
         return candidate;
     }
 
+    public void AssignToWorkflowStep(Guid firstStepId)
+    {
+        CurrentWorkflowStepId = firstStepId;
+    }
+
     public void RecordOutcome(Guid workflowStepId, OutcomeStatus status, Guid recordedByUserId)
     {
         var outcome = CandidateOutcome.Create(Id, workflowStepId, status, recordedByUserId);
         _outcomes.Add(outcome);
+        AddDomainEvent(new OutcomeRecordedEvent(Id, workflowStepId));
+    }
+
+    public void RecordOutcome(
+        Guid workflowStepId,
+        OutcomeStatus status,
+        Guid recordedByUserId,
+        string? reason,
+        IReadOnlyList<WorkflowStep> orderedSteps)
+    {
+        if (CurrentWorkflowStepId is null)
+            throw new InvalidOperationException("Candidate has not been assigned to a workflow step.");
+
+        if (workflowStepId != CurrentWorkflowStepId)
+            throw new InvalidWorkflowTransitionException(
+                CurrentWorkflowStepId.ToString()!,
+                workflowStepId.ToString());
+
+        // Remove existing outcome at this step (re-record support)
+        var existing = _outcomes.FirstOrDefault(o => o.WorkflowStepId == workflowStepId);
+        if (existing is not null)
+            _outcomes.Remove(existing);
+
+        var outcome = CandidateOutcome.Create(Id, workflowStepId, status, recordedByUserId, reason);
+        _outcomes.Add(outcome);
+
+        if (status == OutcomeStatus.Pass)
+        {
+            var currentStep = orderedSteps.First(s => s.Id == workflowStepId);
+            var nextStep = orderedSteps
+                .Where(s => s.Order > currentStep.Order)
+                .OrderBy(s => s.Order)
+                .FirstOrDefault();
+
+            if (nextStep is not null)
+            {
+                CurrentWorkflowStepId = nextStep.Id;
+            }
+            else
+            {
+                IsCompleted = true;
+            }
+        }
+
         AddDomainEvent(new OutcomeRecordedEvent(Id, workflowStepId));
     }
 

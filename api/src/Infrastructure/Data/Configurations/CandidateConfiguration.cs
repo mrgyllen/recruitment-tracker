@@ -38,6 +38,9 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
             .HasDatabaseName("UQ_Candidates_RecruitmentId_Email")
             .HasFilter("[Email] IS NOT NULL"); // Allow multiple anonymized candidates
 
+        builder.Property(c => c.CurrentWorkflowStepId);
+        builder.Property(c => c.IsCompleted).HasDefaultValue(false);
+
         builder.HasMany(c => c.Outcomes)
             .WithOne()
             .HasForeignKey(o => o.CandidateId)
