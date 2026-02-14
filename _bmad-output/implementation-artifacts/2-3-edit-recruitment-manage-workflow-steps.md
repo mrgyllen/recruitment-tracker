@@ -650,10 +650,59 @@ web/src/mocks/handlers.ts                          -- Add MSW handlers for new e
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+- Application.UnitTests cannot run in this environment (ASP.NET Core 10.0.0 runtime not installed). All application-layer code verified via `dotnet build` (0 errors/0 warnings). Domain.UnitTests (47 tests) and frontend tests (129 tests) all pass.
+
 ### Completion Notes List
 
+- Backend: 6 domain unit tests (UpdateDetails, ReorderSteps), UpdateRecruitment/AddWorkflowStep/RemoveWorkflowStep/ReorderWorkflowSteps commands with handlers, validators, and handler tests
+- Backend: Exception handler mappings for RecruitmentClosedException (400), StepHasOutcomesException (409), DuplicateStepNameException (409)
+- Backend: 4 new API endpoints (PUT recruitment, POST step, DELETE step, PUT reorder)
+- Frontend: API types, client methods, mutation hooks with cache invalidation
+- Frontend: MSW handlers for all 4 new endpoints with error scenarios
+- Frontend: EditRecruitmentForm (4 tests) -- inline form with react-hook-form + zod, disabled when closed
+- Frontend: WorkflowStepEditor edit mode (5 tests) -- discriminated union props, API-backed mutations, inline 409 error
+- Frontend: RecruitmentPage integration (3 new tests) -- replaces static display with edit form + step editor
+- Testing mode: test-first (TDD) for domain, EditRecruitmentForm, WorkflowStepEditor edit mode, RecruitmentPage integration
+
 ### File List
+
+**Backend - Domain:**
+- `api/src/Domain/Entities/Recruitment.cs` (modified: UpdateDetails, ReorderSteps)
+- `api/src/Domain/Entities/WorkflowStep.cs` (modified: UpdateOrder)
+- `api/tests/Domain.UnitTests/Entities/RecruitmentTests.cs` (modified: 6 new tests)
+
+**Backend - Application:**
+- `api/src/Application/Features/Recruitments/Commands/UpdateRecruitment/` (new: Command, Validator, Handler)
+- `api/src/Application/Features/Recruitments/Commands/AddWorkflowStep/` (new: Command, Validator, Handler)
+- `api/src/Application/Features/Recruitments/Commands/RemoveWorkflowStep/` (new: Command, Handler)
+- `api/src/Application/Features/Recruitments/Commands/ReorderWorkflowSteps/` (new: Command, Validator, Handler)
+- `api/tests/Application.UnitTests/Features/Recruitments/Commands/UpdateRecruitment/` (new: HandlerTests, ValidatorTests)
+- `api/tests/Application.UnitTests/Features/Recruitments/Commands/AddWorkflowStep/` (new: HandlerTests, ValidatorTests)
+- `api/tests/Application.UnitTests/Features/Recruitments/Commands/RemoveWorkflowStep/` (new: HandlerTests)
+- `api/tests/Application.UnitTests/Features/Recruitments/Commands/ReorderWorkflowSteps/` (new: HandlerTests, ValidatorTests)
+
+**Backend - Web:**
+- `api/src/Web/Endpoints/RecruitmentEndpoints.cs` (modified: 4 new endpoints)
+- `api/src/Web/Infrastructure/CustomExceptionHandler.cs` (modified: 3 exception handlers)
+
+**Frontend - API Layer:**
+- `web/src/lib/api/recruitments.types.ts` (modified: 3 new interfaces)
+- `web/src/lib/api/recruitments.ts` (modified: 4 new methods)
+- `web/src/features/recruitments/hooks/useRecruitmentMutations.ts` (new: 4 mutation hooks)
+
+**Frontend - Components:**
+- `web/src/features/recruitments/EditRecruitmentForm.tsx` (new)
+- `web/src/features/recruitments/EditRecruitmentForm.test.tsx` (new: 4 tests)
+- `web/src/features/recruitments/WorkflowStepEditor.tsx` (modified: edit mode with discriminated union props)
+- `web/src/features/recruitments/WorkflowStepEditor.test.tsx` (modified: 5 new edit mode tests)
+
+**Frontend - Pages:**
+- `web/src/features/recruitments/pages/RecruitmentPage.tsx` (modified: edit form + step editor integration)
+- `web/src/features/recruitments/pages/RecruitmentPage.test.tsx` (modified: 3 new tests)
+
+**Frontend - Mocks:**
+- `web/src/mocks/recruitmentHandlers.ts` (modified: 4 new MSW handlers)

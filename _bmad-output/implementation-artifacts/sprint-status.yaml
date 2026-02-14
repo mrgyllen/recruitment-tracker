@@ -59,7 +59,7 @@ development_status:
   epic-2: in-progress
   2-1-create-recruitment-with-workflow-steps: done
   2-2-recruitment-list-navigation: done
-  2-3-edit-recruitment-manage-workflow-steps: ready-for-dev
+  2-3-edit-recruitment-manage-workflow-steps: done
   2-4-team-membership-management: ready-for-dev
   2-5-close-recruitment-read-only-view: ready-for-dev
   epic-2-retrospective: optional
