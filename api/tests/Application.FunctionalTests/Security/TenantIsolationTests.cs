@@ -7,6 +7,7 @@ using api.Application.Features.Recruitments.Commands.CreateRecruitment;
 using api.Application.Features.Screening.Commands.RecordOutcome;
 using api.Application.Features.Screening.Queries.GetCandidateOutcomeHistory;
 using api.Application.Features.Recruitments.Queries.GetRecruitmentById;
+using api.Application.Features.Recruitments.Queries.GetRecruitmentOverview;
 using api.Domain.Enums;
 using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
@@ -150,6 +151,20 @@ public class TenantIsolationTests : BaseTestFixture
             RecruitmentId: _recruitmentA,
             CandidateId: _candidateA
         ));
+
+        await act.Should().ThrowAsync<ForbiddenAccessException>();
+    }
+
+    [Test]
+    public async Task GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden()
+    {
+        await SetUpTwoRecruitments();
+
+        // User B tries to query overview for Recruitment A
+        var act = () => SendAsync(new GetRecruitmentOverviewQuery
+        {
+            RecruitmentId = _recruitmentA,
+        });
 
         await act.Should().ThrowAsync<ForbiddenAccessException>();
     }

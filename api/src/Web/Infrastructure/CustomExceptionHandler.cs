@@ -87,6 +87,14 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleForbiddenAccessException(HttpContext httpContext, Exception ex)
     {
+        var traceId = httpContext.TraceIdentifier;
+        var endpoint = httpContext.GetEndpoint()?.DisplayName ?? "Unknown";
+
+        _logger.LogWarning(
+            "Authorization denied for endpoint {Endpoint} (TraceId: {TraceId})",
+            endpoint,
+            traceId);
+
         httpContext.Response.StatusCode = StatusCodes.Status403Forbidden;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
