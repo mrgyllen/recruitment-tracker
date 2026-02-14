@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
 import type { OutcomeResultDto } from '@/lib/api/screening.types'
@@ -16,7 +15,7 @@ interface UseScreeningSessionOptions {
 }
 
 export function useScreeningSession(
-  recruitmentId: string,
+  _recruitmentId: string,
   candidates: CandidateResponse[],
   options?: UseScreeningSessionOptions,
 ) {
@@ -27,7 +26,6 @@ export function useScreeningSession(
   const recentlyScreenedRef = useRef<Set<string>>(new Set())
   const onAutoAdvanceRef = useRef(options?.onAutoAdvance)
   onAutoAdvanceRef.current = options?.onAutoAdvance
-  const queryClient = useQueryClient()
 
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId) ?? null
 

@@ -1,11 +1,2 @@
 # Pending anti-patterns — added by mini-retro during sprint
 # Will be promoted to permanent or removed by autonomous retro
-# Processed by Epic 4 retro 2026-02-14T192600Z — all entries resolved
-
-# Story 4.1: no new anti-patterns identified (M1 one-off, M2/M4 addressed by retro actions)
-# Story 4.2: no new anti-patterns identified
-# Story 4.3: no new anti-patterns identified
-# Story 4.4: no new anti-patterns identified (M2-M4 design choices)
-# Story 4.5: no new anti-patterns identified (I1 stale closure promoted to permanent anti-patterns.txt)
-# Story 5.1: no new anti-patterns identified (M2 centralized ProblemDetails testing, M3 story path mismatch — both one-off)
-# Story 5.2: no new anti-patterns identified

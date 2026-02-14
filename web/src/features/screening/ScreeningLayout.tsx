@@ -44,7 +44,7 @@ export function ScreeningLayout() {
     },
   })
 
-  const { focusOutcomePanel } = useKeyboardNavigation({
+  useKeyboardNavigation({
     outcomePanelRef,
     candidateListRef,
     onOutcomeSelect: setKeyboardOutcome,

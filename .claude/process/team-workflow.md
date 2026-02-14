@@ -13,7 +13,9 @@ Before creating the team or assigning any work:
 5. **Apply experiments from previous retros:** If the most recent `retro.json` contains an `experiments` array, apply each experiment NOW before starting stories. Experiments are process/doc changes (updating skill templates, adding checklist items, modifying workflow steps) — they are small and must be applied before the work they're designed to improve. Commit experiment applications with message: `process: apply experiment E-00X from <run_id>`
 6. **Infrastructure readiness check:** Before starting the first story, verify the application can actually run — not just compile:
    - **Build check:** Run `dotnet build` (API) and `npm run build` (frontend) — both must succeed
-   - **Runtime check:** Attempt to start the API and frontend dev servers. If either fails, identify what's missing (database, runtime, services)
+   - **TypeScript zero-error check:** Run `cd web && npx tsc --noEmit` — must return zero errors. If pre-existing errors exist, fix them NOW before starting stories. Do not normalize non-zero error baselines.
+   - **ESLint check:** Run `cd web && npx eslint src/ --max-warnings 0` — must return zero errors/warnings
+   - **Runtime check:** Attempt to start the API and frontend dev servers. If either fails, identify what's missing (database, runtime, services). See `docs/getting-started.md` for native vs Docker Compose setup.
    - **If the app cannot run:** Create a deferred item in `sprint-status.yaml` with key `epic-N-deferred-dev-environment` describing what's needed (e.g., Docker Compose, database setup, MSW browser mode). This becomes a P0 blocker for the Epic Demo Walkthrough step — the demo cannot fall back to code-level verification silently
    - **If the app runs:** Record the startup commands in `demo.md` for use during the Epic Demo Walkthrough
    - This check is best-effort — if the dev environment lacks infrastructure (no Docker, no SQL Server), note the gap and proceed with stories. The demo step will handle the consequence.
@@ -158,9 +160,11 @@ Run after the **last story in the current prompt scope** is completed but **befo
 
 ### Setup
 
-1. **Viability check:** Attempt to start both API and frontend dev servers
-   - **If both start:** Proceed with live walkthrough (preferred)
-   - **If either fails:** Record the failure reason in `demo.md` under a `## Infrastructure Blockers` section, then:
+1. **Viability check:** Attempt to start both API and frontend dev servers (see `docs/getting-started.md` for setup)
+   - **Native mode first:** Try `dotnet run` (API) and `npm run dev` (frontend)
+   - **If native fails, try Docker Compose:** Run `docker compose up --build` from repo root — this starts API + SQL Server. Then start the frontend dev server separately with `cd web && npm run dev`.
+   - **If both modes start:** Proceed with live walkthrough (preferred)
+   - **If both modes fail:** Record the failure reason in `demo.md` under a `## Infrastructure Blockers` section, then:
      - Mark the demo as **BLOCKED** — do NOT silently fall back to code-level verification
      - Create or update the deferred item `epic-N-deferred-dev-environment` in `sprint-status.yaml` if one doesn't already exist
      - Skip to the Summary section of `demo.md` with: `Demo method: BLOCKED — [reason]`
@@ -254,10 +258,12 @@ The evidence bundle MUST include:
    git diff --stat <base>..<head>
    git diff --name-only <base>..<head>
    ```
-3. **Quality signals** (best-effort):
-   - Test results (summary + any failures)
-   - Lint/typecheck results if available
-   - Build results if available
+3. **Quality signals** (REQUIRED — each must report pass/fail/blocked with data, never "Not captured"):
+   - **Tests:** `cd web && npx vitest run` (summary + any failures) and `dotnet test` or Docker fallback (see docs/getting-started.md)
+   - **TypeScript:** `cd web && npx tsc --noEmit` — report error count (must be zero)
+   - **ESLint:** `cd web && npx eslint src/ --max-warnings 0` — report error/warning counts
+   - **Code coverage:** `cd web && npx vitest run --coverage` (frontend) and `dotnet test --collect:"XPlat Code Coverage"` (backend) — report line coverage percentages. If blocked (e.g., missing runtime), report "Blocked: [reason]" with workaround status.
+   - **Build:** `dotnet build api/api.slnx` and `cd web && npm run build` — report pass/fail
 4. **Review findings:** Collected from Review Agent across all stories (Critical/Important/Minor, with file references)
 5. **Anti-patterns discovered:** Contents of `.claude/hooks/anti-patterns-pending.txt`
 6. **Guideline references:** Paths to architecture.md, relevant shards, testing-standards.md
