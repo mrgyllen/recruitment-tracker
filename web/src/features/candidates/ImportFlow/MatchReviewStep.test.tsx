@@ -1,15 +1,18 @@
-import { describe, expect, it } from 'vitest'
-import { MatchReviewStep } from './MatchReviewStep'
+import { describe, expect, it, vi } from 'vitest'
+import { MatchReviewStep, type FlaggedRow } from './MatchReviewStep'
 import { render, screen } from '@/test-utils'
-import type { ImportRowResult } from '@/lib/api/import.types'
+import userEvent from '@testing-library/user-event'
+import { server } from '@/mocks/server'
+import { http, HttpResponse } from 'msw'
 
-const flaggedRows: ImportRowResult[] = [
+const flaggedRows: FlaggedRow[] = [
   {
     rowNumber: 4,
     candidateEmail: 'flagged@example.com',
     action: 'Flagged',
     errorMessage: null,
     resolution: null,
+    originalIndex: 3,
   },
 ]
 
@@ -56,7 +59,7 @@ describe('MatchReviewStep', () => {
   })
 
   it('should show resolved status for already resolved rows', () => {
-    const resolvedRows: ImportRowResult[] = [
+    const resolvedRows: FlaggedRow[] = [
       { ...flaggedRows[0], resolution: 'Confirmed' },
     ]
     render(
@@ -68,5 +71,47 @@ describe('MatchReviewStep', () => {
     )
     expect(screen.getByText('Confirmed')).toBeInTheDocument()
     expect(screen.getByText('All matches reviewed')).toBeInTheDocument()
+  })
+
+  it('should send originalIndex as matchIndex, not filtered array index', async () => {
+    const capturedRequests: { matchIndex: number; action: string }[] = []
+    server.use(
+      http.post('/api/import-sessions/:id/resolve-match', async ({ request }) => {
+        const body = (await request.json()) as { matchIndex: number; action: string }
+        capturedRequests.push(body)
+        return HttpResponse.json({
+          matchIndex: body.matchIndex,
+          action: 'Confirmed',
+          candidateEmail: 'flagged@example.com',
+        })
+      }),
+    )
+
+    const rows: FlaggedRow[] = [
+      {
+        rowNumber: 4,
+        candidateEmail: 'flagged@example.com',
+        action: 'Flagged',
+        errorMessage: null,
+        resolution: null,
+        originalIndex: 5,
+      },
+    ]
+
+    render(
+      <MatchReviewStep
+        importSessionId="session-1"
+        flaggedRows={rows}
+        onDone={() => {}}
+      />,
+    )
+
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: /confirm match/i }))
+
+    await vi.waitFor(() => {
+      expect(capturedRequests).toHaveLength(1)
+    })
+    expect(capturedRequests[0].matchIndex).toBe(5)
   })
 })

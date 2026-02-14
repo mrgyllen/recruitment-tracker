@@ -34,10 +34,35 @@ public class ResolveMatchConflictCommandHandler(
         if (request.Action == "Confirm")
         {
             row = session.ConfirmMatch(request.MatchIndex);
+
+            // AC7: Update matched candidate's profile from import data
+            if (row.MatchedCandidateId is not null)
+            {
+                var candidate = await dbContext.Candidates
+                    .FirstOrDefaultAsync(c => c.Id == row.MatchedCandidateId, cancellationToken)
+                    ?? throw new NotFoundException(nameof(Candidate), row.MatchedCandidateId);
+
+                candidate.UpdateProfile(
+                    row.FullName ?? candidate.FullName!,
+                    row.PhoneNumber,
+                    row.Location,
+                    row.DateApplied ?? DateTimeOffset.UtcNow);
+            }
         }
         else
         {
             row = session.RejectMatch(request.MatchIndex);
+
+            // AC8: Create new candidate from import data
+            var newCandidate = Candidate.Create(
+                session.RecruitmentId,
+                row.FullName ?? "Unknown",
+                row.CandidateEmail ?? "unknown@import.local",
+                row.PhoneNumber,
+                row.Location,
+                row.DateApplied ?? DateTimeOffset.UtcNow);
+
+            dbContext.Candidates.Add(newCandidate);
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

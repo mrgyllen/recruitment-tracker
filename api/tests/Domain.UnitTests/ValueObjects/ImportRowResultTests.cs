@@ -69,4 +69,24 @@ public class ImportRowResultTests
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Test]
+    public void Create_ExtendedConstructor_SetsAllFields()
+    {
+        var matchedId = Guid.NewGuid();
+        var dateApplied = new DateTimeOffset(2026, 1, 15, 0, 0, 0, TimeSpan.Zero);
+
+        var result = new ImportRowResult(
+            2, "flagged@test.com", ImportRowAction.Flagged, null,
+            "Anna Svensson", "+46701234567", "Stockholm", dateApplied, matchedId);
+
+        result.RowNumber.Should().Be(2);
+        result.CandidateEmail.Should().Be("flagged@test.com");
+        result.Action.Should().Be(ImportRowAction.Flagged);
+        result.FullName.Should().Be("Anna Svensson");
+        result.PhoneNumber.Should().Be("+46701234567");
+        result.Location.Should().Be("Stockholm");
+        result.DateApplied.Should().Be(dateApplied);
+        result.MatchedCandidateId.Should().Be(matchedId);
+    }
 }

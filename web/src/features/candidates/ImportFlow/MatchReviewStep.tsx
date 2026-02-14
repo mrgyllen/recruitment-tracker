@@ -4,9 +4,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import type { ImportRowResult } from '@/lib/api/import.types'
 
+export interface FlaggedRow extends ImportRowResult {
+  originalIndex: number
+}
+
 interface MatchReviewStepProps {
   importSessionId: string
-  flaggedRows: ImportRowResult[]
+  flaggedRows: FlaggedRow[]
   onDone: () => void
 }
 
@@ -31,7 +35,7 @@ export function MatchReviewStep({
       </Alert>
 
       <div className="divide-y rounded-md border">
-        {flaggedRows.map((row, index) => (
+        {flaggedRows.map((row) => (
           <div key={row.rowNumber} className="space-y-2 p-3">
             <div className="flex items-center justify-between">
               <div>
@@ -60,7 +64,7 @@ export function MatchReviewStep({
                     disabled={resolveMatch.isPending}
                     onClick={() =>
                       resolveMatch.mutate({
-                        matchIndex: index,
+                        matchIndex: row.originalIndex,
                         action: 'Confirm',
                       })
                     }
@@ -73,7 +77,7 @@ export function MatchReviewStep({
                     disabled={resolveMatch.isPending}
                     onClick={() =>
                       resolveMatch.mutate({
-                        matchIndex: index,
+                        matchIndex: row.originalIndex,
                         action: 'Reject',
                       })
                     }

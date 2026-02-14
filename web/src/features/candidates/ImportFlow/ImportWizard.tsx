@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { FileUploadStep } from './FileUploadStep'
 import { ImportProgress } from './ImportProgress'
 import { ImportSummary } from './ImportSummary'
-import { MatchReviewStep } from './MatchReviewStep'
+import { MatchReviewStep, type FlaggedRow } from './MatchReviewStep'
 import { useImportSession } from './hooks/useImportSession'
 import {
   Sheet,
@@ -129,8 +129,12 @@ export function ImportWizard({
         {step === 'matchReview' && session && importSessionId && (
           <MatchReviewStep
             importSessionId={importSessionId}
-            flaggedRows={session.rowResults.filter(
-              (r) => r.action === 'Flagged',
+            flaggedRows={session.rowResults.reduce<FlaggedRow[]>(
+              (acc, r, i) => {
+                if (r.action === 'Flagged') acc.push({ ...r, originalIndex: i })
+                return acc
+              },
+              [],
             )}
             onDone={handleClose}
           />

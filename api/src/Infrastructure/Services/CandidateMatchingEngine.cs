@@ -16,7 +16,7 @@ public class CandidateMatchingEngine : ICandidateMatchingEngine
 
         if (emailMatch is not null)
         {
-            return new CandidateMatch(ImportMatchConfidence.High, "Email");
+            return new CandidateMatch(ImportMatchConfidence.High, "Email", emailMatch.Id);
         }
 
         // Fallback match: name + phone (low confidence)
@@ -30,7 +30,7 @@ public class CandidateMatchingEngine : ICandidateMatchingEngine
 
             if (namePhoneMatch is not null)
             {
-                return new CandidateMatch(ImportMatchConfidence.Low, "NameAndPhone");
+                return new CandidateMatch(ImportMatchConfidence.Low, "NameAndPhone", namePhoneMatch.Id);
             }
         }
 

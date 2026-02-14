@@ -92,7 +92,11 @@ public class ImportPipelineHostedService(
 
                         case ImportMatchConfidence.Low:
                             // Name+phone match — flag for review, do NOT update
-                            session.AddRowResult(new ImportRowResult(row.RowNumber, row.Email, ImportRowAction.Flagged, null));
+                            // Store full row data + matched candidate ID for later resolve
+                            session.AddRowResult(new ImportRowResult(
+                                row.RowNumber, row.Email, ImportRowAction.Flagged, null,
+                                row.FullName, row.PhoneNumber, row.Location,
+                                row.DateApplied, match.MatchedCandidateId));
                             flagged++;
                             break;
 
