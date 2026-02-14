@@ -95,7 +95,7 @@ development_status:
   # Epic 5: Recruitment Overview & Monitoring
   epic-5: in-progress
   5-1-overview-api-data: done
-  5-2-overview-dashboard-ui: ready-for-dev
+  5-2-overview-dashboard-ui: done
   epic-5-retrospective: optional
 
   # Epic 6: Audit Trail & GDPR Compliance
