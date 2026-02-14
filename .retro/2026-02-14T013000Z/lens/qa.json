@@ -1,0 +1,71 @@
+{
+  "persona": "QA Lens",
+  "wins": [
+    "Comprehensive handler test coverage: Every command and query handler has dedicated test file with happy path, validation failures, not-found, and authorization scenarios",
+    "Domain tests expanded significantly: RecruitmentTests.cs grew from basic CRUD to cover AddMember/RemoveMember/Close guards, step outcomes, closed recruitment invariants — 177+ lines of domain tests",
+    "Frontend test coverage for all new components: CreateRecruitmentForm, EditRecruitmentForm, WorkflowStepEditor, RecruitmentList, RecruitmentSelector, RecruitmentPage, MemberList, InviteMemberDialog, CloseRecruitmentDialog all have dedicated test files",
+    "MSW handlers for realistic API mocking: recruitmentHandlers.ts (231 lines) and teamHandlers.ts (117 lines) provide comprehensive API simulation",
+    "Security test coverage: ITenantContext membership checks tested in GetRecruitmentByIdQueryTests (403 for non-member) and GetMembersQueryHandlerTests"
+  ],
+  "problems": [
+    "Story 2.3 critical security finding: ALL 4 command handlers (UpdateRecruitment, AddWorkflowStep, RemoveWorkflowStep, ReorderWorkflowSteps) were initially missing ITenantContext membership verification — this is a systemic gap, not a one-off mistake",
+    "Missing test for closed recruitment command rejection at handler level: Domain tests verify AddMember/RemoveMember on closed recruitment throw, but no handler-level test verifies the CloseRecruitmentHandler rejects already-closed recruitment via domain exception (Story 2.4 M1)",
+    "No integration tests for API endpoints: All tests are unit-level (handler/validator/domain). No tests verify actual HTTP routing, serialization, or middleware exception mapping",
+    "Code coverage metrics still not evidenced: B7 (coverage thresholds) was marked done but no vitest --coverage or dotnet test --collect output is captured",
+    "WorkflowStepEditor tests at 189 lines cover create mode thoroughly but edit mode testing may be lighter — edit mode involves API mutations"
+  ],
+  "missing_evidence": [
+    "Code coverage reports (both backend and frontend)",
+    "Integration test results for API endpoints",
+    "Mutation testing results to validate test quality",
+    "CI test execution logs — build passes but no evidence tests ran"
+  ],
+  "candidate_actions": [
+    {
+      "id": "QA-001",
+      "title": "Add anti-pattern hook for command handlers missing ITenantContext membership check",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "Story 2.3 had ALL 4 command handlers missing ITenantContext membership checks. This systemic gap was caught by review but should have been caught by a hook or checklist. A preventive check would catch this at development time.",
+      "evidence_refs": [
+        "commit f1dee45 (fix: add ITenantContext membership checks to command handlers)",
+        "Story 2.3 review C1 finding"
+      ],
+      "acceptance_criteria": [
+        "Architecture docs explicitly state: all command/query handlers that load a recruitment MUST verify membership via ITenantContext",
+        "patterns-backend.md has a 'Command Handler Authorization' section with the pattern"
+      ],
+      "automation_hints": [
+        "Add section to patterns-backend.md showing the membership check pattern",
+        "Consider adding to review checklist in team-workflow.md"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future command handlers will lack authorization checks, allowing any authenticated user to modify any recruitment"
+    },
+    {
+      "id": "QA-002",
+      "title": "Add integration tests for exception middleware mapping",
+      "type": "test_gap",
+      "priority": "P2",
+      "rationale": "Story 2.4 C1 found that DomainRuleViolationException was not mapped in CustomExceptionHandler. Unit tests verify handler behavior but no integration test verifies the middleware converts exceptions to correct Problem Details responses.",
+      "evidence_refs": [
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs (8 exception types mapped)",
+        "Story 2.4 C1: InvalidOperationException not mapped"
+      ],
+      "acceptance_criteria": [
+        "Integration test exists that sends a request triggering each mapped exception type",
+        "Integration test verifies correct HTTP status code and Problem Details structure"
+      ],
+      "automation_hints": [
+        "Create test class that exercises exception handler via WebApplicationFactory",
+        "Test each exception type returns expected status code and Problem Details format"
+      ],
+      "files_to_touch": [
+        "api/tests/Web.IntegrationTests/"
+      ],
+      "risk_if_ignored": "New domain exceptions may not be mapped, causing 500 Internal Server Error instead of proper Problem Details responses"
+    }
+  ]
+}

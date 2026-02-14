@@ -1,0 +1,69 @@
+{
+  "persona": "Architecture Lens",
+  "wins": [
+    "DDD aggregate root pattern strictly followed: All mutations (AddStep, RemoveStep, AddMember, RemoveMember, UpdateDetails, ReorderSteps, Close) go through Recruitment aggregate root with proper EnsureNotClosed() guards",
+    "Clean Architecture layering maintained: Domain has zero infrastructure dependencies, Application uses interfaces (ITenantContext, IDirectoryService, IApplicationDbContext), Infrastructure implements them",
+    "Domain exception hierarchy well-structured: RecruitmentClosedException, StepHasOutcomesException, DuplicateStepNameException, DomainRuleViolationException — all mapped to appropriate HTTP status codes in CustomExceptionHandler",
+    "Cross-aggregate reference discipline: Team feature references Recruitment by ID only (RecruitmentMember has RecruitmentId), no navigation properties between aggregates",
+    "Manual DTO mapping consistently applied: All query handlers use explicit projection (Select) or static From() factories — zero AutoMapper usage"
+  ],
+  "problems": [
+    "TeamEndpoints registration pattern violates EndpointGroupBase convention established by RecruitmentEndpoints — two registration mechanisms in the same project (static class vs inheritance)",
+    "SearchDirectory handler ignores recruitmentId from route: The endpoint is nested under /api/recruitments/{recruitmentId}/directory-search but the handler only uses IDirectoryService.SearchUsersAsync(searchTerm) — the route implies scoping that doesn't exist",
+    "CustomExceptionHandler uses dictionary lookup for exact type match — domain exceptions that inherit from a base type won't be caught if only the base is registered (e.g., if a new exception inherits from DomainRuleViolationException)",
+    "WorkflowStep.UpdateOrder() is internal — this is correct for DDD but the method has no domain validation (e.g., order must be positive). Validation is in Recruitment.ReorderSteps() which is correct, but leaves UpdateOrder() unguarded if called from wrong context",
+    "Recruitment._stepsWithOutcomes is a transient HashSet not persisted — requires application layer to call MarkStepHasOutcomes() before RemoveStep() check. This implicit protocol is fragile and undocumented"
+  ],
+  "missing_evidence": [
+    "EF Core migration files — no evidence of migrations being generated for new entities/changes",
+    "Database schema validation — no test that verifies model matches migration",
+    "Architectural decision records (ADRs) for key decisions: directory service interface, exception hierarchy, transient step outcomes"
+  ],
+  "candidate_actions": [
+    {
+      "id": "ARCH-001",
+      "title": "Document the transient _stepsWithOutcomes pattern and its handler protocol",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Recruitment._stepsWithOutcomes is not persisted — it relies on the application handler calling MarkStepHasOutcomes() before RemoveStep(). This implicit protocol is undocumented and could be missed by future handlers.",
+      "evidence_refs": [
+        "api/src/Domain/Entities/Recruitment.cs:25 (_stepsWithOutcomes HashSet)",
+        "api/src/Application/Features/Recruitments/Commands/RemoveWorkflowStep/RemoveWorkflowStepCommandHandler.cs"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md documents the 'transient state' pattern for outcome checking",
+        "Comment in Recruitment.cs explains why _stepsWithOutcomes is not persisted"
+      ],
+      "automation_hints": [
+        "Add section to patterns-backend.md under 'Domain Patterns'",
+        "Add XML comment to _stepsWithOutcomes field"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future handlers that call RemoveStep() without first calling MarkStepHasOutcomes() will allow step deletion even when outcomes exist"
+    },
+    {
+      "id": "ARCH-002",
+      "title": "Document endpoint registration convention (EndpointGroupBase)",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Two endpoint registration patterns exist (static class vs EndpointGroupBase). api-patterns.md should document which one is canonical to prevent further drift.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/TeamEndpoints.cs (static class pattern)",
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs (EndpointGroupBase pattern)"
+      ],
+      "acceptance_criteria": [
+        "api-patterns.md documents EndpointGroupBase as the canonical endpoint registration pattern",
+        "Document when static extension methods may be appropriate (if ever)"
+      ],
+      "automation_hints": [
+        "Add 'Endpoint Registration' section to api-patterns.md"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/api-patterns.md"
+      ],
+      "risk_if_ignored": "Each new feature may pick either pattern, increasing inconsistency"
+    }
+  ]
+}

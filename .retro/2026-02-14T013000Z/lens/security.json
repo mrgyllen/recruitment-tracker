@@ -1,0 +1,68 @@
+{
+  "persona": "Security Lens",
+  "wins": [
+    "ITenantContext membership verification enforced across all query handlers: GetRecruitmentById, GetRecruitments, GetMembers all verify user membership before returning data",
+    "Critical security finding caught by review and fixed: Story 2.3 C1 — all 4 command handlers initially missing membership checks, caught in review and fixed in commit f1dee45",
+    "Domain-level closed recruitment guards: EnsureNotClosed() on all mutation methods prevents state corruption even if API validation is bypassed",
+    "CSP and security headers implemented: SecurityHeadersMiddleware.cs added (resolving B9 deferred item from Epic 1)",
+    "Creator removal protection in domain: Recruitment.RemoveMember() prevents removing the creator — enforced at domain level, not just UI"
+  ],
+  "problems": [
+    "Systemic authorization gap in Story 2.3: ALL 4 command handlers (UpdateRecruitment, AddWorkflowStep, RemoveWorkflowStep, ReorderWorkflowSteps) were initially deployed without membership verification — the pattern was not followed from the start",
+    "SearchDirectory query has no membership verification: SearchDirectoryQueryHandler delegates directly to IDirectoryService without checking if the user is a member of the recruitment identified in the route",
+    "DomainRuleViolationException is a catch-all: Used for member-not-found, duplicate-member, creator-removal, and last-leader scenarios — broad exception type makes it harder to distinguish authorization failures from business rule violations in logging",
+    "No rate limiting on directory search endpoint: GET /api/recruitments/{id}/directory-search could be used for user enumeration if no rate limiting is applied"
+  ],
+  "missing_evidence": [
+    "Penetration testing or security scan results",
+    "Rate limiting configuration evidence",
+    "Dependency vulnerability scan (npm audit, dotnet list package --vulnerable)",
+    "Audit log implementation status — events are raised but where are they consumed?"
+  ],
+  "candidate_actions": [
+    {
+      "id": "SEC-001",
+      "title": "Document mandatory authorization pattern for command handlers",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Story 2.3 revealed that all 4 new command handlers were missing authorization. This is a systemic gap — the security pattern needs to be documented as a mandatory step in handler creation.",
+      "evidence_refs": [
+        "commit f1dee45 (fix: add ITenantContext membership checks)",
+        "Story 2.3 C1 finding"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md documents the mandatory membership check pattern for all command handlers",
+        "Review checklist in team-workflow.md includes authorization verification"
+      ],
+      "automation_hints": [
+        "Add to patterns-backend.md with code example from a fixed handler"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Every new command handler is at risk of missing authorization checks, allowing unauthorized data modification"
+    },
+    {
+      "id": "SEC-002",
+      "title": "Add anti-pattern hook for command handlers without ITenantContext usage",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "A hook that flags command handler files that don't reference ITenantContext could catch missing authorization at development time instead of review time.",
+      "evidence_refs": [
+        "Story 2.3 C1 finding — all 4 handlers missing ITenantContext",
+        ".claude/hooks/anti-patterns.txt (current patterns)"
+      ],
+      "acceptance_criteria": [
+        "Anti-pattern entry added that warns when command handler files don't reference ITenantContext"
+      ],
+      "automation_hints": [
+        "Add regex pattern to anti-patterns.txt for CommandHandler files"
+      ],
+      "files_to_touch": [
+        ".claude/hooks/anti-patterns.txt"
+      ],
+      "risk_if_ignored": "Authorization gaps continue to be caught only at review time, not during development"
+    }
+  ]
+}

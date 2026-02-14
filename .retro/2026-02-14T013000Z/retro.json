@@ -1,0 +1,407 @@
+{
+  "run_id": "2026-02-14T013000Z",
+  "scope": {
+    "level": "epic",
+    "items": [
+      {
+        "id": "2.1",
+        "title": "Create Recruitment with Workflow Steps",
+        "acceptance_criteria": ["Dialog display", "Workflow step customization", "Successful creation (201)", "New candidate default placement", "Title validation", "Step name uniqueness & contiguous order"]
+      },
+      {
+        "id": "2.2",
+        "title": "Recruitment List & Navigation",
+        "acceptance_criteria": ["Recruitment list display", "Empty state", "Click-to-navigate", "Breadcrumb display", "Recruitment selector dropdown", "Access control (403)"]
+      },
+      {
+        "id": "2.3",
+        "title": "Edit Recruitment & Manage Workflow Steps",
+        "acceptance_criteria": ["Edit details", "Add workflow step", "Remove step (no outcomes)", "Block removal (has outcomes)", "Reorder steps", "Closed recruitment read-only"]
+      },
+      {
+        "id": "2.4",
+        "title": "Team Membership Management",
+        "acceptance_criteria": ["View member list", "Directory search", "Add member", "Creator is permanent", "Remove non-creator", "Cannot remove creator", "Access revocation visible"]
+      },
+      {
+        "id": "2.5",
+        "title": "Close Recruitment & Read-Only View",
+        "acceptance_criteria": ["Close confirmation dialog", "Successful close", "Read-only mode enforcement", "Closed data visibility", "API mutation rejection", "Visual distinction in list"]
+      }
+    ],
+    "git": {
+      "base": "9e4913f",
+      "head": "3924d83"
+    }
+  },
+  "summary": {
+    "wins": [
+      "All 30+ acceptance criteria delivered across 5 full-stack stories with zero scope cuts — complete create/list/edit/team/close workflow implemented",
+      "DDD aggregate root pattern strictly followed: All mutations go through Recruitment aggregate root with EnsureNotClosed() guards, domain exception hierarchy, and cross-aggregate ID-only references",
+      "All 9 deferred items from two previous retros resolved in first commit (2d91064) — IUser/ICurrentUserService consolidated, Guid type mismatch fixed, security headers added, coverage thresholds set",
+      "Review process caught critical security gap: Story 2.3 C1 found all 4 command handlers missing authorization — fixed before approval, preventing data isolation breach",
+      "High implementation velocity: 42 commits, 10K+ lines, 133 files across full stack with consistent commit conventions and implementation plans"
+    ],
+    "problems": [
+      "Systemic authorization gap: Story 2.3 had ALL 4 command handlers missing ITenantContext membership checks — pattern not documented in architecture docs, caught only by review",
+      "Endpoint registration inconsistency: TeamEndpoints uses static class with extension method while RecruitmentEndpoints uses EndpointGroupBase — no documented canonical pattern",
+      "SearchDirectory endpoint accepts recruitmentId from route but handler ignores it — API contract implies recruitment-scoped search that doesn't exist",
+      "Minor findings accumulate without resolution: 12+ minor items across 5 stories (Loading text vs SkeletonLoader, Badge vs StatusBadge, empty states, 200 vs 204) — mini-retro anti-pattern capture not occurring",
+      "No integration tests: All tests are unit-level — no tests verify HTTP routing, serialization, or exception middleware mapping"
+    ],
+    "root_cause_hypotheses": [
+      "Authorization gap: patterns-backend.md documents query handlers but not command handler authorization pattern — agents follow documented patterns but skip undocumented ones",
+      "Endpoint inconsistency: api-patterns.md doesn't specify endpoint registration convention — Team feature was built without consulting an example",
+      "Minor accumulation: Mini-retro step in Story Completion only captures anti-patterns to pending.txt — without a forcing function, it gets skipped when sprint velocity is high",
+      "Fix cycle concentration on first-of-kind: Stories 2.1, 2.3, 2.4 are all 'first' implementations of a domain area — patterns need to be established and documented after the first successful implementation"
+    ],
+    "missing_evidence": [
+      "CI pipeline test execution logs — tests compile but no green CI run evidence",
+      "Code coverage metrics — coverage thresholds marked done but no actual measurement data",
+      "Integration test results for API endpoints",
+      "Dependency vulnerability scan results (npm audit, dotnet list package --vulnerable)",
+      "Audit log consumption — domain events raised but no evidence of where they are stored/consumed"
+    ]
+  },
+  "actions": [
+    {
+      "id": "A-001",
+      "title": "Document command handler authorization pattern in patterns-backend.md",
+      "type": "docs_update",
+      "priority": "P0",
+      "owner_persona": "Security",
+      "rationale": "Story 2.3 C1 found ALL 4 command handlers missing ITenantContext membership verification. This is a critical security pattern that is currently undocumented. Every future command handler that loads/modifies a recruitment must verify the current user is a member.",
+      "evidence_refs": [
+        "commit f1dee45 (fix: add ITenantContext membership checks to command handlers)",
+        "Story 2.3 review C1 finding",
+        "api/src/Application/Features/Recruitments/Commands/AddWorkflowStep/AddWorkflowStepCommandHandler.cs (post-fix example)"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md has 'Handler Authorization' section with code example showing ITenantContext membership verification",
+        "Section explicitly states: ALL command and query handlers that access a recruitment MUST verify user membership",
+        "Example shows the 3-step pattern: load recruitment, check membership, throw ForbiddenAccessException"
+      ],
+      "automation_hints": [
+        "Add section after 'Command/Query Handlers' in patterns-backend.md",
+        "Include code snippet from AddWorkflowStepCommandHandler.cs as canonical example"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future command handlers will lack authorization checks, allowing any authenticated user to modify any recruitment — data isolation breach"
+    },
+    {
+      "id": "A-002",
+      "title": "Add authorization verification to review checklist in team-workflow.md",
+      "type": "process_change",
+      "priority": "P0",
+      "owner_persona": "Security",
+      "rationale": "The review checklist currently checks for ITenantContext usage and global query filters but does not explicitly verify command handler authorization. Story 2.3 C1 was caught by adversarial review but a checklist item would make this systematic.",
+      "evidence_refs": [
+        ".claude/process/team-workflow.md:57-68 (review checklist)",
+        "Story 2.3 C1 finding"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md review checklist includes: 'All command/query handlers verify ITenantContext membership before data access'",
+        "Checklist item references patterns-backend.md authorization section"
+      ],
+      "automation_hints": [
+        "Add bullet point to Step 2 review checklist in team-workflow.md"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Authorization verification remains ad-hoc rather than systematic in reviews"
+    },
+    {
+      "id": "A-003",
+      "title": "Document endpoint registration convention (EndpointGroupBase) in api-patterns.md",
+      "type": "docs_update",
+      "priority": "P1",
+      "owner_persona": "Architecture",
+      "rationale": "Two endpoint registration patterns exist: TeamEndpoints uses static class with extension method, RecruitmentEndpoints uses EndpointGroupBase. No doc specifies the canonical pattern, causing Story 2.4 I1 finding.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/TeamEndpoints.cs:9-21 (static class)",
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs:14-28 (EndpointGroupBase)",
+        "Story 2.4 I1 finding"
+      ],
+      "acceptance_criteria": [
+        "api-patterns.md has 'Endpoint Registration' section documenting EndpointGroupBase as canonical pattern",
+        "Section includes code example and explains automatic discovery/registration"
+      ],
+      "automation_hints": [
+        "Add section to api-patterns.md",
+        "Reference RecruitmentEndpoints.cs as canonical example"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/api-patterns.md"
+      ],
+      "risk_if_ignored": "Continued endpoint registration inconsistency across new features"
+    },
+    {
+      "id": "A-004",
+      "title": "Document transient _stepsWithOutcomes pattern in patterns-backend.md",
+      "type": "docs_update",
+      "priority": "P1",
+      "owner_persona": "Architecture",
+      "rationale": "Recruitment._stepsWithOutcomes is a transient HashSet that relies on the application handler calling MarkStepHasOutcomes() before RemoveStep(). This implicit protocol is undocumented and fragile.",
+      "evidence_refs": [
+        "api/src/Domain/Entities/Recruitment.cs:25 (_stepsWithOutcomes HashSet)",
+        "api/src/Domain/Entities/Recruitment.cs:60-73 (RemoveStep uses _stepsWithOutcomes)"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md has section documenting the transient state pattern for outcome checking",
+        "Documents the handler protocol: query outcomes, call MarkStepHasOutcomes(), then call RemoveStep()"
+      ],
+      "automation_hints": [
+        "Add 'Transient Domain State' section to patterns-backend.md under Domain Patterns"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future handlers may call RemoveStep() without MarkStepHasOutcomes(), silently allowing deletion of steps with recorded outcomes"
+    },
+    {
+      "id": "A-005",
+      "title": "Add SkeletonLoader requirement to patterns-frontend.md and anti-pattern for 'Loading...' text",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "owner_persona": "Product",
+      "rationale": "SkeletonLoader was built in Epic 1 but Epic 2 components use plain 'Loading...' text instead (Stories 2.1 M4, 2.4 M3). This is a recurring pattern that should be caught by guidelines.",
+      "evidence_refs": [
+        "Story 2.1 M4 finding ('Loading...' text instead of SkeletonLoader)",
+        "Story 2.4 M3 finding (empty state for member list)"
+      ],
+      "acceptance_criteria": [
+        "patterns-frontend.md documents: 'Use SkeletonLoader for loading states, not plain text'",
+        "anti-patterns-pending.txt has entry for 'Loading...' text in feature components"
+      ],
+      "automation_hints": [
+        "Add loading state guidance to patterns-frontend.md",
+        "Add regex to anti-patterns-pending.txt"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        ".claude/hooks/anti-patterns-pending.txt"
+      ],
+      "risk_if_ignored": "Inconsistent loading states undermine polished UX established in Epic 1"
+    },
+    {
+      "id": "A-006",
+      "title": "Standardize TeamEndpoints to use EndpointGroupBase",
+      "type": "refactor",
+      "priority": "P2",
+      "owner_persona": "Delivery",
+      "rationale": "TeamEndpoints uses a static class pattern while RecruitmentEndpoints uses EndpointGroupBase. After documenting the convention (A-003), the existing code should be aligned.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/TeamEndpoints.cs:9-21",
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs:14-28"
+      ],
+      "acceptance_criteria": [
+        "TeamEndpoints extends EndpointGroupBase",
+        "Map() method overridden with team routes nested under recruitment group",
+        "No static MapTeamEndpoints extension method remains",
+        "All endpoint tests pass"
+      ],
+      "automation_hints": [
+        "Convert static class to inherit EndpointGroupBase",
+        "Update Program.cs if manual registration exists"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Endpoints/TeamEndpoints.cs",
+        "api/src/Web/Program.cs"
+      ],
+      "risk_if_ignored": "Inconsistency remains as a minor tech debt item — low immediate risk"
+    },
+    {
+      "id": "A-007",
+      "title": "Fix CloseRecruitment endpoint to return 204 No Content",
+      "type": "refactor",
+      "priority": "P2",
+      "owner_persona": "Delivery",
+      "rationale": "POST /api/recruitments/{id}/close returns Results.Ok() (200 with empty body) instead of Results.NoContent() (204). Story 2.5 M1 finding. Inconsistent with other command endpoints that return NoContent.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs:96 (Results.Ok())",
+        "Story 2.5 M1 finding"
+      ],
+      "acceptance_criteria": [
+        "CloseRecruitment endpoint returns Results.NoContent() (HTTP 204)",
+        "Frontend CloseRecruitmentDialog handles 204 response correctly"
+      ],
+      "automation_hints": [
+        "Change Results.Ok() to Results.NoContent()",
+        "Verify frontend mutation hook doesn't expect response body"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs"
+      ],
+      "risk_if_ignored": "Minor REST convention violation — low risk but inconsistent with other endpoints"
+    },
+    {
+      "id": "A-008",
+      "title": "Add integration tests for CustomExceptionHandler mappings",
+      "type": "test_gap",
+      "priority": "P2",
+      "owner_persona": "QA",
+      "rationale": "Story 2.4 C1 found DomainRuleViolationException was not mapped. Unit tests verify handler behavior but no integration test verifies exception-to-HTTP-status mapping. CustomExceptionHandler now has 8 mapped exception types.",
+      "evidence_refs": [
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs (8 exception types)",
+        "Story 2.4 C1 finding"
+      ],
+      "acceptance_criteria": [
+        "Integration test class exists that verifies each mapped exception type returns expected HTTP status and Problem Details",
+        "At minimum: ValidationException->400, NotFoundException->404, ForbiddenAccessException->403, RecruitmentClosedException->400, DomainRuleViolationException->400"
+      ],
+      "automation_hints": [
+        "Create WebApplicationFactory-based integration test",
+        "Trigger each exception type via API endpoints"
+      ],
+      "files_to_touch": [
+        "api/tests/Web.IntegrationTests/"
+      ],
+      "risk_if_ignored": "New domain exceptions may not be mapped, causing 500 errors instead of proper Problem Details"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E-001",
+      "hypothesis": "Adding a mandatory 'Authorization Check' section to implementation plan templates will prevent missing ITenantContext checks in command handlers",
+      "how": "Update the writing-plans skill template to include a dedicated 'Authorization' section that lists which handlers need membership verification",
+      "success_metric": "Zero authorization-related Critical findings in Epic 3 reviews"
+    },
+    {
+      "id": "E-002",
+      "hypothesis": "Running lint + test + build as a pre-review verification gate will catch minor findings (import order, Loading text patterns) before review",
+      "how": "Enhance the verification-before-completion skill to include anti-pattern scanning against pending.txt entries",
+      "success_metric": "Minor findings per story drop from 3+ to 1 or fewer in Epic 3"
+    },
+    {
+      "id": "E-003",
+      "hypothesis": "First-of-kind stories benefit from a 'pattern establishment' phase where the implementation is documented as the canonical example before subsequent stories",
+      "how": "After the first story in a new domain area, update architecture docs with the established pattern before starting the next story",
+      "success_metric": "Fix cycle rate drops below 40% in Epic 3 (from 60% in Epic 2)"
+    }
+  ],
+  "lens_reports": [
+    {
+      "persona": "Delivery Engineer",
+      "wins": [
+        "High throughput: 42 commits, 10K+ lines, 5 full-stack stories",
+        "Implementation plans before coding",
+        "Consistent commit conventions",
+        "All Epic 1 deferred items resolved"
+      ],
+      "problems": [
+        "TeamEndpoints inconsistent registration pattern",
+        "CloseRecruitment returns 200 instead of 204",
+        "SearchDirectory route param unused",
+        "WorkflowStepEditor complexity (337 lines)",
+        "Minor findings accumulate without resolution"
+      ],
+      "missing_evidence": [
+        "CI test execution logs",
+        "Code coverage metrics",
+        "Build timing metrics"
+      ],
+      "candidate_actions": ["A-006", "A-007"]
+    },
+    {
+      "persona": "QA",
+      "wins": [
+        "Comprehensive handler test coverage",
+        "Domain tests expanded significantly",
+        "Frontend tests for all new components",
+        "MSW handlers for realistic API mocking"
+      ],
+      "problems": [
+        "Systemic authorization gap in Story 2.3",
+        "No integration tests for API endpoints",
+        "Code coverage metrics not evidenced"
+      ],
+      "missing_evidence": [
+        "Code coverage reports",
+        "Integration test results",
+        "CI test execution logs"
+      ],
+      "candidate_actions": ["A-001", "A-008"]
+    },
+    {
+      "persona": "Architecture",
+      "wins": [
+        "DDD aggregate root pattern strictly followed",
+        "Clean Architecture layering maintained",
+        "Domain exception hierarchy well-structured",
+        "Manual DTO mapping consistent"
+      ],
+      "problems": [
+        "Endpoint registration inconsistency",
+        "SearchDirectory ignores recruitmentId",
+        "Transient _stepsWithOutcomes undocumented"
+      ],
+      "missing_evidence": [
+        "EF Core migration files",
+        "Database schema validation"
+      ],
+      "candidate_actions": ["A-003", "A-004"]
+    },
+    {
+      "persona": "Docs/Enablement",
+      "wins": [
+        "Implementation plans created before coding",
+        "Dev Agent Record quality maintained",
+        "Architecture docs accurately guided implementation",
+        "Story files clear and actionable"
+      ],
+      "problems": [
+        "api-patterns.md missing endpoint registration convention",
+        "patterns-backend.md missing command handler authorization pattern",
+        "anti-patterns-pending.txt empty despite 12+ minor findings"
+      ],
+      "missing_evidence": [
+        "Shard routing table accuracy",
+        "Hook effectiveness metrics"
+      ],
+      "candidate_actions": ["A-001", "A-003"]
+    },
+    {
+      "persona": "Security",
+      "wins": [
+        "ITenantContext membership enforced across query handlers",
+        "Critical security finding caught by review",
+        "Domain-level closed recruitment guards",
+        "Creator removal protection in domain"
+      ],
+      "problems": [
+        "Systemic authorization gap in Story 2.3",
+        "SearchDirectory has no membership verification",
+        "DomainRuleViolationException is a catch-all"
+      ],
+      "missing_evidence": [
+        "Penetration testing results",
+        "Dependency vulnerability scan",
+        "Audit log consumption evidence"
+      ],
+      "candidate_actions": ["A-001", "A-002"]
+    },
+    {
+      "persona": "Product",
+      "wins": [
+        "All 30+ acceptance criteria delivered",
+        "Full user journeys supported end-to-end",
+        "Ubiquitous language consistently applied",
+        "Creator permanence enforced at all levels"
+      ],
+      "problems": [
+        "Loading states use text instead of SkeletonLoader",
+        "Closed recruitment read-only mode partial",
+        "SearchDirectory URL implies scoping that doesn't exist"
+      ],
+      "missing_evidence": [
+        "Usability testing",
+        "Mobile/responsive behavior",
+        "Accessibility testing for new components"
+      ],
+      "candidate_actions": ["A-005"]
+    }
+  ]
+}
