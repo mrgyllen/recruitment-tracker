@@ -22,7 +22,7 @@ export function useCandidates({
     queryKey: [
       'candidates',
       recruitmentId,
-      { page, search, stepId, outcomeStatus },
+      { page, pageSize, search, stepId, outcomeStatus },
     ],
     queryFn: () =>
       candidateApi.getAll(
