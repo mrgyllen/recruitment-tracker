@@ -77,7 +77,7 @@ public class Recruitment : GuidEntity
         _stepsWithOutcomes.Add(stepId);
     }
 
-    public void AddMember(Guid userId, string role)
+    public void AddMember(Guid userId, string role, string? displayName = null)
     {
         EnsureNotClosed();
 
@@ -86,7 +86,7 @@ public class Recruitment : GuidEntity
             throw new InvalidOperationException($"User {userId} is already a member.");
         }
 
-        var member = RecruitmentMember.Create(Id, userId, role);
+        var member = RecruitmentMember.Create(Id, userId, role, displayName);
         _members.Add(member);
         AddDomainEvent(new MembershipChangedEvent(Id, userId, "Added"));
     }

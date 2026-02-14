@@ -16,6 +16,9 @@ public class RecruitmentMemberConfiguration : IEntityTypeConfiguration<Recruitme
             .IsRequired()
             .HasMaxLength(50);
 
+        builder.Property(m => m.DisplayName)
+            .HasMaxLength(200);
+
         builder.HasIndex(m => m.UserId)
             .HasDatabaseName("IX_RecruitmentMembers_UserId");
 
