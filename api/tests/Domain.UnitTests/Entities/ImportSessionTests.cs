@@ -215,4 +215,77 @@ public class ImportSessionTests
 
         act.Should().Throw<ArgumentOutOfRangeException>();
     }
+
+    // === PDF splitting progress tests ===
+
+    [Test]
+    public void SetPdfSplitProgress_WhenProcessing_UpdatesFields()
+    {
+        var session = CreateSession();
+
+        session.SetPdfSplitProgress(10, 5, 1);
+
+        session.PdfTotalCandidates.Should().Be(10);
+        session.PdfSplitCandidates.Should().Be(5);
+        session.PdfSplitErrors.Should().Be(1);
+    }
+
+    [Test]
+    public void SetPdfSplitProgress_WhenNotProcessing_Throws()
+    {
+        var session = CreateSession();
+        session.MarkCompleted(1, 0, 0, 0);
+
+        var act = () => session.SetPdfSplitProgress(10, 5, 0);
+
+        act.Should().Throw<InvalidWorkflowTransitionException>();
+    }
+
+    [Test]
+    public void SetOriginalBundleUrl_StoresUrl()
+    {
+        var session = CreateSession();
+
+        session.SetOriginalBundleUrl("recruitments/abc/bundles/original.pdf");
+
+        session.OriginalBundleBlobUrl.Should().Be("recruitments/abc/bundles/original.pdf");
+    }
+
+    [Test]
+    public void AddImportDocument_WhenProcessing_CreatesChildEntity()
+    {
+        var session = CreateSession();
+
+        session.AddImportDocument("Anna Svensson", "https://blob/cv.pdf", "WD12345");
+
+        session.ImportDocuments.Should().HaveCount(1);
+        var doc = session.ImportDocuments.First();
+        doc.CandidateName.Should().Be("Anna Svensson");
+        doc.BlobStorageUrl.Should().Be("https://blob/cv.pdf");
+        doc.WorkdayCandidateId.Should().Be("WD12345");
+        doc.ImportSessionId.Should().Be(session.Id);
+    }
+
+    [Test]
+    public void AddImportDocument_WhenNotProcessing_Throws()
+    {
+        var session = CreateSession();
+        session.MarkCompleted(1, 0, 0, 0);
+
+        var act = () => session.AddImportDocument("Name", "url", null);
+
+        act.Should().Throw<InvalidWorkflowTransitionException>();
+    }
+
+    [Test]
+    public void ClearImportDocuments_RemovesAllDocuments()
+    {
+        var session = CreateSession();
+        session.AddImportDocument("Anna", "url1", "WD1");
+        session.AddImportDocument("Bob", "url2", "WD2");
+
+        session.ClearImportDocuments();
+
+        session.ImportDocuments.Should().BeEmpty();
+    }
 }

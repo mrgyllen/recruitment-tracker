@@ -23,6 +23,14 @@ public class ImportSession : GuidEntity
     private readonly List<ImportRowResult> _rowResults = new();
     public IReadOnlyCollection<ImportRowResult> RowResults => _rowResults.AsReadOnly();
 
+    public int? PdfTotalCandidates { get; private set; }
+    public int? PdfSplitCandidates { get; private set; }
+    public int PdfSplitErrors { get; private set; }
+    public string? OriginalBundleBlobUrl { get; private set; }
+
+    private readonly List<ImportDocument> _importDocuments = new();
+    public IReadOnlyCollection<ImportDocument> ImportDocuments => _importDocuments.AsReadOnly();
+
     private ImportSession() { } // EF Core
 
     public static ImportSession Create(Guid recruitmentId, Guid createdByUserId, string sourceFileName = "")
@@ -83,6 +91,30 @@ public class ImportSession : GuidEntity
         var row = _rowResults[rowIndex];
         row.Reject();
         return row;
+    }
+
+    public void SetPdfSplitProgress(int total, int completed, int errors)
+    {
+        EnsureProcessing();
+        PdfTotalCandidates = total;
+        PdfSplitCandidates = completed;
+        PdfSplitErrors = errors;
+    }
+
+    public void SetOriginalBundleUrl(string url)
+    {
+        OriginalBundleBlobUrl = url;
+    }
+
+    public void AddImportDocument(string candidateName, string blobStorageUrl, string? workdayCandidateId)
+    {
+        EnsureProcessing();
+        _importDocuments.Add(ImportDocument.Create(Id, candidateName, blobStorageUrl, workdayCandidateId));
+    }
+
+    public void ClearImportDocuments()
+    {
+        _importDocuments.Clear();
     }
 
     private void EnsureProcessing()

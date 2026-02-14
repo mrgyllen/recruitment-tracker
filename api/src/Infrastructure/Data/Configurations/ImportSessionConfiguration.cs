@@ -31,6 +31,17 @@ public class ImportSessionConfiguration : IEntityTypeConfiguration<ImportSession
             rowBuilder.ToJson();
         });
 
+        builder.Property(s => s.OriginalBundleBlobUrl)
+            .HasMaxLength(2048);
+
+        builder.HasMany(s => s.ImportDocuments)
+            .WithOne()
+            .HasForeignKey(d => d.ImportSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(s => s.ImportDocuments)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
+
         builder.Ignore(s => s.DomainEvents);
     }
 }
