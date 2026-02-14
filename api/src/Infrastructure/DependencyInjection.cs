@@ -6,6 +6,7 @@ using api.Infrastructure.Data;
 using api.Infrastructure.Data.Interceptors;
 using api.Infrastructure.Identity;
 using api.Infrastructure.Services;
+using Azure.Storage.Blobs;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Configuration;
@@ -60,6 +61,15 @@ public static class DependencyInjection
         builder.Services.AddScoped<IXlsxParser, XlsxParserService>();
         builder.Services.AddScoped<ICandidateMatchingEngine, CandidateMatchingEngine>();
         builder.Services.AddHostedService<ImportPipelineHostedService>();
+
+        // PDF splitting and blob storage services
+        builder.Services.AddScoped<IPdfSplitter, PdfSplitterService>();
+        builder.Services.AddScoped<IBlobStorageService, BlobStorageService>();
+
+        // Azure Blob Storage client
+        var blobConnectionString = builder.Configuration.GetValue<string>("BlobStorage:ConnectionString")
+            ?? "UseDevelopmentStorage=true";
+        builder.Services.AddSingleton(new BlobServiceClient(blobConnectionString));
 
         // XLSX column mapping options
         builder.Services.Configure<XlsxColumnMappingOptions>(
