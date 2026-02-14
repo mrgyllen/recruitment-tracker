@@ -14,7 +14,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
 import { cn } from '@/lib/utils'
-import type { ImportRowResult } from '@/lib/api/import.types'
+import type { ImportDocumentDto, ImportRowResult } from '@/lib/api/import.types'
 
 interface ImportSummaryProps {
   createdCount: number
@@ -25,6 +25,9 @@ interface ImportSummaryProps {
   failureReason?: string | null
   onReviewMatches?: () => void
   onDone: () => void
+  importDocuments?: ImportDocumentDto[]
+  recruitmentId?: string
+  isClosed?: boolean
 }
 
 export function ImportSummary({
@@ -36,7 +39,12 @@ export function ImportSummary({
   failureReason,
   onReviewMatches,
   onDone,
+  importDocuments,
+  isClosed,
 }: ImportSummaryProps) {
+  const unmatchedDocs = (importDocuments ?? []).filter(
+    (d) => d.matchStatus === 'Unmatched',
+  )
   return (
     <div className="space-y-4 p-4">
       {failureReason && (
@@ -98,6 +106,13 @@ export function ImportSummary({
         label="Updated"
         rows={rowResults.filter((r) => r.action === 'Updated')}
       />
+
+      {unmatchedDocs.length > 0 && (
+        <UnmatchedDocumentsSection
+          documents={unmatchedDocs}
+          isClosed={isClosed}
+        />
+      )}
 
       <Button className="w-full" onClick={onDone}>
         Done
@@ -163,5 +178,36 @@ function RowDetailSection({
         </div>
       </CollapsibleContent>
     </Collapsible>
+  )
+}
+
+function UnmatchedDocumentsSection({
+  documents,
+  isClosed,
+}: {
+  documents: ImportDocumentDto[]
+  isClosed?: boolean
+}) {
+  return (
+    <div className="space-y-2">
+      <h3 className="text-sm font-medium">
+        Unmatched Documents ({documents.length})
+      </h3>
+      <div className="divide-y rounded-md border text-sm">
+        {documents.map((doc) => (
+          <div
+            key={doc.id}
+            className="flex items-center justify-between px-3 py-2"
+          >
+            <span>{doc.candidateName}</span>
+            {!isClosed && (
+              <Button variant="outline" size="sm">
+                Assign
+              </Button>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   )
 }
