@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { CreateCandidateForm } from './CreateCandidateForm'
+import { ImportWizard } from './ImportFlow/ImportWizard'
 import { useCandidates } from './hooks/useCandidates'
 import { useRemoveCandidate } from './hooks/useCandidateMutations'
 import { EmptyState } from '@/components/EmptyState'
@@ -31,6 +32,7 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
   const [candidateToRemove, setCandidateToRemove] =
     useState<CandidateResponse | null>(null)
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
+  const [importWizardOpen, setImportWizardOpen] = useState(false)
 
   function handleConfirmRemove() {
     if (!candidateToRemove) return
@@ -66,7 +68,12 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-lg font-semibold">Candidates</h2>
         {!isClosed && candidates.length > 0 && (
-          <CreateCandidateForm recruitmentId={recruitmentId} />
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => setImportWizardOpen(true)}>
+              Import Candidates
+            </Button>
+            <CreateCandidateForm recruitmentId={recruitmentId} />
+          </div>
         )}
       </div>
 
@@ -79,11 +86,20 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
             onAction={isClosed ? undefined : () => setCreateDialogOpen(true)}
           />
           {!isClosed && (
-            <CreateCandidateForm
-              recruitmentId={recruitmentId}
-              open={createDialogOpen}
-              onOpenChange={setCreateDialogOpen}
-            />
+            <>
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => setImportWizardOpen(true)}
+              >
+                Import Candidates
+              </Button>
+              <CreateCandidateForm
+                recruitmentId={recruitmentId}
+                open={createDialogOpen}
+                onOpenChange={setCreateDialogOpen}
+              />
+            </>
           )}
         </>
       ) : (
@@ -145,6 +161,12 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ImportWizard
+        recruitmentId={recruitmentId}
+        open={importWizardOpen}
+        onOpenChange={setImportWizardOpen}
+      />
     </section>
   )
 }

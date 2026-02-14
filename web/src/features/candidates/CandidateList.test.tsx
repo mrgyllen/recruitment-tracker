@@ -151,4 +151,32 @@ describe('CandidateList', () => {
 
     expect(screen.getByTestId('skeleton-card')).toBeInTheDocument()
   })
+
+  it('should show Import Candidates button for active recruitment', async () => {
+    render(
+      <CandidateList recruitmentId={recruitmentId} isClosed={false} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole('button', { name: /import candidates/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('should hide Import Candidates button for closed recruitment', async () => {
+    render(
+      <CandidateList recruitmentId={recruitmentId} isClosed={true} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.queryByRole('button', { name: /import candidates/i }),
+    ).not.toBeInTheDocument()
+  })
 })
