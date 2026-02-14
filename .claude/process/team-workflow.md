@@ -10,7 +10,8 @@ Before creating the team or assigning any work:
 2. **Read the epic file** referenced in the prompt to understand the full story list
 3. **Determine scope:** If the prompt specifies stories (e.g., "stories 1.4 and 1.5"), implement only those. If the prompt says "Continue" or "Implement Epic X" without specific stories, implement all remaining stories that are `ready-for-dev`
 4. **Check `.retro/`** for previous retro runs — note any deferred items that should be addressed
-5. **Create the team** and begin the Story Cycle with the first in-scope story
+5. **Apply experiments from previous retros:** If the most recent `retro.json` contains an `experiments` array, apply each experiment NOW before starting stories. Experiments are process/doc changes (updating skill templates, adding checklist items, modifying workflow steps) — they are small and must be applied before the work they're designed to improve. Commit experiment applications with message: `process: apply experiment E-00X from <run_id>`
+6. **Create the team** and begin the Story Cycle with the first in-scope story
 
 ## Team Structure
 
@@ -99,11 +100,15 @@ After Review Agent explicitly approves the story, Team Lead runs the Story Compl
 - [ ] Mini-retro completed (anti-patterns captured)
 - [ ] Only THEN create/assign next story's tasks
 
-1. **Mini-retro:** Review any new anti-patterns discovered during this story
+1. **Mini-retro (REQUIRED — not optional):** Team Lead reviews ALL Minor findings from the Review Agent for this story and converts actionable ones into anti-pattern entries.
+   - For each Minor finding, decide: Is this a pattern that could recur? If yes → add to pending.
    - Add new entries to `.claude/hooks/anti-patterns-pending.txt`
-   - Format: `REGEX|FILE_GLOB|MESSAGE`
+   - Format: `REGEX|FILE_GLOB|MESSAGE  # Story X.Y finding ID`
+   - Include the story and finding ID as a trailing comment for traceability
+   - If the review had zero Minor findings, add a comment line: `# Story X.Y: no new anti-patterns identified`
+   - **The pending file MUST be modified in every story completion** — this proves the mini-retro ran
 2. **Update sprint-status:** Mark story status as `done` in `sprint-status.yaml`
-3. **Commit:** Commit sprint-status update
+3. **Commit:** Commit sprint-status update AND anti-patterns-pending.txt changes together
 
 ## Task Structure for Story Cycle
 
@@ -140,6 +145,7 @@ Run after the **last story in the current prompt scope** is completed. Fully aut
 - The new retro checks whether deferred items from previous retros were addressed
 - The final retro is a **synthesis retro** — covers new stories plus validates all previous retro actions were applied
 - **Previous deferred items MUST be resolved** — a deferred item surviving two retros is a process failure. If the item is still valid, fix it NOW regardless of scope. If it's no longer relevant, explicitly close it with justification.
+- **Previous experiments MUST be validated** — if the last retro proposed experiments (E-001, etc.), the new retro MUST check: (a) was the experiment applied in Getting Started step 5? (b) measure the success metric against the current sprint's data. Record results as pass/fail/inconclusive with evidence in the `experiment_validation` section of `retro.json`.
 
 **CRITICAL: Retro scope ≠ fix scope.** The retro EVALUATES stories in scope, but it FIXES everything outstanding — including items from previous retros and items outside the current story domain. A frontend retro that finds outstanding backend doc updates must apply them. The only valid reason to skip a fix is if it would destabilize code that wasn't touched in this sprint.
 
@@ -165,6 +171,16 @@ The evidence bundle MUST include:
 5. **Anti-patterns discovered:** Contents of `.claude/hooks/anti-patterns-pending.txt`
 6. **Guideline references:** Paths to architecture.md, relevant shards, testing-standards.md
 7. **Sprint-status snapshot:** Current state of `sprint-status.yaml`
+8. **Execution timing:** Derive from git commit timestamps:
+   ```bash
+   # First commit in scope
+   git log --oneline --reverse <base>..<head> | head -1
+   git log --format='%ai' --reverse <base>..<head> | head -1
+   # Last commit in scope
+   git log --format='%ai' <base>..<head> | head -1
+   ```
+   Record: first commit timestamp, last commit timestamp, elapsed hours, number of commits, and commits per story.
+9. **Previous experiments (if any):** If the last retro's `retro.json` contains `experiments`, list each experiment with its `success_metric` and gather data to evaluate pass/fail. Include the measurement data in the evidence bundle.
 
 If any data is unavailable, include a section stating **"Not captured"** — the retro will propose instrumentation improvements.
 
@@ -215,14 +231,18 @@ Team Lead acts as Retro Lead and synthesizes lens outputs:
 | `security_hardening` | Immediate fix or next-sprint story depending on severity |
 | `observability` | Logging/monitoring improvements |
 | `process_change` | Update this workflow doc or hook configuration |
+| `instrumentation_gap` | Add missing evidence capture (CI config, coverage reporting, scan setup) |
 
-5. **Process anti-patterns-pending.txt:**
-   - Recurring (2+ stories) -> promote to `.claude/hooks/anti-patterns.txt`
-   - One-off -> remove from pending
-   - Architecture-level -> action item with type `docs_update`
-   - After processing, leave ONLY the header comments — no log entries about what was promoted. Use `retro.md` for history, not working files.
+5. **Convert missing_evidence to action items:** For EACH item in the lens reports' `missing_evidence` arrays, create a proper action item with type `instrumentation_gap`, appropriate priority (P1 for config-level, P2 for infrastructure), acceptance criteria, and files_to_touch. Gaps that appeared in a previous retro's missing_evidence MUST be P1 — recurring gaps are a process failure.
 
-6. **Save** `retro.json` and `retro.md` to `.retro/<run_id>/`
+6. **Process anti-patterns-pending.txt (MANDATORY):** Every entry MUST be resolved — no entries may survive the retro unprocessed.
+   - Recurring (2+ stories, check trailing `# Story X.Y` comments) → promote to `.claude/hooks/anti-patterns.txt` (permanent)
+   - One-off → remove from pending
+   - Architecture-level → action item with type `docs_update`
+   - After processing, leave ONLY the header comments and any `# Story X.Y: no new anti-patterns identified` lines — no pattern entries remain. Use `retro.md` for history, not working files.
+   - **Verification:** After processing, confirm that `anti-patterns-pending.txt` contains zero `REGEX|GLOB|MESSAGE` lines. If any remain, the retro is not complete.
+
+7. **Save** `retro.json` and `retro.md` to `.retro/<run_id>/`
 
 ### Phase 4: Apply (Self-Healing)
 
@@ -238,6 +258,7 @@ This is where the retro becomes self-healing. Team Lead works through the action
 | `architecture_alignment` | Update the relevant architecture shard or create an ADR in `architecture/adrs/`. |
 | `process_change` | Edit `.claude/process/team-workflow.md` or hook configuration in `settings.local.json`. |
 | `observability` | Add logging/monitoring if it's a config-level change. |
+| `instrumentation_gap` | Add missing evidence capture (CI yaml changes, coverage config, scan setup). Most are config-level — apply directly. |
 
 **Delegate to Dev Agent (if the fix requires implementation):**
 
@@ -256,6 +277,8 @@ This is where the retro becomes self-healing. Team Lead works through the action
 | `docs_update` (ANY priority) | Apply immediately — ALWAYS. Docs updates are zero-risk. A docs_update must never be deferred. |
 | `security_hardening` (ANY priority) | Fix now. Security items must never be deferred. |
 | `observability` (P2) | Fix now if config-level. Defer only if it requires new infrastructure. |
+| `instrumentation_gap` (P1) | Fix now — config-level changes (CI flags, reporter setup). Recurring gaps from previous retros are always P1. |
+| `instrumentation_gap` (P2) | Fix now if config-level. Defer only if it requires new external tooling or infrastructure. |
 
 **Rules for Phase 4:**
 - P0 actions are ALWAYS applied immediately — never deferred
@@ -264,6 +287,8 @@ This is where the retro becomes self-healing. Team Lead works through the action
 - P2 `test_gap` is assigned to Dev Agent now — test gaps compound if left open
 - P2 `refactor` may be deferred ONLY if effort exceeds 1 story point AND the refactor would destabilize code not touched this sprint
 - If a P2 action IS deferred, it MUST be added as a task in `sprint-status.yaml` under the current epic with a clear key (e.g., `epic-1-deferred-description`) — NOT "deferred to next sprint"
+- P2 `instrumentation_gap` follows the same rules as `observability` — fix now if config-level, defer only if it requires new infrastructure
+- **An instrumentation gap that appeared in a previous retro's missing_evidence is automatically P1** — recurring gaps are a process failure
 - **An item carried from a previous retro cannot be deferred again.** Fix it or explicitly close it with justification.
 - The retro is NOT done until all P0, P1, and applicable P2 actions are applied or assigned
 - **Expected outcome: 0-2 deferred items per retro.** If more than 2 items are deferred, the retro is being too permissive.
@@ -279,12 +304,13 @@ After all actions are applied:
    - If any P2 items were deferred (only for substantial refactors), add them as tracked tasks under the current epic
 4. **Commit** retro document + sprint-status update
 5. **Deferred items tracking** — if anything was deferred, list it in retro.md under "Deferred (Tracked)" with the sprint-status.yaml task ID. The next retro will check if these were resolved.
+6. **Record execution timing in retro.md:** Include a "Timing" section with: first commit timestamp, last commit timestamp, total elapsed hours, number of commits, number of stories, and commits per story. This data comes from Phase 1 evidence item 8.
 
 ### Mini-Retro Self-Healing (Per Story)
 
-The mini-retro in Story Cycle Step 4 is not just evidence capture — it also applies immediate fixes:
+The mini-retro in Story Cycle Step 5 is MANDATORY — not optional evidence capture. It applies immediate fixes:
 
-1. **Anti-pattern capture:** Add new entries to `.claude/hooks/anti-patterns-pending.txt`
+1. **Anti-pattern capture (REQUIRED):** Review ALL Minor findings from the Review Agent. For each one, decide: could this recur? If yes, add to `.claude/hooks/anti-patterns-pending.txt` with format `REGEX|GLOB|MESSAGE  # Story X.Y finding_id`. If no Minor findings existed, add a comment line `# Story X.Y: no new anti-patterns identified`. The pending file MUST be modified every story — this proves the mini-retro ran.
 2. **Immediate doc fixes:** If a review finding revealed a doc that is *wrong* (not just incomplete), fix the doc NOW — don't wait for the full retro. Wrong docs cause repeated errors.
 3. **Hook quick-fixes:** If a review finding revealed an anti-pattern that a hook SHOULD have caught but didn't, add it to `anti-patterns-pending.txt` immediately so it catches it for the next story in this sprint.
 
