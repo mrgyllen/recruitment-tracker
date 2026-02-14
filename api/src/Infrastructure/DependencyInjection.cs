@@ -36,6 +36,15 @@ public static class DependencyInjection
         builder.Services.AddTransient<IIdentityService, IdentityService>();
         builder.Services.AddScoped<ITenantContext, TenantContext>();
 
+        if (builder.Environment.IsDevelopment())
+        {
+            builder.Services.AddScoped<IDirectoryService, DevDirectoryService>();
+        }
+        else
+        {
+            builder.Services.AddScoped<IDirectoryService, EntraIdDirectoryService>();
+        }
+
         builder.Services.AddAuthorization(options =>
             options.AddPolicy(Policies.CanPurge, policy => policy.RequireRole(Roles.Administrator)));
     }
