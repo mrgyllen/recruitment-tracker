@@ -38,8 +38,15 @@ public class StartImportCommandHandler(
         dbContext.ImportSessions.Add(session);
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var isPdf = request.FileName.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase);
+
         await channelWriter.WriteAsync(
-            new ImportRequest(session.Id, request.RecruitmentId, request.FileContent, userId.Value),
+            new ImportRequest(
+                session.Id,
+                request.RecruitmentId,
+                isPdf ? [] : request.FileContent,
+                userId.Value,
+                isPdf ? request.FileContent : null),
             cancellationToken);
 
         return new StartImportResponse(

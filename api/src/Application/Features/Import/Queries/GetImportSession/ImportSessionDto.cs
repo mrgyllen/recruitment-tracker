@@ -17,7 +17,12 @@ public record ImportSessionDto
     public int ErroredCount { get; init; }
     public int FlaggedCount { get; init; }
     public string? FailureReason { get; init; }
+    public int? PdfTotalCandidates { get; init; }
+    public int? PdfSplitCandidates { get; init; }
+    public int PdfSplitErrors { get; init; }
+    public string? OriginalBundleBlobUrl { get; init; }
     public List<ImportRowResultDto> RowResults { get; init; } = new();
+    public List<ImportDocumentDto> ImportDocuments { get; init; } = new();
 
     public static ImportSessionDto From(ImportSession entity) => new()
     {
@@ -33,7 +38,12 @@ public record ImportSessionDto
         ErroredCount = entity.ErroredCount,
         FlaggedCount = entity.FlaggedCount,
         FailureReason = entity.FailureReason,
+        PdfTotalCandidates = entity.PdfTotalCandidates,
+        PdfSplitCandidates = entity.PdfSplitCandidates,
+        PdfSplitErrors = entity.PdfSplitErrors,
+        OriginalBundleBlobUrl = entity.OriginalBundleBlobUrl,
         RowResults = entity.RowResults.Select(ImportRowResultDto.From).ToList(),
+        ImportDocuments = entity.ImportDocuments.Select(ImportDocumentDto.From).ToList(),
     };
 }
 
@@ -52,5 +62,25 @@ public record ImportRowResultDto
         Action = row.Action.ToString(),
         ErrorMessage = row.ErrorMessage,
         Resolution = row.Resolution,
+    };
+}
+
+public record ImportDocumentDto
+{
+    public Guid Id { get; init; }
+    public string CandidateName { get; init; } = string.Empty;
+    public string BlobStorageUrl { get; init; } = string.Empty;
+    public string? WorkdayCandidateId { get; init; }
+    public string MatchStatus { get; init; } = string.Empty;
+    public Guid? MatchedCandidateId { get; init; }
+
+    public static ImportDocumentDto From(Domain.Entities.ImportDocument entity) => new()
+    {
+        Id = entity.Id,
+        CandidateName = entity.CandidateName,
+        BlobStorageUrl = entity.BlobStorageUrl,
+        WorkdayCandidateId = entity.WorkdayCandidateId,
+        MatchStatus = entity.MatchStatus.ToString(),
+        MatchedCandidateId = entity.MatchedCandidateId,
     };
 }
