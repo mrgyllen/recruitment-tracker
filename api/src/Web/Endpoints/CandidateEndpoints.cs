@@ -18,7 +18,8 @@ public class CandidateEndpoints : EndpointGroupBase
         group.MapDelete("/{candidateId:guid}", RemoveCandidate);
         group.MapGet("/", GetCandidates);
         group.MapPost("/{candidateId:guid}/document", UploadDocument)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .RequireRateLimiting(RateLimitPolicies.FileUpload);
         group.MapPost("/{candidateId:guid}/document/assign", AssignDocument);
     }
 

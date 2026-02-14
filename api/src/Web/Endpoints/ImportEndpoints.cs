@@ -11,7 +11,8 @@ public class ImportEndpoints : EndpointGroupBase
     public override void Map(RouteGroupBuilder group)
     {
         group.MapPost("/", StartImport)
-            .DisableAntiforgery();
+            .DisableAntiforgery()
+            .RequireRateLimiting(RateLimitPolicies.FileUpload);
     }
 
     private static async Task<IResult> StartImport(

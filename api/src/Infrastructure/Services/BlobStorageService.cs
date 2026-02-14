@@ -44,11 +44,18 @@ public class BlobStorageService(BlobServiceClient blobServiceClient) : IBlobStor
         return response.Value.Content;
     }
 
+    private static readonly TimeSpan MaxSasValidity = TimeSpan.FromMinutes(15);
+
     public Uri GenerateSasUri(
         string containerName,
         string blobName,
         TimeSpan validity)
     {
+        if (validity > MaxSasValidity)
+        {
+            validity = MaxSasValidity;
+        }
+
         var containerClient = blobServiceClient.GetBlobContainerClient(containerName);
         var blobClient = containerClient.GetBlobClient(blobName);
         return blobClient.GenerateSasUri(

@@ -123,6 +123,9 @@ export function ImportWizard({
                 : undefined
             }
             onDone={handleClose}
+            importDocuments={session.importDocuments}
+            recruitmentId={recruitmentId}
+            importSessionId={importSessionId ?? undefined}
           />
         )}
 

@@ -28,6 +28,7 @@ app.UseExceptionHandler(options => { });
 
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<NoindexMiddleware>();
 

@@ -1,6 +1,8 @@
-﻿using api.Application.Common.Interfaces;
+﻿using System.Threading.RateLimiting;
+using api.Application.Common.Interfaces;
 using api.Infrastructure.Data;
 using api.Web.Configuration;
+using api.Web.Infrastructure;
 using api.Web.Services;
 using Azure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -40,6 +42,24 @@ public static class DependencyInjection
             .SetFallbackPolicy(new AuthorizationPolicyBuilder()
                 .RequireAuthenticatedUser()
                 .Build());
+
+        // Rate limiting for file upload endpoints (SEC-006)
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+            options.AddPolicy(RateLimitPolicies.FileUpload, context =>
+                RateLimitPartition.GetFixedWindowLimiter(
+                    partitionKey: context.User?.FindFirst("sub")?.Value
+                        ?? context.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value
+                        ?? context.Connection.RemoteIpAddress?.ToString()
+                        ?? "anonymous",
+                    factory: _ => new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 10,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                    }));
+        });
 
         // Customise default API behaviour
         builder.Services.Configure<ApiBehaviorOptions>(options =>

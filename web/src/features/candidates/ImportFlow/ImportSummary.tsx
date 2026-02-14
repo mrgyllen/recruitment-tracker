@@ -13,7 +13,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { cn } from '@/lib/utils'
+import { useCandidates } from '@/features/candidates/hooks/useCandidates'
+import { candidateApi } from '@/lib/api/candidates'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ImportDocumentDto, ImportRowResult } from '@/lib/api/import.types'
 
 interface ImportSummaryProps {
@@ -27,6 +37,7 @@ interface ImportSummaryProps {
   onDone: () => void
   importDocuments?: ImportDocumentDto[]
   recruitmentId?: string
+  importSessionId?: string
   isClosed?: boolean
 }
 
@@ -40,6 +51,8 @@ export function ImportSummary({
   onReviewMatches,
   onDone,
   importDocuments,
+  recruitmentId,
+  importSessionId,
   isClosed,
 }: ImportSummaryProps) {
   const unmatchedDocs = (importDocuments ?? []).filter(
@@ -107,9 +120,11 @@ export function ImportSummary({
         rows={rowResults.filter((r) => r.action === 'Updated')}
       />
 
-      {unmatchedDocs.length > 0 && (
+      {unmatchedDocs.length > 0 && recruitmentId && (
         <UnmatchedDocumentsSection
           documents={unmatchedDocs}
+          recruitmentId={recruitmentId}
+          importSessionId={importSessionId}
           isClosed={isClosed}
         />
       )}
@@ -183,9 +198,13 @@ function RowDetailSection({
 
 function UnmatchedDocumentsSection({
   documents,
+  recruitmentId,
+  importSessionId,
   isClosed,
 }: {
   documents: ImportDocumentDto[]
+  recruitmentId: string
+  importSessionId?: string
   isClosed?: boolean
 }) {
   return (
@@ -195,19 +214,96 @@ function UnmatchedDocumentsSection({
       </h3>
       <div className="divide-y rounded-md border text-sm">
         {documents.map((doc) => (
-          <div
+          <UnmatchedDocumentRow
             key={doc.id}
-            className="flex items-center justify-between px-3 py-2"
-          >
-            <span>{doc.candidateName}</span>
-            {!isClosed && (
-              <Button variant="outline" size="sm">
-                Assign
-              </Button>
-            )}
-          </div>
+            document={doc}
+            recruitmentId={recruitmentId}
+            importSessionId={importSessionId}
+            isClosed={isClosed}
+          />
         ))}
       </div>
+    </div>
+  )
+}
+
+function UnmatchedDocumentRow({
+  document,
+  recruitmentId,
+  importSessionId,
+  isClosed,
+}: {
+  document: ImportDocumentDto
+  recruitmentId: string
+  importSessionId?: string
+  isClosed?: boolean
+}) {
+  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('')
+  const [isAssigned, setIsAssigned] = useState(false)
+  const { data: candidateData } = useCandidates(recruitmentId)
+  const queryClient = useQueryClient()
+
+  const assignMutation = useMutation({
+    mutationFn: () =>
+      candidateApi.assignDocument(recruitmentId, selectedCandidateId, {
+        documentBlobUrl: document.blobStorageUrl,
+        documentName: document.candidateName,
+        importSessionId,
+      }),
+    onSuccess: () => {
+      setIsAssigned(true)
+      void queryClient.invalidateQueries({ queryKey: ['candidates', recruitmentId] })
+    },
+  })
+
+  const candidates = candidateData?.items ?? []
+  const candidatesWithoutDocs = candidates.filter((c) => !c.document)
+
+  if (isAssigned) {
+    return (
+      <div className="flex items-center justify-between px-3 py-2">
+        <span>{document.candidateName}</span>
+        <span className="text-sm text-green-600">Assigned</span>
+      </div>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-2 px-3 py-2">
+      <span className="shrink-0">{document.candidateName}</span>
+      {!isClosed && (
+        <div className="ml-auto flex items-center gap-2">
+          <Select
+            value={selectedCandidateId}
+            onValueChange={setSelectedCandidateId}
+          >
+            <SelectTrigger className="w-[180px]" aria-label="Select candidate">
+              <SelectValue placeholder="Select candidate" />
+            </SelectTrigger>
+            <SelectContent>
+              {candidatesWithoutDocs.length === 0 ? (
+                <SelectItem value="__none" disabled>
+                  No candidates without documents
+                </SelectItem>
+              ) : (
+                candidatesWithoutDocs.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.fullName}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={!selectedCandidateId || assignMutation.isPending}
+            onClick={() => assignMutation.mutate()}
+          >
+            {assignMutation.isPending ? 'Assigning...' : 'Assign'}
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

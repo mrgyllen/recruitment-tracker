@@ -76,10 +76,10 @@ development_status:
   3-5-cv-auto-match-manual-assignment-individual-upload: done
   epic-3-retrospective: done
   # Deferred items from Epic 3 retro
-  epic-3-deferred-unmatched-document-assign-ui: backlog  # Full dropdown/combobox for unmatched doc assignment (Story 3.5 M3)
-  epic-3-deferred-background-service-auth-docs: backlog  # BackgroundService authorization pattern documentation
-  epic-3-deferred-sas-token-max-enforcement: backlog     # SAS token 15-minute maximum enforcement (SEC-003)
-  epic-3-deferred-rate-limiting-uploads: backlog          # Rate limiting on file upload endpoints (SEC-006)
+  epic-3-deferred-unmatched-document-assign-ui: done       # Full dropdown/combobox for unmatched doc assignment (Story 3.5 M3)
+  epic-3-deferred-background-service-auth-docs: done      # BackgroundService authorization pattern documentation
+  epic-3-deferred-sas-token-max-enforcement: done         # SAS token 15-minute maximum enforcement (SEC-003)
+  epic-3-deferred-rate-limiting-uploads: done              # Rate limiting on file upload endpoints (SEC-006)
 
   # Epic 4: Screening & Outcome Recording
   epic-4: in-progress
