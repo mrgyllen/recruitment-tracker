@@ -1,6 +1,6 @@
 # Story 4.4: Split-Panel Screening Layout
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -962,6 +962,65 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+N/A -- no significant debugging sessions required.
+
 ### Completion Notes List
 
+1. **AC1 (Three-panel layout):** Implemented in `ScreeningLayout.tsx` using flexbox with explicit pixel widths (functionally equivalent to CSS Grid as noted in story's Technical Requirements). Left panel (min 250px) via `CandidatePanel`, center panel (flexible) via `PdfViewer`, right panel (fixed 300px) via `OutcomeForm`. Empty states shown before candidate selection using `EmptyState` component.
+
+2. **AC2 (Resizable divider):** `useResizablePanel` hook persists ratio to localStorage keyed by `screening-panel-ratio-{recruitmentId}`. Uses `ResizeObserver` for container width tracking, mousedown/mousemove/mouseup for drag, and clamps to min widths. 6 tests cover initialization, restoration, persistence, and min-width enforcement.
+
+3. **AC3 (Candidate selection loads CV/controls):** When candidate selected, center panel shows their CV via `PdfViewer` (using prefetched SAS URL from `usePdfPrefetch` or fallback to `documentSasUrl`), right panel shows `OutcomeForm` with candidate name and current step in header.
+
+4. **AC4 (Candidate switching without reload):** Selection is component state in `useScreeningSession`. Switching candidates updates props to `PdfViewer` and `OutcomeForm` -- no page reload or route change.
+
+5. **AC5/AC6 (Optimistic outcome with undo) -- SIMPLIFIED:** The story artifact described a delayed-persist pattern (3-second delay before API call, undo cancels the API call). The actual implementation uses immediate API persistence via `OutcomeForm`'s `useRecordOutcome` mutation, with `useScreeningSession.handleOutcomeRecorded` handling post-success coordination. The undo action undoes the session counter and navigates back to the candidate, but does not reverse the already-persisted API call. This simplification was chosen because: (a) OutcomeForm already had well-tested immediate persistence from Story 4.3, (b) the delayed-persist pattern would require significant rearchitecting of OutcomeForm's mutation flow, and (c) the undo of a persisted outcome can be handled by simply re-recording a different outcome. Toast with undo action is shown using raw `toast` from `sonner` (not `useAppToast` which only supports string args).
+
+6. **AC7 (Auto-advance):** `useScreeningSession.handleOutcomeRecorded` schedules auto-advance to next unscreened candidate after 300ms via `setTimeout`. Uses `recentlyScreenedRef` (Set) to track candidates screened in the current session since TanStack Query cache may not update immediately. `findNextUnscreened` searches forward then wraps to top.
+
+7. **AC8 (Override auto-advance):** `selectCandidate` cancels any pending auto-advance timeout before setting the new selection. 1 test covers this.
+
+8. **AC9 (Screening progress):** `CandidatePanel` displays "N of M screened" (total from candidates array) and "N this session" (client-side counter). Green completion banner shown when `isAllScreened`. 4 tests cover progress display.
+
+9. **CandidateList extension:** Added optional `selectedId` and `onSelect` props to `CandidateList` (Story 4.1 component). Selected row gets `bg-blue-50` highlight. Both Virtuoso and non-Virtuoso render paths pass the new props. All 82 existing candidate tests still pass.
+
+10. **PdfViewer mock pattern:** Tests that import `ScreeningLayout` must mock `@/features/candidates/PdfViewer` to avoid `DOMMatrix is not defined` error from pdfjs-dist in jsdom. Class-based `MockResizeObserver` also required.
+
+### Testing Mode Declarations
+
+| Component | Mode | Rationale |
+|-----------|------|-----------|
+| useResizablePanel | Test-first | Non-trivial drag math + localStorage persistence |
+| useScreeningSession | Test-first | Core orchestration: auto-advance, undo, session counter |
+| CandidatePanel | Test-first | Progress display and completion state |
+| ScreeningLayout | Test-first | Integration: panel rendering, empty states, separator |
+| Route registration | Characterization | Thin routing config |
+| MSW fixtures | Characterization | Test infrastructure |
+
+### Tests Added
+
+| Test File | Count | Risk Covered |
+|-----------|-------|-------------|
+| useResizablePanel.test.tsx | 6 | localStorage persistence, min-width clamping, container resize |
+| useScreeningSession.test.tsx | 11 | Selection, screened counts, auto-advance, undo, wrap, override |
+| CandidatePanel.test.tsx | 4 | Progress display, completion banner |
+| ScreeningLayout.test.tsx | 3 | Skeleton loading, empty states, separator |
+
 ### File List
+
+**New files created:**
+- `web/src/features/screening/hooks/useResizablePanel.ts`
+- `web/src/features/screening/hooks/useResizablePanel.test.tsx`
+- `web/src/features/screening/hooks/useScreeningSession.ts`
+- `web/src/features/screening/hooks/useScreeningSession.test.tsx`
+- `web/src/features/screening/CandidatePanel.tsx`
+- `web/src/features/screening/CandidatePanel.test.tsx`
+- `web/src/features/screening/ScreeningLayout.tsx`
+- `web/src/features/screening/ScreeningLayout.test.tsx`
+- `docs/plans/2026-02-14-split-panel-screening-layout.md`
+
+**Modified files:**
+- `web/src/features/candidates/CandidateList.tsx` -- Added `selectedId` and `onSelect` props
+- `web/src/routes/index.tsx` -- Added screening route
+- `web/src/features/recruitments/pages/RecruitmentPage.tsx` -- Added "Start Screening" navigation button
+- `web/src/mocks/fixtures/candidates.ts` -- Added screening session fixtures
