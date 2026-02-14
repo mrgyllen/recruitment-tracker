@@ -49,5 +49,6 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="$(EfcoreVersion)" />
     <PackageVersion Include="MockQueryable.NSubstitute" Version="7.0.3" />
     <PackageVersion Include="Testcontainers.MsSql" Version="4.8.1" />
+    <PackageVersion Include="ClosedXML" Version="0.104.2" />
   </ItemGroup>
 </Project>

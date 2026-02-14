@@ -21,6 +21,7 @@
         <PackageReference Include="NSubstitute" />
         <PackageReference Include="MockQueryable.NSubstitute" />
         <PackageReference Include="FluentAssertions" />
+        <PackageReference Include="ClosedXML" />
     </ItemGroup>
 
     <ItemGroup>
