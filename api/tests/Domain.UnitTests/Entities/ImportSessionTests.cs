@@ -288,4 +288,41 @@ public class ImportSessionTests
 
         session.ImportDocuments.Should().BeEmpty();
     }
+
+    [Test]
+    public void UpdateImportDocumentMatch_AutoMatched_UpdatesDocStatus()
+    {
+        var session = CreateSession();
+        session.AddImportDocument("Alice", "blob://cv.pdf", null);
+        var doc = session.ImportDocuments.First();
+        var candidateId = Guid.NewGuid();
+
+        session.UpdateImportDocumentMatch(doc.Id, candidateId, ImportDocumentMatchStatus.AutoMatched);
+
+        doc.MatchStatus.Should().Be(ImportDocumentMatchStatus.AutoMatched);
+        doc.MatchedCandidateId.Should().Be(candidateId);
+    }
+
+    [Test]
+    public void UpdateImportDocumentMatch_Unmatched_SetsStatusCorrectly()
+    {
+        var session = CreateSession();
+        session.AddImportDocument("Unknown", "blob://cv.pdf", null);
+        var doc = session.ImportDocuments.First();
+
+        session.UpdateImportDocumentMatch(doc.Id, null, ImportDocumentMatchStatus.Unmatched);
+
+        doc.MatchStatus.Should().Be(ImportDocumentMatchStatus.Unmatched);
+        doc.MatchedCandidateId.Should().BeNull();
+    }
+
+    [Test]
+    public void UpdateImportDocumentMatch_InvalidDocumentId_Throws()
+    {
+        var session = CreateSession();
+
+        var act = () => session.UpdateImportDocumentMatch(Guid.NewGuid(), null, ImportDocumentMatchStatus.Unmatched);
+
+        act.Should().Throw<ArgumentException>();
+    }
 }

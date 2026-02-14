@@ -14,6 +14,24 @@ public class ImportDocument : GuidEntity
 
     private ImportDocument() { } // EF Core
 
+    public void MarkAutoMatched(Guid candidateId)
+    {
+        MatchStatus = ImportDocumentMatchStatus.AutoMatched;
+        MatchedCandidateId = candidateId;
+    }
+
+    public void MarkUnmatched()
+    {
+        MatchStatus = ImportDocumentMatchStatus.Unmatched;
+        MatchedCandidateId = null;
+    }
+
+    public void MarkManuallyAssigned(Guid candidateId)
+    {
+        MatchStatus = ImportDocumentMatchStatus.ManuallyAssigned;
+        MatchedCandidateId = candidateId;
+    }
+
     internal static ImportDocument Create(
         Guid importSessionId,
         string candidateName,

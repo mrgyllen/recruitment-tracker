@@ -34,4 +34,45 @@ public class ImportDocumentTests
 
         doc.WorkdayCandidateId.Should().BeNull();
     }
+
+    [Test]
+    public void MarkAutoMatched_SetsStatusAndCandidateId()
+    {
+        var session = ImportSession.Create(Guid.NewGuid(), Guid.NewGuid(), "test.pdf");
+        session.AddImportDocument("Alice Johnson", "blob://cv.pdf", null);
+        var doc = session.ImportDocuments.First();
+        var candidateId = Guid.NewGuid();
+
+        doc.MarkAutoMatched(candidateId);
+
+        doc.MatchStatus.Should().Be(ImportDocumentMatchStatus.AutoMatched);
+        doc.MatchedCandidateId.Should().Be(candidateId);
+    }
+
+    [Test]
+    public void MarkUnmatched_SetsStatusToUnmatched()
+    {
+        var session = ImportSession.Create(Guid.NewGuid(), Guid.NewGuid(), "test.pdf");
+        session.AddImportDocument("Unknown", "blob://cv.pdf", null);
+        var doc = session.ImportDocuments.First();
+
+        doc.MarkUnmatched();
+
+        doc.MatchStatus.Should().Be(ImportDocumentMatchStatus.Unmatched);
+        doc.MatchedCandidateId.Should().BeNull();
+    }
+
+    [Test]
+    public void MarkManuallyAssigned_SetsStatusAndCandidateId()
+    {
+        var session = ImportSession.Create(Guid.NewGuid(), Guid.NewGuid(), "test.pdf");
+        session.AddImportDocument("Person", "blob://cv.pdf", null);
+        var doc = session.ImportDocuments.First();
+        var candidateId = Guid.NewGuid();
+
+        doc.MarkManuallyAssigned(candidateId);
+
+        doc.MatchStatus.Should().Be(ImportDocumentMatchStatus.ManuallyAssigned);
+        doc.MatchedCandidateId.Should().Be(candidateId);
+    }
 }

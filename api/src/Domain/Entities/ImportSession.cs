@@ -117,6 +117,25 @@ public class ImportSession : GuidEntity
         _importDocuments.Clear();
     }
 
+    public void UpdateImportDocumentMatch(Guid importDocumentId, Guid? candidateId, ImportDocumentMatchStatus status)
+    {
+        var doc = _importDocuments.FirstOrDefault(d => d.Id == importDocumentId)
+            ?? throw new ArgumentException($"ImportDocument {importDocumentId} not found in session");
+
+        switch (status)
+        {
+            case ImportDocumentMatchStatus.AutoMatched:
+                doc.MarkAutoMatched(candidateId!.Value);
+                break;
+            case ImportDocumentMatchStatus.Unmatched:
+                doc.MarkUnmatched();
+                break;
+            case ImportDocumentMatchStatus.ManuallyAssigned:
+                doc.MarkManuallyAssigned(candidateId!.Value);
+                break;
+        }
+    }
+
     private void EnsureProcessing()
     {
         if (Status != ImportSessionStatus.Processing)
