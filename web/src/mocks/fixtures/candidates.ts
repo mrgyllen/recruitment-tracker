@@ -64,6 +64,22 @@ export const mockOutcomeHistory: OutcomeHistoryEntry[] = [
   },
 ]
 
+export const mockCandidateDetailNoDoc: CandidateDetailResponse = {
+  id: mockCandidateId2,
+  recruitmentId: '550e8400-e29b-41d4-a716-446655440000',
+  fullName: 'Bob Smith',
+  email: 'bob@example.com',
+  phoneNumber: null,
+  location: 'San Francisco, CA',
+  dateApplied: '2026-02-12T00:00:00Z',
+  createdAt: '2026-02-12T09:00:00Z',
+  currentWorkflowStepId: mockStepId1,
+  currentWorkflowStepName: 'Screening',
+  currentOutcomeStatus: 'NotStarted',
+  documents: [],
+  outcomeHistory: [],
+}
+
 export const mockCandidateDetail: CandidateDetailResponse = {
   id: mockCandidateId1,
   recruitmentId: '550e8400-e29b-41d4-a716-446655440000',
