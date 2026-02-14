@@ -6,3 +6,5 @@
 # Story 4.1: M4 — pageSize not included in TanStack Query queryKey (cache invalidation risk)
 # Story 4.1: M3 noted but not actionable as anti-pattern (virtualization threshold is a design choice)
 # Story 4.2: no new anti-patterns identified (3 Minors are design notes, not recurring patterns)
+# Story 4.3: M3 — "who recorded it" not displayed in outcome history (needs user name resolution, not a pattern issue)
+# Story 4.3: no new anti-patterns identified (4 Minors are deferred features or design notes)
