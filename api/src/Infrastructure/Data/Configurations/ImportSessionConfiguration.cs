@@ -17,11 +17,19 @@ public class ImportSessionConfiguration : IEntityTypeConfiguration<ImportSession
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(s => s.SourceFileName)
+            .HasMaxLength(500);
+
         builder.Property(s => s.FailureReason)
             .HasMaxLength(2000);
 
         builder.HasIndex(s => s.RecruitmentId)
             .HasDatabaseName("IX_ImportSessions_RecruitmentId");
+
+        builder.OwnsMany(s => s.RowResults, rowBuilder =>
+        {
+            rowBuilder.ToJson();
+        });
 
         builder.Ignore(s => s.DomainEvents);
     }
