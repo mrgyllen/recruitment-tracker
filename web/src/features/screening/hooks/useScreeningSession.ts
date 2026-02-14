@@ -25,6 +25,8 @@ export function useScreeningSession(
   const pendingRef = useRef<PendingOutcome | null>(null)
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recentlyScreenedRef = useRef<Set<string>>(new Set())
+  const onAutoAdvanceRef = useRef(options?.onAutoAdvance)
+  onAutoAdvanceRef.current = options?.onAutoAdvance
   const queryClient = useQueryClient()
 
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId) ?? null
@@ -106,7 +108,7 @@ export function useScreeningSession(
           setSelectedCandidateId(nextId)
         }
         autoAdvanceRef.current = null
-        options?.onAutoAdvance?.()
+        onAutoAdvanceRef.current?.()
       }, AUTO_ADVANCE_DELAY_MS)
     },
     [candidates, findNextUnscreened, undoOutcome],
