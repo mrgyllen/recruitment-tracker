@@ -25,6 +25,7 @@ export default defineConfig([
       'import-x': importX,
     },
     rules: {
+      'react-hooks/exhaustive-deps': 'error',
       'import-x/order': [
         'warn',
         {
