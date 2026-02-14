@@ -1,4 +1,8 @@
+using api.Application.Features.Recruitments.Commands.AddWorkflowStep;
 using api.Application.Features.Recruitments.Commands.CreateRecruitment;
+using api.Application.Features.Recruitments.Commands.RemoveWorkflowStep;
+using api.Application.Features.Recruitments.Commands.ReorderWorkflowSteps;
+using api.Application.Features.Recruitments.Commands.UpdateRecruitment;
 using api.Application.Features.Recruitments.Queries.GetRecruitmentById;
 using api.Application.Features.Recruitments.Queries.GetRecruitments;
 using api.Web.Infrastructure;
@@ -15,6 +19,10 @@ public class RecruitmentEndpoints : EndpointGroupBase
         group.MapPost("/", CreateRecruitment);
         group.MapGet("/{id:guid}", GetRecruitmentById);
         group.MapGet("/", GetRecruitments);
+        group.MapPut("/{id:guid}", UpdateRecruitment);
+        group.MapPost("/{id:guid}/steps", AddWorkflowStep);
+        group.MapDelete("/{id:guid}/steps/{stepId:guid}", RemoveWorkflowStep);
+        group.MapPut("/{id:guid}/steps/reorder", ReorderWorkflowSteps);
     }
 
     private static async Task<IResult> CreateRecruitment(
@@ -40,5 +48,41 @@ public class RecruitmentEndpoints : EndpointGroupBase
     {
         var result = await sender.Send(new GetRecruitmentsQuery { Page = page, PageSize = pageSize });
         return Results.Ok(result);
+    }
+
+    private static async Task<IResult> UpdateRecruitment(
+        ISender sender,
+        Guid id,
+        UpdateRecruitmentCommand command)
+    {
+        await sender.Send(command with { Id = id });
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> AddWorkflowStep(
+        ISender sender,
+        Guid id,
+        AddWorkflowStepCommand command)
+    {
+        var result = await sender.Send(command with { RecruitmentId = id });
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> RemoveWorkflowStep(
+        ISender sender,
+        Guid id,
+        Guid stepId)
+    {
+        await sender.Send(new RemoveWorkflowStepCommand { RecruitmentId = id, StepId = stepId });
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ReorderWorkflowSteps(
+        ISender sender,
+        Guid id,
+        ReorderWorkflowStepsCommand command)
+    {
+        await sender.Send(command with { RecruitmentId = id });
+        return Results.NoContent();
     }
 }
