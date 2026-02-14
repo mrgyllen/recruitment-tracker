@@ -1,6 +1,7 @@
 using api.Domain.Entities;
 using api.Domain.Enums;
 using api.Domain.Exceptions;
+using api.Domain.ValueObjects;
 using FluentAssertions;
 using NUnit.Framework;
 
@@ -22,16 +23,34 @@ public class ImportSessionTests
     }
 
     [Test]
-    public void MarkCompleted_SetsCompletedStatusAndCounts()
+    public void Create_WithSourceFileName_RecordsSourceFileName()
+    {
+        var session = ImportSession.Create(Guid.NewGuid(), Guid.NewGuid(), "workday-export.xlsx");
+
+        session.SourceFileName.Should().Be("workday-export.xlsx");
+    }
+
+    [Test]
+    public void Create_WithoutSourceFileName_DefaultsToEmpty()
     {
         var session = CreateSession();
 
-        session.MarkCompleted(8, 2);
+        session.SourceFileName.Should().BeEmpty();
+    }
+
+    [Test]
+    public void MarkCompleted_UpdatesAllCounts()
+    {
+        var session = CreateSession();
+
+        session.MarkCompleted(created: 5, updated: 3, errored: 1, flagged: 2);
 
         session.Status.Should().Be(ImportSessionStatus.Completed);
-        session.TotalRows.Should().Be(10);
-        session.SuccessfulRows.Should().Be(8);
-        session.FailedRows.Should().Be(2);
+        session.CreatedCount.Should().Be(5);
+        session.UpdatedCount.Should().Be(3);
+        session.ErroredCount.Should().Be(1);
+        session.FlaggedCount.Should().Be(2);
+        session.TotalRows.Should().Be(11);
         session.CompletedAt.Should().NotBeNull();
     }
 
@@ -48,12 +67,47 @@ public class ImportSessionTests
     }
 
     [Test]
+    public void MarkFailed_TruncatesLongReason()
+    {
+        var session = CreateSession();
+        var longReason = new string('x', 3000);
+
+        session.MarkFailed(longReason);
+
+        session.FailureReason.Should().HaveLength(2000);
+    }
+
+    [Test]
+    public void AddRowResult_WhenProcessing_AddsResult()
+    {
+        var session = CreateSession();
+        var rowResult = new ImportRowResult(1, "alice@example.com", ImportRowAction.Created, null);
+
+        session.AddRowResult(rowResult);
+
+        session.RowResults.Should().HaveCount(1);
+        session.RowResults.First().Should().Be(rowResult);
+    }
+
+    [Test]
+    public void AddRowResult_WhenCompleted_ThrowsInvalidWorkflowTransitionException()
+    {
+        var session = CreateSession();
+        session.MarkCompleted(1, 0, 0, 0);
+
+        var act = () => session.AddRowResult(
+            new ImportRowResult(1, "a@b.com", ImportRowAction.Created, null));
+
+        act.Should().Throw<InvalidWorkflowTransitionException>();
+    }
+
+    [Test]
     public void MarkCompleted_WhenAlreadyCompleted_ThrowsInvalidWorkflowTransitionException()
     {
         var session = CreateSession();
-        session.MarkCompleted(10, 0);
+        session.MarkCompleted(10, 0, 0, 0);
 
-        var act = () => session.MarkCompleted(5, 0);
+        var act = () => session.MarkCompleted(5, 0, 0, 0);
 
         act.Should().Throw<InvalidWorkflowTransitionException>();
     }
@@ -64,7 +118,7 @@ public class ImportSessionTests
         var session = CreateSession();
         session.MarkFailed("error");
 
-        var act = () => session.MarkCompleted(5, 0);
+        var act = () => session.MarkCompleted(5, 0, 0, 0);
 
         act.Should().Throw<InvalidWorkflowTransitionException>();
     }
@@ -73,7 +127,7 @@ public class ImportSessionTests
     public void MarkFailed_WhenAlreadyCompleted_ThrowsInvalidWorkflowTransitionException()
     {
         var session = CreateSession();
-        session.MarkCompleted(10, 0);
+        session.MarkCompleted(10, 0, 0, 0);
 
         var act = () => session.MarkFailed("error");
 
