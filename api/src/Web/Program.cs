@@ -1,4 +1,5 @@
 using api.Infrastructure.Data;
+using api.Web.Endpoints;
 using api.Web.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -37,6 +38,7 @@ app.MapGet("/api/health-auth", () => Results.Ok(new { status = "authenticated" }
     .RequireAuthorization();
 
 app.MapEndpoints();
+app.MapTeamEndpoints();
 
 app.Run();
 
