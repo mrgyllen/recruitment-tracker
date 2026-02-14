@@ -1,7 +1,27 @@
 import { http, HttpResponse } from 'msw'
-import type { ImportSessionResponse } from '@/lib/api/import.types'
+import type { ImportDocumentDto, ImportSessionResponse } from '@/lib/api/import.types'
+import { mockCandidateId1 } from './fixtures/candidates'
 
 export const mockImportSessionId = 'import-session-001'
+
+export const mockImportDocuments: ImportDocumentDto[] = [
+  {
+    id: 'idoc-1111-1111-1111-111111111111',
+    candidateName: 'Alice Johnson',
+    blobStorageUrl: 'recruitment-1/split/alice-johnson.pdf',
+    workdayCandidateId: null,
+    matchStatus: 'AutoMatched',
+    matchedCandidateId: mockCandidateId1,
+  },
+  {
+    id: 'idoc-2222-2222-2222-222222222222',
+    candidateName: 'Unknown Person',
+    blobStorageUrl: 'recruitment-1/split/unknown-person.pdf',
+    workdayCandidateId: null,
+    matchStatus: 'Unmatched',
+    matchedCandidateId: null,
+  },
+]
 
 export const mockCompletedSession: ImportSessionResponse = {
   id: mockImportSessionId,
@@ -39,6 +59,11 @@ export const mockCompletedSession: ImportSessionResponse = {
       resolution: null,
     },
   ],
+  pdfTotalCandidates: 2,
+  pdfSplitCandidates: 2,
+  pdfSplitErrors: 0,
+  originalBundleBlobUrl: 'recruitment-1/bundles/workday-export.pdf',
+  importDocuments: mockImportDocuments,
 }
 
 export const mockProcessingSession: ImportSessionResponse = {
@@ -51,6 +76,11 @@ export const mockProcessingSession: ImportSessionResponse = {
   erroredCount: 0,
   flaggedCount: 0,
   rowResults: [],
+  pdfTotalCandidates: null,
+  pdfSplitCandidates: null,
+  pdfSplitErrors: 0,
+  originalBundleBlobUrl: null,
+  importDocuments: [],
 }
 
 export const mockFailedSession: ImportSessionResponse = {
@@ -63,6 +93,11 @@ export const mockFailedSession: ImportSessionResponse = {
   erroredCount: 0,
   flaggedCount: 0,
   rowResults: [],
+  pdfTotalCandidates: null,
+  pdfSplitCandidates: null,
+  pdfSplitErrors: 0,
+  originalBundleBlobUrl: null,
+  importDocuments: [],
 }
 
 export const importHandlers = [

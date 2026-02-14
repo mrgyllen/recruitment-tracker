@@ -23,3 +23,17 @@ export interface PaginatedCandidateList {
   page: number
   pageSize: number
 }
+
+export interface CandidateDocumentDto {
+  id: string
+  candidateId: string
+  documentType: string
+  blobStorageUrl: string
+  uploadedAt: string
+}
+
+export interface AssignDocumentRequest {
+  documentBlobUrl: string
+  documentName: string
+  importSessionId?: string
+}

@@ -1,7 +1,19 @@
-import type { CandidateResponse } from '@/lib/api/candidates.types'
+import type {
+  CandidateDocumentDto,
+  CandidateResponse,
+} from '@/lib/api/candidates.types'
 
 export const mockCandidateId1 = 'cand-1111-1111-1111-111111111111'
 export const mockCandidateId2 = 'cand-2222-2222-2222-222222222222'
+export const mockDocumentId = 'doc-1111-1111-1111-111111111111'
+
+export const mockCandidateDocument: CandidateDocumentDto = {
+  id: mockDocumentId,
+  candidateId: mockCandidateId1,
+  documentType: 'CV',
+  blobStorageUrl: 'recruitment-1/cvs/doc-1.pdf',
+  uploadedAt: '2026-02-14T12:00:00Z',
+}
 
 export const mockCandidates: CandidateResponse[] = [
   {

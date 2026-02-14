@@ -1,5 +1,7 @@
-import { apiDelete, apiGet, apiPost } from './httpClient'
+import { apiDelete, apiGet, apiPost, apiPostFormData } from './httpClient'
 import type {
+  AssignDocumentRequest,
+  CandidateDocumentDto,
   CreateCandidateRequest,
   PaginatedCandidateList,
 } from './candidates.types'
@@ -17,5 +19,24 @@ export const candidateApi = {
   getAll: (recruitmentId: string, page = 1, pageSize = 50) =>
     apiGet<PaginatedCandidateList>(
       `/recruitments/${recruitmentId}/candidates?page=${page}&pageSize=${pageSize}`,
+    ),
+
+  uploadDocument: (recruitmentId: string, candidateId: string, file: File) => {
+    const formData = new FormData()
+    formData.append('file', file)
+    return apiPostFormData<CandidateDocumentDto>(
+      `/recruitments/${recruitmentId}/candidates/${candidateId}/document`,
+      formData,
+    )
+  },
+
+  assignDocument: (
+    recruitmentId: string,
+    candidateId: string,
+    data: AssignDocumentRequest,
+  ) =>
+    apiPost<CandidateDocumentDto>(
+      `/recruitments/${recruitmentId}/candidates/${candidateId}/document/assign`,
+      data,
     ),
 }

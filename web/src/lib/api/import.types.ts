@@ -8,6 +8,15 @@ export interface ImportRowResult {
   resolution: string | null
 }
 
+export interface ImportDocumentDto {
+  id: string
+  candidateName: string
+  blobStorageUrl: string
+  workdayCandidateId: string | null
+  matchStatus: 'Pending' | 'AutoMatched' | 'Unmatched' | 'ManuallyAssigned'
+  matchedCandidateId: string | null
+}
+
 export interface ImportSessionResponse {
   id: string
   recruitmentId: string
@@ -22,6 +31,11 @@ export interface ImportSessionResponse {
   flaggedCount: number
   failureReason: string | null
   rowResults: ImportRowResult[]
+  pdfTotalCandidates: number | null
+  pdfSplitCandidates: number | null
+  pdfSplitErrors: number
+  originalBundleBlobUrl: string | null
+  importDocuments: ImportDocumentDto[]
 }
 
 export interface StartImportResponse {

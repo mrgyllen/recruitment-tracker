@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { PaginatedCandidateList } from '@/lib/api/candidates.types'
-import { mockCandidates } from './fixtures/candidates'
+import type { CandidateDocumentDto, PaginatedCandidateList } from '@/lib/api/candidates.types'
+import { mockCandidateDocument, mockCandidates } from './fixtures/candidates'
 
 const duplicateEmail = 'duplicate@example.com'
 
@@ -58,4 +58,26 @@ export const candidateHandlers = [
     }
     return new HttpResponse(null, { status: 204 })
   }),
+
+  http.post(
+    '/api/recruitments/:recruitmentId/candidates/:candidateId/document',
+    ({ params }) => {
+      const response: CandidateDocumentDto = {
+        ...mockCandidateDocument,
+        candidateId: params.candidateId as string,
+      }
+      return HttpResponse.json(response, { status: 200 })
+    },
+  ),
+
+  http.post(
+    '/api/recruitments/:recruitmentId/candidates/:candidateId/document/assign',
+    ({ params }) => {
+      const response: CandidateDocumentDto = {
+        ...mockCandidateDocument,
+        candidateId: params.candidateId as string,
+      }
+      return HttpResponse.json(response, { status: 200 })
+    },
+  ),
 ]
