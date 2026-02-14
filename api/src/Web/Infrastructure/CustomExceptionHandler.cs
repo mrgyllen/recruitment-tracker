@@ -27,6 +27,7 @@ public class CustomExceptionHandler : IExceptionHandler
                 { typeof(DuplicateStepNameException), HandleDuplicateStepNameException },
                 { typeof(DomainRuleViolationException), HandleDomainRuleViolationException },
                 { typeof(DuplicateCandidateException), HandleDuplicateCandidateException },
+                { typeof(InvalidWorkflowTransitionException), HandleInvalidWorkflowTransitionException },
             };
     }
 
@@ -154,6 +155,19 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "A candidate with this email already exists in this recruitment",
+            Detail = ex.Message,
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+        });
+    }
+
+    private async Task HandleInvalidWorkflowTransitionException(HttpContext httpContext, Exception ex)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Invalid workflow transition",
             Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
