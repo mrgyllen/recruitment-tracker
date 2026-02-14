@@ -129,9 +129,70 @@ Task D: "Implement Story X.Z"        (Dev Agent)    — blockedBy: [C]  <-- gate
 
 **Dev Agent guardrail:** NEVER start a new story task unless the Team Lead explicitly assigns it to you with a message. Do not self-assign based on task list availability alone.
 
+## Epic Demo Walkthrough
+
+Run after the **last story in the current prompt scope** is completed but **before** the retrospective. The Dev Agent walks through all user journeys defined in the epic, verifying the application works end-to-end. This is the autonomous equivalent of a sprint demo.
+
+### Setup
+
+1. **Start the application** — run both API and frontend dev servers
+2. **Read the epic file** to identify user journeys and acceptance criteria across all stories
+3. **Create `demo.md`** at `_bmad-output/implementation-artifacts/epic-N-demo-YYYY-MM-DD.md`
+
+### Execution
+
+For each story in the epic, walk through every acceptance criterion:
+
+1. **Navigate** to the relevant page/endpoint
+2. **Perform** the action described in the AC (create, edit, click, submit, etc.)
+3. **Observe** the result — does the UI/API response match the expected behavior?
+4. **Record** in demo.md:
+   - AC identifier and summary
+   - What was done (action)
+   - What was observed (result)
+   - **PASS** or **FAIL** with explanation
+
+### Error Paths
+
+Also verify key error/edge cases from the ACs:
+- Validation errors (missing required fields, invalid input)
+- Authorization boundaries (accessing resources the user shouldn't see)
+- State guards (attempting mutations on closed/locked resources)
+- Empty states (no data scenarios)
+
+### Output
+
+The `demo.md` file must contain:
+
+```markdown
+# Epic N Demo Walkthrough
+**Date:** YYYY-MM-DD
+**App URL:** http://localhost:...
+**Stories covered:** N.1 through N.X
+
+## Story N.1: [Title]
+
+| AC | Action | Expected | Observed | Result |
+|----|--------|----------|----------|--------|
+| AC1 | ... | ... | ... | PASS/FAIL |
+
+## Summary
+- Total ACs verified: X
+- Pass: X
+- Fail: X
+- Blocked (app not running, feature not accessible): X
+```
+
+### Rules
+
+- **If any AC fails**, document it clearly but do NOT fix it — the retro will pick it up as a finding
+- **If the app cannot start**, document the error, skip the walkthrough, and note "Demo blocked: [reason]" — the retro will create an action item
+- The demo file is included in the retro's Phase 1 evidence bundle (see evidence item 10 below)
+- **Do not block the retro on demo failures** — the retro evaluates them
+
 ## Autonomous Retrospective
 
-Run after the **last story in the current prompt scope** is completed. Fully autonomous — no human interaction, no "please confirm". Every claim must cite evidence.
+Run after the **epic demo walkthrough** is completed. Fully autonomous — no human interaction, no "please confirm". Every claim must cite evidence.
 
 **When to run:**
 - The prompt specifies which stories to implement (e.g., "stories 1.1, 1.2, and 1.3")
@@ -181,6 +242,7 @@ The evidence bundle MUST include:
    ```
    Record: first commit timestamp, last commit timestamp, elapsed hours, number of commits, and commits per story.
 9. **Previous experiments (if any):** If the last retro's `retro.json` contains `experiments`, list each experiment with its `success_metric` and gather data to evaluate pass/fail. Include the measurement data in the evidence bundle.
+10. **Demo walkthrough results:** Include the summary from `_bmad-output/implementation-artifacts/epic-N-demo-YYYY-MM-DD.md` — total ACs verified, pass/fail counts, and any failures with details. Demo failures become candidate action items for the retro.
 
 If any data is unavailable, include a section stating **"Not captured"** — the retro will propose instrumentation improvements.
 
