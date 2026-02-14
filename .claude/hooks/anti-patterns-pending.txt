@@ -1,3 +1,4 @@
 # Pending anti-patterns — added by mini-retro during sprint
 # Will be promoted to permanent or removed by autonomous retro
 Loading\.\.\.|web/src/features/**/*.tsx|Use SkeletonLoader component instead of plain 'Loading...' text — see patterns-frontend.md Loading States
+# Story 3.1: M1 (missing query validator), M2 (inline closed-check vs EnsureNotClosed), M3 (no query validator tests), M4 (record vs class on commands) — all situational, none warrant regex anti-patterns. M2 is a cross-aggregate case where domain method call is debatable. M4 was prescribed by story spec.
