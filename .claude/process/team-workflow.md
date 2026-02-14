@@ -47,8 +47,10 @@ Repeat this cycle for each story in the sprint:
 
 1. Dev Agent reads the story file and all required architecture shards
 2. Dev Agent uses `writing-plans` skill to create an implementation plan
+   - **Authorization requirement (E-001):** Implementation plans MUST include a dedicated "Authorization" section listing which command/query handlers need ITenantContext membership verification. For each handler, specify: load entity with `.Include(r => r.Members)`, check `_tenantContext.UserGuid` membership, throw `ForbiddenAccessException` if not a member. Plans missing this section for recruitment-scoped handlers are incomplete.
 3. Dev Agent implements using `test-driven-development` skill
 4. Dev Agent runs `verification-before-completion` before declaring done
+   - **Anti-pattern scanning (E-002):** Before declaring done, Dev Agent MUST scan source files against entries in `.claude/hooks/anti-patterns.txt` and `.claude/hooks/anti-patterns-pending.txt`. Any matches must be fixed before handoff to review. This catches minor pattern violations (Loading text, data annotations, wrong test framework) before review.
 5. Dev Agent commits work and sends message to Team Lead
 
 ### Step 2: Review Agent Reviews
@@ -100,15 +102,16 @@ After Review Agent explicitly approves the story, Team Lead runs the Story Compl
 - [ ] Mini-retro completed (anti-patterns captured)
 - [ ] Only THEN create/assign next story's tasks
 
-1. **Mini-retro (REQUIRED — not optional):** Team Lead reviews ALL Minor findings from the Review Agent for this story and converts actionable ones into anti-pattern entries.
+1. **Pattern establishment (E-003):** If this story is the first implementation of a new domain area (e.g., first Candidate handler, first Import endpoint, first PDF processing), update architecture docs with the established patterns before starting the next story. This includes: documenting the canonical code example in the relevant architecture shard, noting any deviations from existing patterns, and confirming the pattern is consistent with architecture.md. First-of-kind stories set precedent — subsequent stories copy the pattern.
+2. **Mini-retro (REQUIRED — not optional):** Team Lead reviews ALL Minor findings from the Review Agent for this story and converts actionable ones into anti-pattern entries.
    - For each Minor finding, decide: Is this a pattern that could recur? If yes → add to pending.
    - Add new entries to `.claude/hooks/anti-patterns-pending.txt`
    - Format: `REGEX|FILE_GLOB|MESSAGE  # Story X.Y finding ID`
    - Include the story and finding ID as a trailing comment for traceability
    - If the review had zero Minor findings, add a comment line: `# Story X.Y: no new anti-patterns identified`
    - **The pending file MUST be modified in every story completion** — this proves the mini-retro ran
-2. **Update sprint-status:** Mark story status as `done` in `sprint-status.yaml`
-3. **Commit:** Commit sprint-status update AND anti-patterns-pending.txt changes together
+3. **Update sprint-status:** Mark story status as `done` in `sprint-status.yaml`
+4. **Commit:** Commit sprint-status update AND anti-patterns-pending.txt changes together
 
 ## Task Structure for Story Cycle
 
