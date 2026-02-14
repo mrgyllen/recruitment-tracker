@@ -11,6 +11,7 @@ interface CandidatePanelProps {
   isAllScreened: boolean
   isClosed: boolean
   workflowSteps: WorkflowStepDto[]
+  candidateListRef?: React.RefObject<HTMLDivElement | null>
 }
 
 export function CandidatePanel({
@@ -23,9 +24,10 @@ export function CandidatePanel({
   isAllScreened,
   isClosed,
   workflowSteps,
+  candidateListRef,
 }: CandidatePanelProps) {
   return (
-    <div className="flex h-full flex-col">
+    <div ref={candidateListRef} tabIndex={0} className="flex h-full flex-col focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2">
       <div className="border-b bg-gray-50 p-3">
         <div className="flex justify-between text-sm">
           <span className="font-medium">

@@ -69,4 +69,24 @@ describe('ScreeningLayout', () => {
     expect(separator).toBeInTheDocument()
     expect(separator).toHaveAttribute('aria-orientation', 'vertical')
   })
+
+  it('should have ARIA region labels on all three panels', async () => {
+    renderWithRoute()
+    await screen.findAllByText('Select a candidate')
+
+    expect(screen.getByRole('region', { name: /candidate list/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /cv viewer/i })).toBeInTheDocument()
+    expect(screen.getByRole('region', { name: /outcome controls/i })).toBeInTheDocument()
+  })
+
+  it('should have ARIA live regions for announcements', async () => {
+    renderWithRoute()
+    await screen.findAllByText('Select a candidate')
+
+    const politeRegion = document.querySelector('[aria-live="polite"]')
+    expect(politeRegion).toBeInTheDocument()
+
+    const assertiveRegion = document.querySelector('[aria-live="assertive"]')
+    expect(assertiveRegion).toBeInTheDocument()
+  })
 })
