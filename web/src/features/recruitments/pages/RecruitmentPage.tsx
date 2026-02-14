@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router'
 import { EditRecruitmentForm } from '../EditRecruitmentForm'
 import { useRecruitment } from '../hooks/useRecruitment'
 import { WorkflowStepEditor } from '../WorkflowStepEditor'
+import { MemberList } from '@/features/team/MemberList'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -85,6 +86,8 @@ export function RecruitmentPage() {
         recruitmentId={data.id}
         disabled={isClosed}
       />
+
+      <MemberList recruitmentId={data.id} disabled={isClosed} />
     </div>
   )
 }
