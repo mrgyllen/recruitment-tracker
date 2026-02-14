@@ -1,6 +1,6 @@
 # Story 3.3: Import Wizard & Summary UI
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -835,10 +835,84 @@ api/src/Web/Endpoints/ImportEndpoints.cs     -- Add POST resolve-match endpoint 
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Claude Opus 4.6 (claude-opus-4-6) via subagent-driven development skill
+
+### Testing Mode Rationale
+
+| Component | Mode | Rationale |
+|-----------|------|-----------|
+| ImportRowResult.Confirm/Reject | Test-first | Domain logic with invariant enforcement |
+| ImportSession.ConfirmMatch/RejectMatch | Test-first | Aggregate root mutations with index validation |
+| ResolveMatchConflictCommandValidator | Test-first | Validation rules with boundary conditions |
+| ResolveMatchConflictCommandHandler | Test-first | Business logic with auth check |
+| WorkdayGuide | Characterization | Static content display |
+| FileUploadStep | Test-first | Client-side validation (file type, size) |
+| ImportProgress | Characterization | Simple display component |
+| ImportSummary | Test-first | Complex data display with expandable detail |
+| MatchReviewStep | Test-first | User-facing confirm/reject decisions |
+| ImportWizard | Test-first | Multi-step state machine with async transitions |
+| CandidateList wiring | Characterization | Glue code, button render verification |
+
+### Key Decisions
+
+1. **ImportRowResult: sealed record -> sealed class** -- Needed mutable Resolution state for match resolution. Kept same constructor API to minimize breaking changes. EF Core requires parameterless constructor added as `private`.
+2. **useEffect for state transitions** -- Plan had inline setState during render (infinite loop). Wrapped processing->summary/upload transition in useEffect with [step, session] deps.
+3. **useImportSession enabled for all non-upload steps** -- Plan only enabled during 'processing', but session data needed in summary/matchReview steps. Changed to `step !== 'upload'` check.
+4. **fireEvent.change for accept-bypassed upload test** -- userEvent.upload respects HTML accept attribute, preventing CSV test. Used fireEvent.change to bypass browser filtering for validation testing.
+5. **Grammar fix in MatchReviewStep** -- Plan template had "1 match need review" (missing singular "s"). Fixed to use conditional: "needs" for 1, "need" for plural.
+6. **Application.UnitTests environment limitation** -- ASP.NET Core runtime not installed locally (only NETCore.App 10.0.3). Domain tests (70/70) pass; application tests deferred to CI.
 
 ### Debug Log References
 
-### Completion Notes List
+- Test failures in MatchReviewStep: getByText('flagged@example.com') failed because email is concatenated with "Row 4:" in single `<p>` element. Fixed with regex matcher.
+- ImportWizard summary transition test: session data became null after step change because useImportSession was only enabled during 'processing'. Fixed by enabling for all non-upload steps.
+
+### Completion Notes
+
+- Backend: Build 0 warnings/0 errors. Domain tests 70/70 pass.
+- Frontend: TypeScript clean. 190/190 tests pass across 33 files.
+- Anti-pattern scan: No child entity bypass, no new TODOs, no sync-over-async.
+- All handlers (StartImport, GetImportSession, ResolveMatchConflict) have ITenantContext authorization.
+- AC coverage: AC1 (Sheet entry point), AC2 (file upload with validation), AC3 (polling), AC4 (summary), AC5 (error detail), AC6 (match review), AC7 (confirm), AC8 (reject), AC10 (failure handling), AC11 (close/refresh), AC12 (closed guard). AC9 (count discrepancy notice) is informational notice -- amber styling in ImportSummary flagged section.
 
 ### File List
+
+**New files (21):**
+- `api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommand.cs`
+- `api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs`
+- `api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandValidator.cs`
+- `api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchResultDto.cs`
+- `api/tests/Application.UnitTests/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandlerTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandValidatorTests.cs`
+- `web/src/features/candidates/ImportFlow/FileUploadStep.tsx`
+- `web/src/features/candidates/ImportFlow/FileUploadStep.test.tsx`
+- `web/src/features/candidates/ImportFlow/ImportProgress.tsx`
+- `web/src/features/candidates/ImportFlow/ImportProgress.test.tsx`
+- `web/src/features/candidates/ImportFlow/ImportSummary.tsx`
+- `web/src/features/candidates/ImportFlow/ImportSummary.test.tsx`
+- `web/src/features/candidates/ImportFlow/ImportWizard.tsx`
+- `web/src/features/candidates/ImportFlow/ImportWizard.test.tsx`
+- `web/src/features/candidates/ImportFlow/MatchReviewStep.tsx`
+- `web/src/features/candidates/ImportFlow/MatchReviewStep.test.tsx`
+- `web/src/features/candidates/ImportFlow/WorkdayGuide.tsx`
+- `web/src/features/candidates/ImportFlow/WorkdayGuide.test.tsx`
+- `web/src/features/candidates/ImportFlow/hooks/useImportSession.ts`
+- `web/src/features/candidates/ImportFlow/hooks/useResolveMatch.ts`
+- `web/src/lib/api/import.types.ts`
+
+**New files (shared infrastructure, 3):**
+- `web/src/lib/api/import.ts`
+- `web/src/mocks/importHandlers.ts`
+- `docs/plans/2026-02-14-import-wizard-summary-ui.md`
+
+**Modified files (8):**
+- `api/src/Domain/ValueObjects/ImportRowResult.cs` -- sealed record -> sealed class, Resolution property, Confirm()/Reject()
+- `api/src/Domain/Entities/ImportSession.cs` -- ConfirmMatch()/RejectMatch() methods
+- `api/src/Application/Features/Import/Queries/GetImportSession/ImportSessionDto.cs` -- Resolution field
+- `api/src/Web/Endpoints/ImportSessionEndpoints.cs` -- resolve-match endpoint
+- `api/tests/Domain.UnitTests/ValueObjects/ImportRowResultTests.cs` -- Updated for class change + Confirm/Reject tests
+- `api/tests/Domain.UnitTests/Entities/ImportSessionTests.cs` -- ConfirmMatch/RejectMatch tests
+- `web/src/lib/api/httpClient.ts` -- apiPostFormData helper
+- `web/src/mocks/handlers.ts` -- importHandlers registration
+- `web/src/features/candidates/CandidateList.tsx` -- ImportWizard integration, Import button
+- `web/src/features/candidates/CandidateList.test.tsx` -- Import button tests
