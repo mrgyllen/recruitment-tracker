@@ -22,6 +22,7 @@
         <PackageReference Include="MockQueryable.NSubstitute" />
         <PackageReference Include="FluentAssertions" />
         <PackageReference Include="ClosedXML" />
+        <PackageReference Include="PdfPig" />
     </ItemGroup>
 
     <ItemGroup>
