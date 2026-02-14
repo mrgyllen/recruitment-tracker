@@ -56,3 +56,14 @@ export function useReorderWorkflowSteps(recruitmentId: string) {
     },
   })
 }
+
+export function useCloseRecruitment(id: string) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: () => recruitmentApi.close(id),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['recruitment', id] })
+      void queryClient.invalidateQueries({ queryKey: ['recruitments'] })
+    },
+  })
+}

@@ -33,4 +33,6 @@ export const recruitmentApi = {
 
   reorderSteps: (recruitmentId: string, data: ReorderStepsRequest) =>
     apiPut<void>(`/recruitments/${recruitmentId}/steps/reorder`, data),
+
+  close: (id: string) => apiPost<void>(`/recruitments/${id}/close`),
 }

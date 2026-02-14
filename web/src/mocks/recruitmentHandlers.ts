@@ -191,6 +191,26 @@ export const recruitmentHandlers = [
     return new HttpResponse(null, { status: 204 })
   }),
 
+  http.post('/api/recruitments/:id/close', ({ params }) => {
+    const { id } = params
+    const recruitment = recruitmentsById[id as string]
+    if (!recruitment) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    if (recruitment.status === 'Closed') {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1', title: 'Recruitment is closed', status: 400 },
+        { status: 400 },
+      )
+    }
+    recruitment.status = 'Closed'
+    recruitment.closedAt = new Date().toISOString()
+    return HttpResponse.json(null, { status: 200 })
+  }),
+
   http.put('/api/recruitments/:id/steps/reorder', async ({ params, request }) => {
     const { id } = params
     const recruitment = recruitmentsById[id as string]
