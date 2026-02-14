@@ -1,6 +1,6 @@
 # Story 4.5: Keyboard Navigation & Screening Flow
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -521,6 +521,51 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 ### Debug Log References
 
+None -- clean implementation, no blockers encountered.
+
 ### Completion Notes List
 
+- **Testing mode:** Test-first for all tasks (useKeyboardNavigation, OutcomeForm updates, useScreeningSession onAutoAdvance, ScreeningLayout coordination, ARIA regions).
+- **Plan deviation 1:** Combined story Tasks 2 (OutcomeForm shortcut hints) and 5 (externalOutcome prop) into a single implementation commit since both modify OutcomeForm.
+- **Plan deviation 2:** Used `externalOutcome` prop name instead of `selectedOutcome` to distinguish externally-driven keyboard selection from OutcomeForm's internal `selectedOutcome` state.
+- **Plan deviation 3:** Inlined `onAutoAdvance` callback directly in ScreeningLayout instead of passing `focusOutcomePanel` to avoid circular variable dependency between `useKeyboardNavigation` and `useScreeningSession`.
+- **Plan deviation 4:** Used simple `React.RefObject` prop on CandidatePanel instead of `React.forwardRef` -- simpler approach that achieves the same result.
+- **Plan deviation 5:** Did not add `role="listbox"` / `role="option"` to CandidateList (story Task 5.3-5.4) -- this would require modifying the react-virtuoso integration in CandidateList.tsx, which is a Story 4.1 component. The current implementation provides keyboard navigation via arrow keys scoped to the candidate panel ref without ARIA listbox semantics. This is a pragmatic tradeoff; listbox ARIA can be added in a future accessibility refinement.
+- **Story 4.4 review fixes (I1, I2):** Applied before starting Story 4.5. I1: `key={selectedCandidate.id}` on OutcomeForm forces remount on candidate switch. I2: CandidateRow renders `<span>` instead of `<Link>` in screening mode.
+
+### AC Coverage
+
+| AC | Status | Implementation |
+|----|--------|---------------|
+| AC1 | Covered | `useKeyboardNavigation` OUTCOME_KEYS map + `OutcomeForm` externalOutcome prop |
+| AC2 | Covered | TEXT_INPUT_TAGS filter + contentEditable check in keydown handler |
+| AC3 | Covered | Natural DOM tab order in OutcomeForm: buttons -> textarea -> confirm |
+| AC4 | Covered | `useScreeningSession` onAutoAdvance callback + `requestAnimationFrame` focus |
+| AC5 | Covered | ArrowUp/ArrowDown handlers on candidateListRef |
+| AC6 | Covered | Arrow listeners scoped to candidateListRef, no focus stealing |
+| AC7 | Covered | `role="region"` + `aria-label` + `focus-visible:outline-*` on all panels |
+| AC8 | Covered | `<kbd>` elements in OutcomeForm buttons: "Pass (1)", "Fail (2)", "Hold (3)" |
+| AC9 | Covered | `aria-live="polite"` (candidate switch) + `aria-live="assertive"` (outcome) |
+| AC10 | Covered | Full flow: 1/2/3 -> Tab reason -> Tab confirm -> Enter -> auto-advance -> repeat |
+
+### Verification
+
+- **Tests:** 285 passed, 0 failed (45 test files)
+- **TypeScript:** `tsc --noEmit` exit code 0
+- **Production build:** `vite build` exit code 0, built in 4.01s
+
 ### File List
+
+**Created:**
+- `web/src/features/screening/hooks/useKeyboardNavigation.ts` -- Keyboard navigation hook (1/2/3 shortcuts, ArrowUp/Down, focusOutcomePanel)
+- `web/src/features/screening/hooks/useKeyboardNavigation.test.tsx` -- 12 tests for keyboard navigation hook
+- `docs/plans/2026-02-14-keyboard-navigation-screening-flow.md` -- Implementation plan
+
+**Modified:**
+- `web/src/features/screening/OutcomeForm.tsx` -- Added externalOutcome prop, onOutcomeSelect callback, shortcut hint labels
+- `web/src/features/screening/OutcomeForm.test.tsx` -- Added 3 tests (hints, externalOutcome, onOutcomeSelect)
+- `web/src/features/screening/hooks/useScreeningSession.ts` -- Added onAutoAdvance callback option
+- `web/src/features/screening/hooks/useScreeningSession.test.tsx` -- Added 1 test (onAutoAdvance callback)
+- `web/src/features/screening/ScreeningLayout.tsx` -- Wired keyboard navigation, ARIA regions, focus management, outcome announcements
+- `web/src/features/screening/ScreeningLayout.test.tsx` -- Added 2 tests (ARIA regions, ARIA live regions)
+- `web/src/features/screening/CandidatePanel.tsx` -- Added candidateListRef prop, tabIndex, focus-visible styles
