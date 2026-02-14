@@ -93,9 +93,9 @@ development_status:
   epic-4-deferred-dev-environment: backlog            # Dev environment bootstrap: Docker Compose (API + SQL Server), browser-mode MSW, single-command startup
 
   # Epic 5: Recruitment Overview & Monitoring
-  epic-5: backlog
-  5-1-overview-api-data: backlog
-  5-2-overview-dashboard-ui: backlog
+  epic-5: in-progress
+  5-1-overview-api-data: ready-for-dev
+  5-2-overview-dashboard-ui: ready-for-dev
   epic-5-retrospective: optional
 
   # Epic 6: Audit Trail & GDPR Compliance
