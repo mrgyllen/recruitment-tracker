@@ -82,13 +82,13 @@ development_status:
   epic-3-deferred-rate-limiting-uploads: done              # Rate limiting on file upload endpoints (SEC-006)
 
   # Epic 4: Screening & Outcome Recording
-  epic-4: in-progress
+  epic-4: done
   4-1-candidate-list-search-filter: done
   4-2-pdf-viewing-download: done
   4-3-outcome-recording-workflow-enforcement: done
   4-4-split-panel-screening-layout: done
   4-5-keyboard-navigation-screening-flow: done
-  epic-4-retrospective: optional
+  epic-4-retrospective: done
 
   # Epic 5: Recruitment Overview & Monitoring
   epic-5: backlog
