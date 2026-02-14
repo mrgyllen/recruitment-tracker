@@ -29,6 +29,7 @@ This document has been sharded for focused context loading. Load the core (this 
 | Full-stack story | This file + [`patterns-backend.md`](./architecture/patterns-backend.md) + [`patterns-frontend.md`](./architecture/patterns-frontend.md) |
 | New API endpoint | Add [`api-patterns.md`](./architecture/api-patterns.md) |
 | Frontend feature with new views | Add [`frontend-architecture.md`](./architecture/frontend-architecture.md) |
+| Screening/batch processing UI | Add [`frontend-architecture.md`](./architecture/frontend-architecture.md) (Batch Screening Architecture, PDF Viewing) |
 | Creating new files/folders | Add [`project-structure.md`](./architecture/project-structure.md) |
 | Any story with tests | Add [`testing-standards.md`](./architecture/testing-standards.md) |
 | Auth-related work | Add [`dev-auth-patterns.md`](./architecture/dev-auth-patterns.md) |

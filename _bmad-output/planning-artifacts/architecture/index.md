@@ -9,6 +9,7 @@
 | Full-stack story | `architecture.md` (core) + `patterns-backend.md` + `patterns-frontend.md` |
 | New API endpoint | Add `api-patterns.md` |
 | Frontend feature with new views | Add `frontend-architecture.md` |
+| Screening/batch processing UI | Add `frontend-architecture.md` (Batch Screening Architecture, PDF Viewing sections) |
 | Creating new files/folders | Add `project-structure.md` |
 | Any story with tests | Add `testing-standards.md` |
 | Auth-related work | Add `dev-auth-patterns.md` |

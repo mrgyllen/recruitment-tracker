@@ -1,0 +1,554 @@
+{
+  "run_id": "2026-02-14T192600Z",
+  "scope": {
+    "level": "epic",
+    "items": [
+      { "id": "4.1", "title": "Candidate List & Search/Filter" },
+      { "id": "4.2", "title": "PDF Viewing & Download" },
+      { "id": "4.3", "title": "Outcome Recording & Workflow Enforcement" },
+      { "id": "4.4", "title": "Split-Panel Screening Layout" },
+      { "id": "4.5", "title": "Keyboard Navigation & Screening Flow" }
+    ],
+    "git": {
+      "base": "b04e294",
+      "head": "ac63aa0"
+    }
+  },
+  "summary": {
+    "wins": [
+      "E-004 authorization architectural test achieved zero auth findings across all 5 stories — compile-time reflection enforcement eliminated the authorization gap defect class entirely",
+      "All 39 acceptance criteria verified PASS plus 10 error paths — keyboard-first screening flow fully operational (49/49 demo walkthrough)",
+      "Single-round fix cycles on all 5 stories — no multi-round rework despite 100% fix rate, indicating focused implementation quality",
+      "Clean DDD compliance: Candidate.RecordOutcome enforces workflow through aggregate root, feature folder isolation maintained, global query filters on all 3 aggregates",
+      "285 frontend + 114 domain tests all passing, zero TypeScript errors, clean production build — comprehensive test pyramid for new features"
+    ],
+    "problems": [
+      "Code coverage metrics missing for 4th consecutive epic — coverlet installed but unused, zero visibility into test adequacy across 13,046 new lines",
+      "FluentValidation gap recurred 3 times (4.1 C1 two queries, 4.3 I1 one query) — validators added reactively in fix cycles, not proactively during TDD",
+      "A-006 blob URL ownership verification still unresolved after 2 epics — cross-recruitment document access vector bypasses tenant isolation",
+      "Stale closure pattern recurring (4.2 I1 useSasUrl useEffect sync, 4.5 I1 useCallback missing dependency) — no ESLint exhaustive-deps enforcement",
+      "100% fix cycle rate (5/5 stories) despite E-005 AC completeness walkthrough — finding types shifted from AC gaps to missing validators, tests, and React state bugs",
+      "3 P1 action items from Epic 3 carried forward without resolution (A-003 query filters, A-005 coverage, A-006 blob validation) — no blocking mechanism",
+      "Implementation plans range 761-2335 lines — becoming spec documents instead of executable guides, potentially reducing plan adherence"
+    ],
+    "root_cause_hypotheses": [
+      "Tooling enforcement gap: E-004 proved compile-time architectural tests eliminate defect classes, but the pattern was not extended to validators or coverage enforcement",
+      "Reactive validation culture: FluentValidation treated as polish rather than security boundary — no TDD step requires writing validator tests before handler implementation",
+      "No accountability mechanism for carried action items — retro process lacks enforcement teeth to prevent P1 items from perpetual deferral",
+      "ESLint configuration gap: react-hooks/exhaustive-deps rule is available but not enforced at error level, allowing stale closure bugs to escape to review"
+    ],
+    "missing_evidence": [
+      "Code coverage percentages for Domain, Application, Infrastructure layers — 4 epics without quantitative test adequacy data",
+      "Application.UnitTests execution results — blocked by missing .NET 10 ASP.NET Core runtime on Linux dev environment for 2 epics",
+      "Cross-recruitment data isolation verification — zero integration tests verify users cannot access other recruitments' data via API",
+      "SAS token generation audit trail — no logging when SAS URLs are generated (who, which blob, expiry)"
+    ]
+  },
+  "actions": [
+    {
+      "id": "A-001",
+      "title": "Add FluentValidation architectural test to enforce validator presence for all IRequest types",
+      "type": "test_gap",
+      "priority": "P0",
+      "owner_persona": "Architecture",
+      "rationale": "Missing validators found in review 3 times this epic (4.1 C1: GetCandidatesQuery/GetCandidateByIdQuery, 4.3 I1: GetCandidateOutcomeHistoryQuery). Same pattern in Epic 3 Story 3.2. E-004 proved architectural tests eliminate defect classes — apply same approach to validators.",
+      "evidence_refs": [
+        "context.md Section 4: Story 4.1 C1, Story 4.3 I1",
+        "Epic 3 retro: Story 3.2 missing validator on GetImportSessionQuery",
+        "AuthorizationArchitectureTests.cs (commit 6849760) — pattern to replicate"
+      ],
+      "acceptance_criteria": [
+        "ValidatorArchitectureTests.cs exists in Web.AcceptanceTests (alongside AuthorizationArchitectureTests.cs)",
+        "Test scans all IRequest<T> types in Application assembly via reflection",
+        "Test asserts each IRequest<T> has corresponding AbstractValidator<T>",
+        "Test fails with clear message listing IRequest types missing validators",
+        "Zero validator-related Critical or Important findings in next epic"
+      ],
+      "automation_hints": [
+        "Mirror AuthorizationArchitectureTests.cs structure using Assembly.GetTypes()",
+        "Find all types implementing IRequest<T>, verify AbstractValidator<T> exists",
+        "Allow explicit exemptions via [ExcludeFromValidatorTest] attribute if needed"
+      ],
+      "files_to_touch": [
+        "api/tests/Web.AcceptanceTests/ValidatorArchitectureTests.cs"
+      ],
+      "risk_if_ignored": "Validator gaps continue surfacing as Critical/Important findings — input validation is the security boundary, missing validators allow malformed requests to reach handlers"
+    },
+    {
+      "id": "A-002",
+      "title": "Enable code coverage CI with enforced thresholds",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "owner_persona": "QA",
+      "rationale": "4th consecutive epic without coverage metrics despite coverlet.collector installed. Previous retro A-005 (P1) not applied — auto-escalated to P0 per carried-item rules. Story 4.1 C2 (zero frontend tests) would have been caught by coverage delta. 13,046 lines added with zero visibility.",
+      "evidence_refs": [
+        "context.md Section 3: Code Coverage — Not measured, 4th consecutive epic",
+        "context.md Section 6: A-005 NOT APPLIED",
+        "context.md Section 4: Story 4.1 C2 — zero frontend tests initially"
+      ],
+      "acceptance_criteria": [
+        "Backend: dotnet test runs with --collect:\"XPlat Code Coverage\" generating cobertura reports",
+        "Frontend: vitest --coverage configured with v8 or istanbul reporter",
+        "CI pipeline publishes coverage reports as artifacts",
+        "Minimum thresholds: 70% Domain, 60% Application (warning-only for 1 epic, then enforced)",
+        "Coverage report generated locally via documented script"
+      ],
+      "automation_hints": [
+        "coverlet.collector already in .csproj files — add --collect flag to test commands",
+        "Install ReportGenerator: dotnet tool install -g dotnet-reportgenerator-globaltool",
+        "Frontend: add @vitest/coverage-v8 and coverage config to vitest.config.ts",
+        "CI: add coverage step after test step in workflow yaml"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml",
+        "web/vitest.config.ts",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "Test gaps remain invisible until manual review — 5th epic without quantitative test adequacy signals, false confidence in 'all tests pass'"
+    },
+    {
+      "id": "A-003",
+      "title": "Enforce blob ownership verification in AssignDocumentCommand handler",
+      "type": "security_hardening",
+      "priority": "P0",
+      "owner_persona": "Security",
+      "rationale": "Previous retro A-006 (P1) not applied after 2 epics — auto-escalated to P0 per carried-item rules. AssignDocumentCommandHandler accepts arbitrary blob URLs. Validator string prefix check is bypassable via path traversal. Cross-recruitment document exfiltration possible.",
+      "evidence_refs": [
+        "context.md Section 6: A-006 NOT APPLIED — security risk carried forward",
+        "AssignDocumentCommandHandler.cs line 40: accepts request.DocumentBlobUrl without ownership check",
+        "AssignDocumentCommandValidator.cs: string prefix check vulnerable to ../ traversal"
+      ],
+      "acceptance_criteria": [
+        "IBlobStorageService.VerifyBlobOwnership(container, blobUrl, recruitmentId) method added",
+        "Implementation normalizes path (removes ../ segments) then verifies starts with recruitmentId/",
+        "AssignDocumentCommandHandler calls VerifyBlobOwnership before ReplaceDocument",
+        "Handler throws ForbiddenAccessException if ownership check fails",
+        "Unit test verifies cross-recruitment blob assignment rejected",
+        "Unit test verifies path traversal attempt rejected"
+      ],
+      "automation_hints": [
+        "Add VerifyBlobOwnership to IBlobStorageService interface",
+        "Implementation: Uri-normalize blob path, verify starts with {recruitmentId}/",
+        "Call before line 40 in handler, throw ForbiddenAccessException on failure"
+      ],
+      "files_to_touch": [
+        "api/src/Application/Common/Interfaces/IBlobStorageService.cs",
+        "api/src/Infrastructure/Services/BlobStorageService.cs",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment document exfiltration: attacker with valid recruitment access assigns documents from other recruitments, bypassing tenant isolation"
+    },
+    {
+      "id": "A-004",
+      "title": "Add cross-recruitment isolation tests for all entity endpoints",
+      "type": "test_gap",
+      "priority": "P0",
+      "owner_persona": "Security",
+      "rationale": "E-004 enforces ITenantContext at compile time but no runtime tests verify isolation. Global query filters applied on all 3 aggregates but zero integration tests confirm users cannot access other recruitments' data. Zero cross-tenant tests across 4 epics.",
+      "evidence_refs": [
+        "context.md Section 6: E-004 PASS (compile-time only, no runtime tests)",
+        "ApplicationDbContext.cs lines 29-56: global query filters — untested",
+        "Security lens missing_evidence: Cross-recruitment data leakage test scenarios"
+      ],
+      "acceptance_criteria": [
+        "TenantIsolationTests.cs covers 8 scenarios: GetCandidates, GetCandidateById, RecordOutcome, AssignDocument, GetOutcomeHistory, GetImportSession, UploadDocument, direct DbSet query",
+        "Test setup: 2 recruitments with different user memberships",
+        "Cross-access attempts return 403 or 404 (global filter makes entity invisible)",
+        "Tests verify both handler-level and EF filter-level isolation"
+      ],
+      "automation_hints": [
+        "Use WebApplicationFactory for integration testing with real DbContext",
+        "Generate JWT for User A, attempt access to User B's recruitment data",
+        "Use Theory with InlineData for all 8 endpoint scenarios"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Security/TenantIsolationTests.cs"
+      ],
+      "risk_if_ignored": "Core security boundary (recruitment-scoped isolation) relies entirely on untested code paths — regressions would cause data leakage across tenants"
+    },
+    {
+      "id": "A-005",
+      "title": "Add P0/P1 action item enforcement to retro workflow",
+      "type": "process_change",
+      "priority": "P0",
+      "owner_persona": "Delivery",
+      "rationale": "3 P1 items from Epic 3 (A-003, A-005, A-006) carried forward to Epic 4 without resolution. No process mechanism prevents perpetual deferral. A-006 is a security risk carried for 2 epics.",
+      "evidence_refs": [
+        "context.md Section 6: A-003, A-005, A-006 all NOT APPLIED",
+        "team-workflow.md Phase 4: P0/P1 rules exist but no pre-epic blocking gate"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md updated: P0 actions MUST be applied before next epic starts",
+        "team-workflow.md updated: P1 actions not resolved after 2 epics auto-escalate to P0",
+        "Retro Phase 1 evidence assembly includes previous retro action status check",
+        "Retro Phase 3 synthesis flags carried P1 items as auto-P0 with 'ESCALATED' tag"
+      ],
+      "automation_hints": [
+        "Add pre-epic gate to team-workflow.md after retro completion",
+        "Gate reads previous retro.json actions, checks P0/P1 application status",
+        "Carried P1 items get priority override in next retro.json"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Security and quality actions perpetually deferred — A-006 blob validation risk carried indefinitely, A-005 coverage gap persists"
+    },
+    {
+      "id": "A-006",
+      "title": "Enable ESLint exhaustive-deps as error and document ref escape hatch pattern",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "owner_persona": "Delivery",
+      "rationale": "Stale closure bugs recurred twice in Epic 4 (4.2 I1 useSasUrl, 4.5 I1 useCallback). Both caught in review, not by tooling. ESLint react-hooks/exhaustive-deps rule available but not enforced at error level.",
+      "evidence_refs": [
+        "context.md Section 4: Story 4.2 I1 (useSasUrl stale initialUrl), Story 4.5 I1 (useCallback missing dependency)",
+        "context.md Section 5: Story 4.5 I1 anti-pattern — recurring React pattern",
+        "useScreeningSession.ts: onAutoAdvanceRef workaround added post-fix (commit afcca2f)"
+      ],
+      "acceptance_criteria": [
+        "ESLint config sets react-hooks/exhaustive-deps to error severity",
+        "CI fails on exhaustive-deps violations",
+        "patterns-frontend.md includes 'useCallback and Dependency Arrays' section documenting ref escape hatch pattern",
+        "Anti-patterns.txt includes entry preventing eslint-disable of exhaustive-deps rule",
+        "Zero stale closure findings in next epic"
+      ],
+      "automation_hints": [
+        "Change rule from warn to error in ESLint config",
+        "Verify eslint-plugin-react-hooks is installed (likely already present)",
+        "Add ref pattern example from commit afcca2f to patterns-frontend.md"
+      ],
+      "files_to_touch": [
+        "web/eslint.config.js",
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        ".claude/hooks/anti-patterns.txt"
+      ],
+      "risk_if_ignored": "Stale closure bugs continue in every epic — subtle runtime bugs that pass tests but fail in user interaction"
+    },
+    {
+      "id": "A-007",
+      "title": "Complete entity key redaction in NotFoundException and all exception handlers",
+      "type": "security_hardening",
+      "priority": "P1",
+      "owner_persona": "Security",
+      "rationale": "Previous retro A-009 partially applied — NotFoundException handler redacts Detail, but constructor still embeds entity type + GUID in message. 6 other exception handlers still expose Detail = ex.Message. Information disclosure aids attacker reconnaissance.",
+      "evidence_refs": [
+        "context.md Section 6: A-009 NOT APPLIED (partial)",
+        "NotFoundException.cs lines 20-23: constructor embeds entity name and key",
+        "CustomExceptionHandler.cs lines 106,119,132,145,158,171: Detail = ex.Message exposed"
+      ],
+      "acceptance_criteria": [
+        "NotFoundException constructor uses generic message: 'The requested resource was not found.'",
+        "NotFoundException logs entity name + key at Warning level for internal observability",
+        "All exception handlers in CustomExceptionHandler omit Detail field or use sanitized message",
+        "404/400/409 responses do not contain entity type names or GUIDs"
+      ],
+      "automation_hints": [
+        "Change NotFoundException base call to generic message",
+        "Add ILogger injection for internal logging of entity details",
+        "Remove Detail = ex.Message from all handlers in CustomExceptionHandler.cs"
+      ],
+      "files_to_touch": [
+        "api/src/Application/Common/Exceptions/NotFoundException.cs",
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs"
+      ],
+      "risk_if_ignored": "Attackers gain schema inference (entity type names), valid ID enumeration (GUIDs), and domain rule structure — low-severity but violates defense-in-depth"
+    },
+    {
+      "id": "A-008",
+      "title": "Add Authorization section template to writing-plans skill",
+      "type": "process_change",
+      "priority": "P1",
+      "owner_persona": "Docs",
+      "rationale": "All 4 Epic 4 implementation plans missing Authorization sections despite E-001 mandate in team-workflow.md line 50. Process control failed because writing-plans skill doesn't enforce the requirement.",
+      "evidence_refs": [
+        "docs/plans/2026-02-14-pdf-viewing-download.md (no Authorization section)",
+        "docs/plans/2026-02-14-outcome-recording-workflow-enforcement.md (no Authorization section)",
+        "docs/plans/2026-02-14-split-panel-screening-layout.md (no Authorization section)",
+        "docs/plans/2026-02-14-keyboard-navigation-screening-flow.md (no Authorization section)"
+      ],
+      "acceptance_criteria": [
+        "writing-plans skill prompt includes mandatory Authorization section template",
+        "Template requires handler enumeration table: Handler, Type, Recruitment-Scoped?, Auth Pattern",
+        "Frontend-only stories declare: '## Authorization: No backend handlers in this story'",
+        "Next implementation plan contains properly formatted Authorization section"
+      ],
+      "automation_hints": [
+        "Update .claude/superpowers/writing-plans.md or equivalent skill definition",
+        "Add Authorization section template after Architecture/Tech Stack and before Task breakdown"
+      ],
+      "files_to_touch": [
+        ".claude/superpowers/writing-plans.md"
+      ],
+      "risk_if_ignored": "Authorization gaps in planning — dev agents implement without considering auth requirements upfront, caught only in review"
+    },
+    {
+      "id": "A-009",
+      "title": "Fix pageSize in TanStack Query queryKey and add pagination param guideline",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "owner_persona": "Product",
+      "rationale": "pageSize not in queryKey means changing page size serves stale cached data. Flagged in Story 4.1 M4, confirmed across 3 mini-retros but never fixed. Cache correctness bug.",
+      "evidence_refs": [
+        "context.md Section 4: Story 4.1 M4 — pageSize not in queryKey",
+        "context.md Section 5: Anti-pattern 4.1 M4"
+      ],
+      "acceptance_criteria": [
+        "useCandidates hook queryKey includes pageSize parameter",
+        "patterns-frontend.md updated: 'All pagination params (page, pageSize, sort) MUST be in queryKey'",
+        "Test verifying cache miss when pageSize changes"
+      ],
+      "automation_hints": [
+        "Fix queryKey in useCandidates hook to include pageSize",
+        "Add guideline to patterns-frontend.md TanStack Query section"
+      ],
+      "files_to_touch": [
+        "web/src/features/candidates/hooks/useCandidates.ts",
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md"
+      ],
+      "risk_if_ignored": "Users change page size, see stale cached data from previous page size — data freshness bug in pagination UX"
+    },
+    {
+      "id": "A-010",
+      "title": "Add screening routing table entry and DTO display value guideline",
+      "type": "docs_update",
+      "priority": "P1",
+      "owner_persona": "Docs",
+      "rationale": "Epic 4 introduced features/screening/ directory with specialized patterns but architecture routing tables lack guidance. Additionally, Story 4.3 M1 showed step ID instead of name — no DTO guideline for display values.",
+      "evidence_refs": [
+        "context.md Section 11: features/screening/ components",
+        "architecture/index.md lines 6-16: no screening entry",
+        "context.md Section 4 Story 4.3 M1: outcome history shows step ID not name"
+      ],
+      "acceptance_criteria": [
+        "architecture/index.md routing table includes screening/batch-processing UI entry pointing to frontend-architecture.md Batch Screening section",
+        "architecture.md routing table includes same entry",
+        "patterns-backend.md DTO Mapping section includes 'Display Values in DTOs' subsection",
+        "Guideline: list/history views include computed display values alongside IDs; create/update commands accept IDs only"
+      ],
+      "automation_hints": [
+        "Add row to index.md and architecture.md routing tables",
+        "Add subsection to patterns-backend.md after DTO Mapping section"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/index.md",
+        "_bmad-output/planning-artifacts/architecture.md",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future screening stories re-discover patterns already documented; DTOs inconsistently include display values causing N+1 frontend lookups"
+    }
+  ],
+  "timing": {
+    "first_commit": "2026-02-14T17:20:58+01:00",
+    "last_commit": "2026-02-14T19:25:00+01:00",
+    "elapsed_hours": 2.07,
+    "total_commits": 57,
+    "stories_count": 5,
+    "commits_per_story": 11.4
+  },
+  "experiment_validation": [
+    {
+      "id": "E-004",
+      "hypothesis": "Architectural test for ITenantContext enforcement eliminates authorization gap defect class",
+      "success_metric": "Zero authorization-related Critical/Important findings in Epic 4",
+      "result": "pass",
+      "evidence": "Zero authorization findings across all 5 stories. AuthorizationArchitectureTests.cs (commit 6849760) catches missing ITenantContext via reflection at compile time. RecordOutcomeCommandHandler and GetCandidateOutcomeHistoryQueryHandler both correctly inject ITenantContext.",
+      "recommendation": "adopt"
+    },
+    {
+      "id": "E-005",
+      "hypothesis": "AC completeness walkthrough reduces fix cycle rate to below 50%",
+      "success_metric": "Fix cycle rate below 50%",
+      "result": "fail",
+      "evidence": "Fix cycle rate 100% (5/5 stories). However, zero findings were 'AC not functionally complete' — the specific problem E-005 targeted. All findings were: missing validators (4.1 C1, 4.3 I1), missing tests (4.1 C2/C3), React state bugs (4.2 I1, 4.4 I1/I2, 4.5 I1). Metric measures wrong signal — AC incompleteness was eliminated but fix cycle rate driven by other causes.",
+      "recommendation": "modify"
+    },
+    {
+      "id": "E-006",
+      "hypothesis": "Structured pre-review checklist catches more issues before review, reducing minor findings",
+      "success_metric": "Average minor findings per story below 3",
+      "result": "fail",
+      "evidence": "Average 3.6 minor findings per story (4+3+4+4+3). Target was below 3. Previous epic averaged 4.4, so 18% improvement. Checklist helps but minor findings are mostly design choices and UX polish items that checklists cannot catch.",
+      "recommendation": "modify"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E-007",
+      "hypothesis": "FluentValidation architectural test eliminates validator-gap review findings (replicating E-004 success for validators)",
+      "how": "Add ValidatorArchitectureTests.cs (A-001) that scans all IRequest<T> types and asserts matching AbstractValidator<T> exists. Run as part of standard test suite.",
+      "success_metric": "Zero validator-related Critical or Important findings in Epic 5"
+    },
+    {
+      "id": "E-008",
+      "hypothesis": "ESLint exhaustive-deps enforcement at error level eliminates stale closure review findings",
+      "how": "Enable react-hooks/exhaustive-deps as error in ESLint config (A-006). Document ref escape hatch pattern in patterns-frontend.md for legitimate use cases.",
+      "success_metric": "Zero stale closure or missing dependency array findings in Epic 5"
+    },
+    {
+      "id": "E-009",
+      "hypothesis": "P0/P1 blocking mechanism prevents action items from being carried forward more than 1 epic",
+      "how": "Add pre-epic gate to team-workflow.md (A-005) that checks previous retro action status. Carried P1 items auto-escalate to P0.",
+      "success_metric": "Zero P1 actions carried forward from Epic 4 retro remain unresolved at Epic 5 retro"
+    }
+  ],
+  "lens_reports": [
+    {
+      "persona": "Delivery Engineer Lens",
+      "wins": [
+        "Architectural test (E-004) achieved zero authorization findings across all 5 stories",
+        "Single-round fix cycles on all 5 stories — no multi-round rework",
+        "285 frontend + 114 domain tests, all passing, zero TypeScript errors",
+        "React hook quality improved with domain separation (useSasUrl, usePdfPrefetch, useScreeningSession)",
+        "Consistent domain modeling — RecordOutcome follows DDD boundary rules"
+      ],
+      "problems": [
+        "100% fix cycle rate despite process improvements",
+        "Missing validators caught in review (4.1 C1, 4.3 I1)",
+        "Dead queryClient carried across 2 stories (4.4 M1 → 4.5 M3)",
+        "Code coverage blind spot: 4th consecutive epic without metrics",
+        "Stale closure pattern recurring (4.2 I1, 4.5 I1)",
+        "Zero frontend tests in initial 4.1 implementation (C2)",
+        "Duplicated toStatusVariant carried 2 stories before extraction"
+      ],
+      "missing_evidence": [
+        "Cyclomatic complexity metrics",
+        "Build time tracking per story",
+        "Test execution duration",
+        "Code coverage deltas",
+        "PR review cycle time"
+      ],
+      "candidate_actions": ["DEL-001", "DEL-002", "DEL-003", "DEL-004", "DEL-005", "DEL-006", "DEL-007"]
+    },
+    {
+      "persona": "QA Lens",
+      "wins": [
+        "E-004 authorization architectural test validated with zero auth findings",
+        "Frontend test coverage expanded to 285 tests with 100% pass rate",
+        "Domain.UnitTests maintained at 114 tests with 100% pass rate",
+        "All stale closure bugs caught in single-round fix cycles",
+        "Fix cycle quality improved: zero multi-round fixes"
+      ],
+      "problems": [
+        "Code coverage metrics missing for 4th consecutive epic",
+        "Application.UnitTests cannot execute on Linux (requires .NET 10 runtime)",
+        "Critical test gap recurred in 4.1 C2 (zero frontend tests initially)",
+        "FluentValidation gap recurred (4.1 C1, 4.3 I1) — 3rd epic with this finding",
+        "Functional/integration test gap in 4.1 C3",
+        "React stale closure pattern recurring despite fix-cycle catches",
+        "11 minor anti-patterns deferred without prioritization framework"
+      ],
+      "missing_evidence": [
+        "Code coverage percentages for all layers",
+        "Application.UnitTests execution results",
+        "Integration test status for candidate endpoints",
+        "Mutation testing results",
+        "Accessibility audit results for keyboard navigation"
+      ],
+      "candidate_actions": ["QA-001", "QA-002", "QA-003", "QA-004", "QA-005", "QA-006", "QA-007"]
+    },
+    {
+      "persona": "Architecture Lens",
+      "wins": [
+        "Excellent DDD compliance: Candidate.RecordOutcome through aggregate root with encapsulation",
+        "Clean Architecture layering: vertical slice pattern, no infrastructure coupling",
+        "Global query filters on all 3 aggregates for defense-in-depth",
+        "Proper CQRS separation with MediatR command/query pattern",
+        "Frontend feature folder pattern correctly implemented"
+      ],
+      "problems": [
+        "A-003 (global query filters) status unclear — filters present but tests not verified",
+        "A-006 (blob URL validation) NOT APPLIED — cross-recruitment document access vector",
+        "Code coverage gap persists across 4 epics",
+        "FluentValidation gap pattern continues (4.1 C1, 4.3 I1)",
+        "Stale closure pattern recurring (4.2 I1, 4.5 I1)",
+        "WorkflowStep dependency in Candidate.RecordOutcome creates cross-aggregate coupling",
+        "Dead queryClient carried across 2 stories"
+      ],
+      "missing_evidence": [
+        "Application.UnitTests execution results",
+        "EF Core migration review for workflow columns",
+        "Accessibility audit results for keyboard navigation",
+        "Frontend bundle size impact of react-pdf"
+      ],
+      "candidate_actions": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-004", "ARCH-005", "ARCH-006"]
+    },
+    {
+      "persona": "Docs/Enablement Lens",
+      "wins": [
+        "E-004 architectural test is a docs-as-code success story",
+        "BackgroundService authorization pattern documented in dev-auth-patterns.md",
+        "A-008 state-change endpoint convention applied to api-patterns.md",
+        "Mini-retro process working consistently across all 5 stories",
+        "Architecture routing table accuracy confirmed — no broken cross-references"
+      ],
+      "problems": [
+        "Authorization section missing from all 4 Epic 4 implementation plans",
+        "Implementation plans range 761-2335 lines with no quality guidelines",
+        "Code coverage instrumentation gap persists for 4th consecutive epic",
+        "Routing table has no entry for screening frontend work",
+        "RecordOutcome history displays step ID instead of step name",
+        "Stale closure pattern recurred — no documented dependency array guideline",
+        "No DTO design guideline for computed display values"
+      ],
+      "missing_evidence": [
+        "Implementation plan Authorization section compliance logs",
+        "Architecture shard read logs for Epic 4 stories",
+        "E-005 AC Coverage Map evidence"
+      ],
+      "candidate_actions": ["DOCS-001", "DOCS-002", "DOCS-003", "DOCS-004", "DOCS-005", "DOCS-006", "DOCS-007"]
+    },
+    {
+      "persona": "Security Lens",
+      "wins": [
+        "E-004 architectural test achieved ZERO authorization findings — first epic with perfect auth coverage",
+        "Global query filters applied on all 3 aggregate entities for defense-in-depth",
+        "SAS token max enforcement (15-minute cap) implemented in BlobStorageService",
+        "Rate limiting applied to file upload endpoints (10 req/min per user)",
+        "FluentValidation coverage expanded to all 4 new handlers"
+      ],
+      "problems": [
+        "A-006 NOT APPLIED — AssignDocumentCommandHandler accepts arbitrary blob URLs",
+        "A-009 PARTIALLY APPLIED — NotFoundException redacted but 6 other handlers still expose Detail",
+        "Missing FluentValidation on 3 of 4 new handlers caught only in review",
+        "No security tests for SAS token refresh flow",
+        "RecordedByUserId exposed in API responses (low risk but exposes internal structure)",
+        "ScreeningEndpoints relies on handler-level auth only",
+        "Code coverage unavailable for 4th epic"
+      ],
+      "missing_evidence": [
+        "SAS token generation audit trail",
+        "Cross-recruitment data leakage test scenarios",
+        "Rate limiting bypass testing",
+        "Azure Blob Storage access control verification",
+        "Background service authorization testing"
+      ],
+      "candidate_actions": ["SEC-001", "SEC-002", "SEC-003", "SEC-004", "SEC-005", "SEC-006"]
+    },
+    {
+      "persona": "Product Lens",
+      "wins": [
+        "All 39 ACs verified PASS plus 10 error paths — keyboard-first screening fully operational",
+        "Comprehensive state handling: empty, error, and closed-recruitment guards all present",
+        "Workflow enforcement in domain model: step transitions validated, InvalidWorkflowTransitionException registered",
+        "Accessibility foundation: ARIA live regions, focus indicators, keyboard-only flow, text input protection",
+        "E-004 validated: zero auth findings across all 5 stories"
+      ],
+      "problems": [
+        "Two AC deviations without documented rationale (toast 5s vs 3s, immediate persist vs delayed)",
+        "User name resolution missing for outcome history (userId shown, not name)",
+        "pageSize not in TanStack Query queryKey — cache invalidation risk",
+        "WCAG 2.1 AA incomplete: missing listbox/option roles on candidate list",
+        "E-005 metric failure despite problem elimination",
+        "3 P1 actions carried forward without resolution from Epic 3",
+        "Code coverage unmeasured for 4th consecutive epic"
+      ],
+      "missing_evidence": [
+        "User task completion time telemetry for screening flow",
+        "PDF pre-fetch effectiveness metrics",
+        "toStatusVariant extraction usage audit"
+      ],
+      "candidate_actions": ["PROD-001", "PROD-002", "PROD-003", "PROD-004", "PROD-005", "PROD-006", "PROD-007"]
+    }
+  ]
+}

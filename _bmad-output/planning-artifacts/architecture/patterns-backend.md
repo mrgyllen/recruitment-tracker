@@ -120,6 +120,29 @@ public record RecruitmentOverviewDto
 }
 ```
 
+### Display Values in DTOs
+
+**Rule: List/history view DTOs include computed display values alongside IDs.** When returning data for display (lists, histories, detail views), include human-readable names, titles, and labels alongside their IDs. This prevents N+1 frontend lookups and ensures consistent display.
+
+- **Read DTOs (queries):** Include both `WorkflowStepId` and `WorkflowStepName`, both `RecordedByUserId` and `RecordedByUserName`
+- **Write DTOs (commands):** Accept IDs only — the handler resolves display values
+
+```csharp
+// Good: History DTO with display values for list view
+public record OutcomeHistoryDto
+{
+    public Guid Id { get; init; }
+    public Guid WorkflowStepId { get; init; }
+    public string WorkflowStepName { get; init; }  // Display value
+    public Guid RecordedByUserId { get; init; }
+    public string? RecordedByUserName { get; init; } // Display value (nullable if user lookup unavailable)
+    public OutcomeStatus Status { get; init; }
+    public DateTimeOffset RecordedAt { get; init; }
+}
+```
+
+Use `.Include()` with `.Select()` projection to load display values in a single query. Avoid separate queries per row.
+
 ## Handler Authorization
 
 **Rule: ALL command and query handlers that access a recruitment MUST verify the current user is a member.** This is a security-critical pattern — without it, any authenticated user can read or modify any recruitment.

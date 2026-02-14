@@ -80,6 +80,49 @@ Never a blank void, never "No data found," never a spinner for empty data.
 
 **Special case — Onboarding (FR10):** The `RecruitmentList` empty state doubles as the first-time user experience. When no recruitments exist, this is the user's entry point to the application. The empty state here should include onboarding-quality guidance: what the app does, how to get started, and a prominent "Create your first recruitment" CTA. This is not a generic "No data" screen — it's the onboarding flow.
 
+## TanStack Query Keys
+
+**Rule: All request parameters MUST be included in the queryKey.** This includes pagination params (page, pageSize), sort params, filters, and search terms. Missing params cause stale cache hits when the user changes a parameter.
+
+```typescript
+// Good: all params in queryKey
+const { data } = useQuery({
+  queryKey: ['candidates', { recruitmentId, page, pageSize, search, stepFilter }],
+  queryFn: () => getCandidates({ recruitmentId, page, pageSize, search, stepFilter }),
+});
+
+// Bad: pageSize missing — changing page size serves stale data
+const { data } = useQuery({
+  queryKey: ['candidates', { recruitmentId, page, search }],
+  queryFn: () => getCandidates({ recruitmentId, page, pageSize, search }),
+});
+```
+
+## useCallback and Dependency Arrays
+
+**Rule: Never suppress `react-hooks/exhaustive-deps`.** Fix dependencies or use the ref escape hatch pattern.
+
+When a callback depends on a frequently-changing value that would cause excessive re-renders, use a ref to hold the latest value:
+
+```typescript
+// Ref escape hatch — for event handlers in performance-sensitive contexts
+const onAutoAdvanceRef = useRef(options?.onAutoAdvance);
+useEffect(() => {
+  onAutoAdvanceRef.current = options?.onAutoAdvance;
+}, [options?.onAutoAdvance]);
+
+const handleOutcomeRecorded = useCallback((outcome: OutcomeResult) => {
+  // Uses ref — no stale closure, no re-render on options change
+  onAutoAdvanceRef.current?.();
+}, []); // Empty deps is safe because ref is always current
+```
+
+**When to use refs vs direct dependencies:**
+- **Direct dependency** (default): Top-level handlers, infrequently-changing values
+- **Ref pattern**: Callbacks in loops, nested callbacks, or when the callback is a prop that changes frequently and re-creation causes performance issues
+
+**Anti-pattern: Stale closures.** If a callback reads a value captured at creation time instead of the current value, it's a stale closure. This causes subtle bugs like auto-advance not firing or state not updating on prop changes.
+
 ## Error Handling
 
 | Scenario | Pattern |

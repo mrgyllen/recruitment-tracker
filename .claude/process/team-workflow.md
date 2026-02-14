@@ -372,6 +372,17 @@ This is where the retro becomes self-healing. Team Lead works through the action
 - The retro is NOT done until all P0, P1, and applicable P2 actions are applied or assigned
 - **Expected outcome: 0-2 deferred items per retro.** If more than 2 items are deferred, the retro is being too permissive.
 
+### Pre-Epic Gate (Between Retros)
+
+Before starting a new epic, Team Lead MUST verify previous retro action items:
+
+1. Read previous `retro.json` and check all P0/P1 actions
+2. Any P0 action not marked APPLIED blocks the new epic — resolve before proceeding
+3. Any P1 action carried forward from 2+ epics ago auto-escalates to P0
+4. If a previously-carried P1 item cannot be deferred again (per Phase 4 rules), it becomes a blocking gate
+
+**Enforcement:** The retro Phase 1 evidence assembly step MUST include a "Previous Action Item Status" section checking each action from the last retro. Items marked NOT APPLIED that were P0/P1 MUST be listed as auto-escalated in the new retro's synthesis.
+
 ### Phase 5: Finalize
 
 After all actions are applied:

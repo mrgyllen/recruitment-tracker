@@ -19,6 +19,9 @@ Navigate to="/login"|web/src/**/*.tsx|Do not use <Navigate> to auth routes — c
 # Loading states (promoted from pending — Epic 2-3, recurring across multiple stories)
 Loading\.\.\.|web/src/features/**/*.tsx|Use SkeletonLoader component instead of plain 'Loading...' text — see patterns-frontend.md Loading States
 
+# Stale closures (promoted from pending — Epic 4 Stories 4.2 I1, 4.5 I1)
+eslint-disable.*exhaustive-deps|web/src/**/*.{ts,tsx}|Do not disable exhaustive-deps — fix dependencies or use ref pattern (see patterns-frontend.md useCallback section)
+
 # Domain model rules (promoted from pending — Story 1.3)
 \[NotMapped\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API builder.Ignore()
 \[Required\]|api/src/Domain/**/*.cs|Do not use data annotations in domain entities — use Fluent API

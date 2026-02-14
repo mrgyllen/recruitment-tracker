@@ -1,0 +1,215 @@
+{
+  "persona": "Architecture Lens",
+  "wins": [
+    "Excellent DDD compliance: Candidate.RecordOutcome enforces workflow step validation through aggregate root (lines 69-105 in Candidate.cs), uses private setters on all properties, maintains encapsulation via IReadOnlyCollection<CandidateOutcome>, and modifies child entities only through aggregate methods. RecordOutcomeCommandHandler correctly loads Recruitment aggregate with steps, passes orderedSteps to domain method, and saves through root.",
+    "Clean Architecture layering maintained: New Screening feature follows vertical slice pattern (Features/Screening/Commands and Queries folders), handlers inject only IApplicationDbContext and ITenantContext (no infrastructure coupling), DTOs live in Application layer, EF configuration uses Fluent API only (CandidateConfiguration.cs lines 8-58 with no DataAnnotations on domain entities).",
+    "Global query filters correctly applied to Candidate entity (ApplicationDbContext.cs lines 47-56): three-tier access model (service context, recruitment scope, membership check) enforces tenant isolation at the data layer with shadow navigation to Recruitment.Members. Complements handler-level auth checks for defense-in-depth.",
+    "Proper CQRS separation: RecordOutcomeCommand, GetCandidateOutcomeHistoryQuery both follow MediatR command/query pattern with dedicated handlers, validators (FluentValidation), and DTOs. Fix cycle in Story 4.1 C1 and 4.3 I1 caught missing validators, demonstrating verification process works.",
+    "Frontend feature folder pattern correctly implemented: features/screening/ contains ScreeningLayout.tsx, hooks (useScreeningSession.ts, useKeyboardNavigation.ts, useResizablePanel.ts), and components (CandidatePanel, OutcomeForm, OutcomeHistory). Shared StatusBadge.types.ts extracted to components/ folder (cross-feature concern). No cross-feature direct dependencies detected."
+  ],
+  "problems": [
+    "A-003 (Global query filters on Recruitment/ImportSession) NOT APPLIED despite being P1 priority from Epic 3 retro (2026-02-14T073000Z). Evidence bundle Section 6 line 228 confirms this is the second consecutive epic without resolution. ApplicationDbContext.cs lines 30-44 shows filters ARE present — this is a stale action item that should be marked complete or the action description is misleading.",
+    "A-006 (Validate blob URLs belong to recruitment) NOT APPLIED despite being P1 security risk from Epic 3 retro. AssignDocumentCommandHandler.cs line 40 accepts request.DocumentBlobUrl without path validation — caller can pass any blob URL including documents from other recruitments. This is a cross-recruitment document access vector that bypasses tenant isolation.",
+    "Code coverage measurement gap persists across 4 consecutive epics (evidence Section 3 lines 112-113): coverlet.collector installed in all test projects but no coverage reports generated. 13,046 lines added in this epic with zero visibility into which handlers/domain methods lack test coverage. This masks gaps until manual review (e.g., Story 3.5 finding: AssignDocument/UploadDocument handlers with zero tests).",
+    "FluentValidation gap pattern continues: Story 4.1 C1 (GetCandidatesQuery and GetCandidateByIdQuery missing validators), Story 4.3 I1 (GetCandidateOutcomeHistoryQuery missing validator). All caught in review, indicating pre-commit verification step does not enforce 'every IRequest has a corresponding Validator' architectural rule.",
+    "Frontend stale closure pattern recurring: Story 4.5 I1 (useCallback missing onAutoAdvance from dependency array), Story 4.2 I1 (useSasUrl missing initialUrl sync). useScreeningSession.ts lines 28-29 shows workaround (onAutoAdvanceRef pattern) added post-fix. This is the second fix cycle for React stale closures in recent epics.",
+    "WorkflowStep dependency in Candidate.RecordOutcome creates cross-aggregate coupling: RecordOutcomeCommandHandler.cs lines 37-44 loads Recruitment aggregate to get ordered steps, then passes List<WorkflowStep> to Candidate.RecordOutcome. Architecture.md lines 219-222 states 'cross-aggregate references use IDs only' but this pattern requires Candidate domain logic to depend on Recruitment's child entity type (WorkflowStep). More correct: pass only step IDs or outcome advancement logic should be a domain service coordinating both aggregates.",
+    "Dead queryClient reference in useScreeningSession.ts line 30: queryClient variable declared but never used. Evidence Section 4 Story 4.4 M1 and 4.5 M3 confirm this anti-pattern carried across two stories. Minor code quality issue but indicates incremental copy-paste without cleanup."
+  ],
+  "missing_evidence": [
+    "Application.UnitTests execution results — evidence Section 3 lines 106-107 states 'Cannot execute (requires Microsoft.AspNetCore.App 10.0.0 runtime, not installed on this Linux environment)'. No CI/local test run output provided, so handler-level unit test coverage cannot be verified.",
+    "EF Core migration review for workflow enforcement columns (Story 4.3) — evidence Section 11 line 307 mentions 'initial EF Core migration with workflow enforcement columns' but no migration file content or review of nullable vs required constraints provided.",
+    "Accessibility audit results for keyboard navigation (Story 4.5) — 8 ACs related to WCAG 2.1 AA compliance (keyboard shortcuts, focus management, ARIA live regions) but no structured accessibility audit beyond code-level demo walkthrough (Section 10 line 288).",
+    "Frontend bundle size impact of react-pdf library — Story 4.2 added react-pdf dependency but no webpack/vite bundle analysis showing chunk size impact on NFR1 (3s initial load budget)."
+  ],
+  "candidate_actions": [
+    {
+      "id": "ARCH-001",
+      "title": "Add architectural test to enforce 'every IRequest has a corresponding AbstractValidator'",
+      "type": "architecture_alignment",
+      "priority": "P0",
+      "rationale": "FluentValidation gap pattern recurred in 3 of 5 stories this epic (4.1 C1, 4.3 I1 missed validators on queries). Current E-004 architectural test (AuthorizationArchitectureTests.cs from commit 6849760) catches ITenantContext violations but does not enforce validator presence. A reflection-based test scanning all IRequest<> types for corresponding AbstractValidator<> subclasses would eliminate this category at compile time.",
+      "evidence_refs": [
+        "Evidence Section 4: Story 4.1 C1 (GetCandidatesQuery/GetCandidateByIdQuery), Story 4.3 I1 (GetCandidateOutcomeHistoryQuery)",
+        "Epic 3 retro 2026-02-14T073000Z: Story 3.2 missing validator on GetImportSessionQuery (same pattern)",
+        "E-004 success validates architectural tests prevent auth gaps — same approach applies to validation gaps"
+      ],
+      "acceptance_criteria": [
+        "Test class ValidatorArchitectureTests.cs in Web.AcceptanceTests project (alongside AuthorizationArchitectureTests.cs)",
+        "Test method All_IRequest_Handlers_Have_Validators() uses reflection to find all IRequest<T> types in Application assembly",
+        "For each IRequest<T>, verify AbstractValidator<TRequest> exists in same namespace or adjacent Validators folder",
+        "Test fails with clear message listing IRequest types missing validators",
+        "Run as part of dotnet test suite (no separate CI step required)"
+      ],
+      "automation_hints": [
+        "Pattern similar to AuthorizationArchitectureTests.cs commit 6849760",
+        "Use Assembly.GetTypes() to find all types implementing IRequest<>",
+        "Check if corresponding AbstractValidator<TRequest> type exists",
+        "FluentValidation automatically scans assembly for validators at startup, so existence check is sufficient"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Web.AcceptanceTests/ValidatorArchitectureTests.cs (create)"
+      ],
+      "risk_if_ignored": "Validator gaps will continue to surface as Critical findings in review (already 3 instances in Epic 4). Backend validation is authoritative security boundary per patterns-frontend.md line 97 — missing validators allow invalid data to reach handlers."
+    },
+    {
+      "id": "ARCH-002",
+      "title": "Validate blob URLs belong to recruitment in AssignDocumentCommandHandler and UploadDocumentCommandHandler",
+      "type": "architecture_alignment",
+      "priority": "P0",
+      "rationale": "A-006 from Epic 3 retro (2026-02-14T073000Z) flagged AssignDocumentCommand accepting arbitrary blob URLs without validation. Cross-recruitment document access vector: attacker with valid recruitment membership can assign blob URLs from other recruitments to their candidates. Global query filter on Candidate prevents reading other recruitments' candidates, but does not prevent writing other recruitments' blob URLs to own candidates.",
+      "evidence_refs": [
+        "AssignDocumentCommandHandler.cs line 40: candidate.ReplaceDocument(\"CV\", request.DocumentBlobUrl) — no path validation",
+        "Evidence Section 6 line 231: A-006 NOT APPLIED — security risk carried forward",
+        "Epic 3 retro 2026-02-14T073000Z actions: A-006 description 'Validate AssignDocument blob URL belongs to recruitment'"
+      ],
+      "acceptance_criteria": [
+        "IBlobStorageService.ValidateBlobBelongsToRecruitment(containerName, blobUrl, recruitmentId) method added to interface",
+        "BlobStorageService implementation checks blobUrl path starts with 'documents/{recruitmentId}/' prefix",
+        "AssignDocumentCommandHandler calls ValidateBlobBelongsToRecruitment before candidate.ReplaceDocument",
+        "UploadDocumentCommandHandler calls same validation (if exists — check Story 3.5 implementation)",
+        "Validation throws ForbiddenAccessException if blob belongs to different recruitment",
+        "Unit test in BlobStorageServiceTests covers validation logic (valid path, wrong recruitment ID, malformed URL)",
+        "Functional test in CandidateEndpointsTests covers cross-recruitment blob assignment attempt returns 403"
+      ],
+      "automation_hints": [
+        "Blob URL format from Azure Blob Storage: https://<account>.blob.core.windows.net/<container>/<path>",
+        "Path convention for this app: documents/{recruitmentId}/{candidateId}/CV.pdf",
+        "Extract recruitmentId from URL path, compare to expected recruitmentId parameter",
+        "Edge cases: URL with query params (SAS token), relative vs absolute URLs, missing path segments"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Application/Common/Interfaces/IBlobStorageService.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Infrastructure/Services/BlobStorageService.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Application/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandHandler.cs (if exists)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Infrastructure.IntegrationTests/Services/BlobStorageServiceTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Application.FunctionalTests/Endpoints/CandidateEndpointsTests.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment document access: attacker with membership in Recruitment A can assign blob URLs from Recruitment B to candidates in A. Bypasses tenant isolation. Medium severity (requires valid auth + knowledge of other recruitment's blob URLs) but violates core security boundary."
+    },
+    {
+      "id": "ARCH-003",
+      "title": "Enable code coverage collection in CI and establish minimum thresholds",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "Code coverage tooling installed (coverlet.collector in all test projects) but never executed across 4 consecutive epics (evidence Section 3 lines 112-113, Section 6 line 230 A-005). No visibility into which of the 13,046 lines added in Epic 4 lack test coverage. Story 3.5 finding (AssignDocument/UploadDocument handlers with zero tests) would be caught by coverage reports, not manual review.",
+      "evidence_refs": [
+        "Evidence Section 3 lines 112-113: 'coverlet.collector is installed but no coverage reports generated. This is the 4th consecutive epic without coverage metrics.'",
+        "Evidence Section 6 line 230: A-005 (Code coverage CI thresholds) NOT APPLIED from Epic 3 retro",
+        "Epic 3 retro 2026-02-14T073000Z Section 8 lines 64-65: 'Untested handlers: AssignDocument and UploadDocument handlers have zero tests... likely because they were added late in the story and the verification step checks tests pass not test coverage exists'"
+      ],
+      "acceptance_criteria": [
+        "dotnet test command in CI includes --collect:\"XPlat Code Coverage\" flag",
+        "Coverage report generated in cobertura or opencover format",
+        "ReportGenerator (or similar) converts coverage.xml to HTML report",
+        "CI publishes coverage report as artifact or uploads to dashboard (e.g., Codecov, Coveralls)",
+        "Minimum thresholds: 80% line coverage for Domain, 70% for Application, no threshold for Infrastructure/Web (integration tests suffice)",
+        "CI fails if thresholds not met",
+        "README.md updated with coverage badge and threshold policy"
+      ],
+      "automation_hints": [
+        "coverlet.collector already in .csproj files — no package changes needed",
+        "Add to test command: dotnet test --collect:\"XPlat Code Coverage\" --results-directory ./coverage",
+        "Install ReportGenerator: dotnet tool install -g dotnet-reportgenerator-globaltool",
+        "Generate HTML: reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage/report -reporttypes:Html",
+        "Thresholds in coverlet.runsettings or as CI assertion"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.github/workflows/ci.yml (or equivalent CI config)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/coverlet.runsettings (create for thresholds)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/README.md (coverage badge)"
+      ],
+      "risk_if_ignored": "Test gaps remain invisible until manual review. Domain logic (Candidate.RecordOutcome, ImportSession state machine) is critical path — untested branches here are production risk. Developer confidence in refactoring is low without coverage feedback."
+    },
+    {
+      "id": "ARCH-004",
+      "title": "Refactor Candidate.RecordOutcome to eliminate WorkflowStep dependency using step ID-based advancement logic",
+      "type": "refactor",
+      "priority": "P2",
+      "rationale": "Candidate.RecordOutcome accepts IReadOnlyList<WorkflowStep> (Candidate.cs line 68), violating DDD aggregate boundary rule 'cross-aggregate references use IDs only' (architecture.md line 219). Candidate (aggregate root) should not depend on Recruitment's child entity type. Current pattern requires handler to load Recruitment with steps, pass collection to Candidate domain logic. More correct: Candidate.RecordOutcome(stepId, status, nextStepId?) or introduce domain service CandidateWorkflowCoordinator.",
+      "evidence_refs": [
+        "Candidate.cs lines 68-105: RecordOutcome method accepts IReadOnlyList<WorkflowStep> orderedSteps parameter",
+        "RecordOutcomeCommandHandler.cs lines 37-44: loads recruitment.Steps, passes to domain method",
+        "architecture.md lines 219-220: Aggregate rules 'Cross-aggregate references use IDs only', 'Domain events for cross-aggregate coordination'"
+      ],
+      "acceptance_criteria": [
+        "Option A (Simple): Candidate.RecordOutcome(stepId, status, nextStepId?) — caller (handler) determines next step, passes as parameter. Domain logic validates nextStepId is not null when status=Pass and current step is not last.",
+        "Option B (Domain Service): Create CandidateWorkflowCoordinator domain service that accepts Candidate, stepId, status, orderedSteps and orchestrates RecordOutcome + AdvanceToNextStep as separate calls. Keeps workflow progression logic outside Candidate aggregate.",
+        "Option C (Domain Events): Candidate.RecordOutcome raises OutcomeRecordedEvent, separate handler listens and issues AdvanceCandidateToNextStepCommand. Eventual consistency for workflow advancement.",
+        "Chosen option preserves existing test coverage (Domain.UnitTests for Candidate.RecordOutcome)",
+        "No behavioral change — AC3 (Pass advances to next step) and AC4 (Fail/Hold stays at current step) still enforced"
+      ],
+      "automation_hints": [
+        "Option A is simplest — handler computes nextStepId using same LINQ logic (lines 88-92), passes as parameter",
+        "Option B introduces domain service but does not eliminate cross-aggregate knowledge (still needs WorkflowStep collection)",
+        "Option C is architecturally purest but adds complexity (MediatR handler for domain event, transaction boundaries)"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Domain/Entities/Candidate.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/src/Application/Features/Screening/Commands/RecordOutcome/RecordOutcomeCommandHandler.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Domain.UnitTests/Entities/CandidateTests.cs"
+      ],
+      "risk_if_ignored": "Technical debt in aggregate boundary modeling. Does not affect functionality but sets precedent for cross-aggregate coupling. Future refactoring (e.g., workflow step advancement as domain event) becomes harder if pattern spreads."
+    },
+    {
+      "id": "ARCH-005",
+      "title": "Add ESLint rule to enforce useCallback/useEffect dependency array completeness",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "Stale closure pattern recurred in Stories 4.2 I1 (useSasUrl) and 4.5 I1 (useScreeningSession). Evidence Section 5 line 182 flags 'stale closure from missing useCallback dependency (recurring React pattern)'. useScreeningSession.ts lines 28-29 shows manual workaround (onAutoAdvanceRef) added post-fix. ESLint react-hooks/exhaustive-deps rule should catch this at dev time, not review.",
+      "evidence_refs": [
+        "Evidence Section 4: Story 4.2 I1 (useSasUrl stale initialUrl), Story 4.5 I1 (handleOutcomeRecorded missing options dependency)",
+        "useScreeningSession.ts lines 28-29: onAutoAdvanceRef.current workaround pattern",
+        "Evidence Section 5 line 182: Anti-pattern I1 — stale closure recurring"
+      ],
+      "acceptance_criteria": [
+        "ESLint config (.eslintrc.cjs or equivalent) enables 'react-hooks/exhaustive-deps' rule as error (not warning)",
+        "CI fails on ESLint errors (already true if ESLint in CI, just verify rule is error level)",
+        "Pre-commit hook (husky or lint-staged) runs ESLint on staged .ts/.tsx files",
+        "Documentation in patterns-frontend.md or CONTRIBUTING.md explains ref escape hatch pattern for stable callbacks (onAutoAdvanceRef.current pattern)"
+      ],
+      "automation_hints": [
+        "react-hooks/exhaustive-deps is built into eslint-plugin-react-hooks (likely already installed)",
+        "Change from 'warn' to 'error' in .eslintrc: rules: { 'react-hooks/exhaustive-deps': 'error' }",
+        "Pre-commit hook: npx lint-staged with ESLint on *.{ts,tsx} files"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/.eslintrc.cjs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/package.json (add lint-staged config)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/_bmad-output/planning-artifacts/architecture/patterns-frontend.md (document ref escape hatch)"
+      ],
+      "risk_if_ignored": "Stale closure bugs cause subtle functional defects (e.g., auto-advance not firing, SAS token not refreshing). Hard to diagnose in production. Two instances in Epic 4 suggests this will recur without tooling enforcement."
+    },
+    {
+      "id": "ARCH-006",
+      "title": "Clarify A-003 status or remove from action tracking",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "Evidence Section 6 line 228 states 'A-003 (Global query filters on Recruitment/ImportSession) NOT APPLIED — deferred from Epic 3 retro, carried into Epic 4 without resolution'. However, ApplicationDbContext.cs lines 30-44 shows global query filters ARE present on both Recruitment and ImportSession entities. Either the action description is misleading (filters exist but tests missing?), the action was completed but not marked, or the filters are incomplete.",
+      "evidence_refs": [
+        "Evidence Section 6 line 228: A-003 NOT APPLIED",
+        "ApplicationDbContext.cs lines 30-44: Global query filters on Recruitment (lines 30-35) and ImportSession (lines 38-44) already implemented",
+        "Epic 3 retro 2026-02-14T073000Z: A-003 created with title 'Global query filters on Recruitment + ImportSession'"
+      ],
+      "acceptance_criteria": [
+        "Review A-003 original action item from Epic 3 retro JSON (2026-02-14T073000Z/retro.json line ~93)",
+        "Compare acceptance criteria to current ApplicationDbContext.cs implementation",
+        "If filters are complete, mark A-003 as DONE in next retro self-healing commit",
+        "If tests are missing, update A-003 to be specific: 'Add integration tests for global query filters on Recruitment/ImportSession' (parallel to Candidate filter tests from Epic 2)",
+        "If filters are present but incomplete (e.g., missing membership check on ImportSession), update A-003 with specific gap"
+      ],
+      "automation_hints": [
+        "Check Epic 2 integration tests for Candidate global query filter pattern (8 tests covering service context, recruitment scope, membership check)",
+        "Apply same test coverage to Recruitment and ImportSession filters",
+        "Pattern: create recruitment1 with user1 membership, create recruitment2 with user2 membership, query as user1, verify only recruitment1 returned"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.retro/2026-02-14T073000Z/retro.json (review original A-003)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Infrastructure.IntegrationTests/Data/ApplicationDbContextTests.cs (add tests if missing)",
+        "Next retro self-healing commit (mark A-003 done or update description)"
+      ],
+      "risk_if_ignored": "Action tracking loses credibility if stale items accumulate. If filters are actually complete, this is administrative debt only. If filters are incomplete, this is a security gap (cross-recruitment data leakage)."
+    }
+  ]
+}

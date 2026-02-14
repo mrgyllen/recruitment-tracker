@@ -1,0 +1,237 @@
+{
+  "persona": "QA Lens",
+  "wins": [
+    "E-004 authorization architectural test validated with zero auth findings across all 5 stories (compile-time enforcement via reflection)",
+    "Frontend test coverage expanded to 285 tests across 45 files with 100% pass rate, TypeScript type-safe, and clean production builds",
+    "Domain.UnitTests maintained at 114 tests with 100% pass rate, demonstrating stable domain layer testing",
+    "All stale closure and state synchronization bugs caught in single-round fix cycles (4.2 I1 useSasUrl, 4.4 I1 OutcomeForm, 4.5 I1 useCallback)",
+    "Fix cycle quality improved: zero multi-round fixes, all Important/Critical findings resolved in first pass"
+  ],
+  "problems": [
+    "Code coverage metrics missing for 4th consecutive epic despite coverlet.collector being installed — zero visibility into actual coverage percentages",
+    "Application.UnitTests cannot execute on Linux dev environment (requires .NET 10 ASP.NET Core runtime) — unknown test status for 2 consecutive epics",
+    "Critical test gap pattern recurred in 4.1 C2: zero frontend tests written during initial implementation despite 9 new components/hooks",
+    "FluentValidation validator gap pattern recurred (4.1 C1 GetCandidatesQuery/GetCandidateByIdQuery, 4.3 I1 GetCandidateOutcomeHistoryQuery) — 3rd epic with this finding",
+    "Functional/integration test gap in 4.1 C3: new candidate query endpoints deployed without integration tests (SQL Server requirement blocks CI)",
+    "React stale closure pattern recurring (4.2 I1 useSasUrl, 4.5 I1 useCallback deps) despite fix-cycle catches — root cause is missing pre-commit linting rule",
+    "11 minor anti-patterns deferred to technical debt (Section 5) without explicit acceptance of regression risk or prioritization framework"
+  ],
+  "missing_evidence": [
+    "Code coverage percentages for Domain, Application, Infrastructure layers (no coverage reports generated since Epic 1)",
+    "Application.UnitTests execution results (blocked by .NET 10 runtime availability on Linux)",
+    "Integration test status for candidate query endpoints (blocked by SQL Server requirement)",
+    "Mutation testing results to validate test quality (are tests detecting real bugs or just exercising code?)",
+    "Performance test evidence for virtualization threshold choice (4.1 M3: why 50 items?)",
+    "Accessibility audit results for ARIA live regions and keyboard navigation (4.5 claims compliance but no automated verification)",
+    "Security test results for SAS token refresh logic (4.2 useSasUrl: no evidence of token expiration edge case testing)"
+  ],
+  "candidate_actions": [
+    {
+      "id": "QA-001",
+      "title": "Enable code coverage measurement and reporting in CI pipeline",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "4 consecutive epics without coverage metrics creates blind spot for regression risk. Section 3 confirms coverlet.collector installed but unused. Testing standards require coverage visibility.",
+      "evidence_refs": [
+        "Section 3: 'Not measured. coverlet.collector is installed but no coverage reports generated. This is the 4th consecutive epic without coverage metrics.'",
+        "Section 6 A-005: 'Code coverage CI thresholds — P1 — NOT APPLIED — 4th epic without coverage metrics'"
+      ],
+      "acceptance_criteria": [
+        "Coverage reports generated for Domain, Application, Infrastructure test projects",
+        "CI pipeline fails if coverage drops below baseline (recommend 70% line coverage for Domain/Application)",
+        "Coverage delta displayed in PR comments for review",
+        "Coverage reports archived as CI artifacts"
+      ],
+      "automation_hints": [
+        "Add coverlet.msbuild package to test projects if not present",
+        "Configure dotnet test --collect:\"XPlat Code Coverage\" in CI script",
+        "Use ReportGenerator to convert coverage.cobertura.xml to HTML",
+        "Integrate with GitHub Actions coverage reporting action"
+      ],
+      "files_to_touch": [
+        ".github/workflows/*.yml (CI pipeline)",
+        "api/tests/*/Directory.Build.props (coverage config)",
+        "api/tests/*/coverlet.runsettings (exclusion patterns)"
+      ],
+      "risk_if_ignored": "Regression defects in Domain/Application logic will remain undetected until production. No quantitative basis for accepting technical debt trade-offs."
+    },
+    {
+      "id": "QA-002",
+      "title": "Add pre-commit hook to enforce FluentValidation validator presence for all queries",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "FluentValidation gap recurred in 3 epics (4.1 C1, 4.3 I1). Pattern: queries added without validators, caught only in review. Section 4 shows 3 of 5 handlers missing validators initially.",
+      "evidence_refs": [
+        "Section 4 Story 4.1 C1: 'Missing FluentValidation validators on GetCandidatesQuery and GetCandidateByIdQuery'",
+        "Section 4 Story 4.3 I1: 'Missing FluentValidation for GetCandidateOutcomeHistoryQuery'",
+        "Section 4 Totals: '3 Critical findings (all in Story 4.1)' — 1 of 3 was validator gap"
+      ],
+      "acceptance_criteria": [
+        "Architecture test verifies every IRequest<T> in Application.Queries has corresponding AbstractValidator<T> registration",
+        "Test fails at compile time if validator missing",
+        "Test covers all query types (MediatR IRequest implementations)",
+        "CI pipeline runs architecture tests before functional tests"
+      ],
+      "automation_hints": [
+        "Extend api/tests/Application.UnitTests/ArchitectureTests/ with FluentValidation detection",
+        "Use reflection to find all IRequest<T> types in Application assembly",
+        "Query IServiceCollection for IValidator<T> registrations",
+        "Assert 1:1 correspondence between queries and validators"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/ArchitectureTests/ValidationArchitectureTests.cs (new file)",
+        "api/src/Application/DependencyInjection.cs (validator registration verification)"
+      ],
+      "risk_if_ignored": "Continued pattern of shipping unvalidated queries. Malformed requests reach handlers, risking SQL injection, performance issues, or unexpected exceptions."
+    },
+    {
+      "id": "QA-003",
+      "title": "Add ESLint rule to detect missing useCallback/useMemo dependencies",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Stale closure bug recurred 3 times in Epic 4 (4.2 I1 useSasUrl, 4.5 I1 useCallback deps, 4.4 I1 OutcomeForm). All caught in review, none blocked by pre-commit checks.",
+      "evidence_refs": [
+        "Section 4 Story 4.2 I1: 'useSasUrl stale initialUrl (useEffect sync missing)'",
+        "Section 4 Story 4.5 I1: 'options missing from handleOutcomeRecorded useCallback dependency array (stale closure)'",
+        "Section 5 Anti-Patterns: 'Story 4.5 I1 — stale closure from missing useCallback dependency (recurring React pattern)'"
+      ],
+      "acceptance_criteria": [
+        "ESLint exhaustive-deps rule enabled and enforced in CI",
+        "Pre-commit hook runs eslint --max-warnings 0",
+        "React Hooks ESLint plugin configured with recommended rules",
+        "CI fails on exhaustive-deps violations"
+      ],
+      "automation_hints": [
+        "Install eslint-plugin-react-hooks if not present",
+        "Add 'react-hooks/exhaustive-deps': 'error' to .eslintrc",
+        "Configure husky pre-commit hook to run eslint --max-warnings 0",
+        "Add npm run lint:fix to PR merge checklist"
+      ],
+      "files_to_touch": [
+        "web/.eslintrc.cjs (rule configuration)",
+        "web/package.json (husky pre-commit script)",
+        ".github/workflows/*.yml (CI lint step)"
+      ],
+      "risk_if_ignored": "Stale closure bugs will continue to escape to review/production. User-facing bugs include incorrect state updates, memory leaks, and race conditions."
+    },
+    {
+      "id": "QA-004",
+      "title": "Add test-first enforcement to team workflow for frontend features",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "Story 4.1 C2 shows zero frontend tests written during 9-commit implementation phase. Tests only added in fix cycle (commit 52901a3). Testing standards require test-first for domain logic.",
+      "evidence_refs": [
+        "Section 4 Story 4.1 C2: 'Missing frontend tests for all new functionality (0 tests)'",
+        "Section 9 Story 4.1: '9 implementation commits, 5 fix commits' — tests added in fix phase",
+        "CLAUDE.md: 'Default to test-first for domain/business logic'"
+      ],
+      "acceptance_criteria": [
+        "Story checklist includes 'Declare testing mode (test-first/spike/characterization) in commit message or story file'",
+        "Review checklist includes 'Verify tests committed before or alongside implementation'",
+        "Test files exist in same commit as implementation files (or earlier) for domain logic",
+        "Mini-retro template asks 'Was testing mode declared? Was it followed?'"
+      ],
+      "automation_hints": [
+        "Update .claude/process/team-workflow.md story implementation section",
+        "Add pre-review checklist item: 'git log --name-only | grep .test.tsx before grep .tsx'",
+        "Create GitHub PR template with testing mode declaration checkbox",
+        "Add testing mode field to story YAML frontmatter"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md (story implementation workflow)",
+        ".github/pull_request_template.md (PR checklist)",
+        "docs/plans/stories/*.md (story template)"
+      ],
+      "risk_if_ignored": "Test-after pattern becomes norm. Tests written to pass existing code (not to specify behavior). Lower defect detection rate, brittle tests tied to implementation details."
+    },
+    {
+      "id": "QA-005",
+      "title": "Create .NET 10 runtime installation documentation for Linux dev environments",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Application.UnitTests cannot execute for 2 consecutive epics due to missing .NET 10 runtime on Linux. Unknown test status creates blind spot for Application layer regressions.",
+      "evidence_refs": [
+        "Section 3: 'Application.UnitTests: Cannot execute (requires Microsoft.AspNetCore.App 10.0.0 runtime, not installed on this Linux environment)'",
+        "Section 3: 'Application.FunctionalTests: Cannot execute (requires SQL Server)'"
+      ],
+      "acceptance_criteria": [
+        "Documentation includes step-by-step .NET 10 SDK + runtime installation for Ubuntu/Debian",
+        "Script verifies required runtime components present (Microsoft.AspNetCore.App 10.0.0)",
+        "CI pipeline uses same runtime version as dev docs specify",
+        "README.md links to dev environment setup guide"
+      ],
+      "automation_hints": [
+        "Create docs/development/environment-setup-linux.md",
+        "Add dotnet --list-runtimes verification script",
+        "Document dotnet-install.sh usage for .NET 10 preview/RC channels",
+        "Add environment check to api/tests/run-tests.sh"
+      ],
+      "files_to_touch": [
+        "docs/development/environment-setup-linux.md (new file)",
+        "README.md (link to setup guide)",
+        "api/tests/run-tests.sh (runtime verification)"
+      ],
+      "risk_if_ignored": "Application.UnitTests remain unexecuted on developer machines. Handler logic regressions undetected. CI becomes single point of failure for Application layer test coverage."
+    },
+    {
+      "id": "QA-006",
+      "title": "Add integration tests for candidate query endpoints using Testcontainers",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "Story 4.1 C3 identifies missing integration tests for GetCandidatesQuery and GetCandidateByIdQuery endpoints. Section 3 shows Infrastructure.IntegrationTests cannot execute (Docker requirement).",
+      "evidence_refs": [
+        "Section 4 Story 4.1 C3: 'Missing integration/functional tests for new API endpoints'",
+        "Section 3: 'Infrastructure.IntegrationTests: Cannot execute (requires Docker/SQL Server)'",
+        "Section 11: 'Functional tests: handler tests' (unit tests only, no DB integration)"
+      ],
+      "acceptance_criteria": [
+        "Testcontainers-based integration tests for GET /api/candidates with search/filter/pagination",
+        "Testcontainers-based integration tests for GET /api/candidates/{id}",
+        "Tests verify EF Core query translation, tenant isolation, SAS URL generation",
+        "Tests run in CI with Docker available"
+      ],
+      "automation_hints": [
+        "Use Testcontainers.MsSql package to spin up SQL Server container",
+        "Extend api/tests/Infrastructure.IntegrationTests/CandidateEndpointsTests.cs",
+        "Seed test data via EF Core migrations + fixtures",
+        "Assert response DTOs match expected shape + SAS URL format"
+      ],
+      "files_to_touch": [
+        "api/tests/Infrastructure.IntegrationTests/Endpoints/CandidateEndpointsTests.cs (new file)",
+        "api/tests/Infrastructure.IntegrationTests/Fixtures/DatabaseFixture.cs (shared fixture)",
+        "api/tests/Infrastructure.IntegrationTests/Infrastructure.IntegrationTests.csproj (Testcontainers.MsSql package)"
+      ],
+      "risk_if_ignored": "Query translation bugs, tenant isolation failures, and SAS URL generation defects will escape to production. No verification that EF Core LINQ translates correctly to SQL."
+    },
+    {
+      "id": "QA-007",
+      "title": "Create technical debt prioritization framework for deferred anti-patterns",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Section 5 lists 11 deferred anti-patterns with no explicit risk acceptance or prioritization. No mechanism to prevent unbounded technical debt accumulation.",
+      "evidence_refs": [
+        "Section 5: 11 anti-patterns pending (M1-M4 from stories 4.1, 4.3, 4.4, 4.5 + I1 from 4.5)",
+        "Section 4 Totals: '18 Minor findings (3.6 average per story)' — many deferred",
+        "Section 6 A-003, A-006, A-009: 3 P1/P2 action items carried forward without resolution"
+      ],
+      "acceptance_criteria": [
+        "Framework defines P0/P1/P2 criteria for technical debt (e.g., P0 = security, P1 = user-facing defect risk, P2 = maintainability)",
+        "Each deferred finding requires explicit risk acceptance with timeframe (next sprint, next epic, backlog)",
+        "Retro lens tracks deferred item age and escalates if > 2 epics old",
+        "Technical debt backlog visible in sprint planning"
+      ],
+      "automation_hints": [
+        "Create .claude/process/technical-debt-framework.md",
+        "Add technical debt section to sprint-status.md with aging tracker",
+        "Extend retro lens to flag items deferred > 2 epics",
+        "Add technical debt review to epic planning checklist"
+      ],
+      "files_to_touch": [
+        ".claude/process/technical-debt-framework.md (new file)",
+        "docs/plans/sprint-status.md (technical debt section)",
+        ".claude/retro/prompts/process-lens.md (aging detection logic)"
+      ],
+      "risk_if_ignored": "Technical debt accumulates unbounded. No forcing function to address deferred items. Codebase maintainability degrades over time without visibility or prioritization."
+    }
+  ]
+}

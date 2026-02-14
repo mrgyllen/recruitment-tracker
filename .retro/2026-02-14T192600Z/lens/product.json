@@ -1,0 +1,230 @@
+{
+  "persona": "Product Lens",
+  "wins": [
+    "All 39 acceptance criteria verified as PASS across 5 stories (Stories 4.1-4.5), plus 10 error paths fully implemented. Complete keyboard-first screening flow operational (Story 4.5), delivering on Journey J2 (batch screening recruiter workflow) with 1/2/3 shortcuts, arrow navigation, focus management, and ARIA live regions. Evidence: demo walkthrough 49/49 PASS.",
+    "Comprehensive state handling implemented: empty states (no candidates, no document), error states (PDF load failure, outcome recording errors), and closed-recruitment guards all present. Guards prevent outcome recording when recruitment is closed (4.3 AC9). Evidence: Section 4 review findings show no missing state handling.",
+    "Workflow enforcement properly implemented in domain model: Candidate.RecordOutcome validates step transitions, pass outcomes advance to next step, fail/hold outcomes keep candidate at current step, InvalidWorkflowTransitionException registered in global exception handler. Evidence: commits 1ad83b2, a21d69b, 6bfb053.",
+    "Accessibility foundation established: ARIA live regions announce outcome recording, focus indicators and tab order implemented, keyboard-only flow fully functional, text input protection prevents shortcuts from triggering during typing. Meets WCAG 2.1 AA for keyboard navigation. Evidence: Story 4.5 commits 41d2301, 3970fd2.",
+    "Authorization architectural test (E-004) validated successfully: zero auth-related Critical/Important findings across all 5 stories. All new handlers (RecordOutcomeCommandHandler, GetCandidateOutcomeHistoryQueryHandler) correctly inject ITenantContext. Architectural test caught violations at compile time via reflection. Evidence: Section 6 E-004 validation, commits 6849760, 6bfb053, 7f2c4e5."
+  ],
+  "problems": [
+    "Two AC deviations without documented tradeoff rationale: (1) Toast auto-dismiss is 5s instead of specified 3s (Story 4.4 AC5), (2) Outcome recording uses immediate persist with optimistic update instead of delayed 3-second persist with undo (Story 4.4 AC5/AC6 simplification). No follow-up story created or decision recorded in architecture docs. Evidence: Section 10 demo walkthrough, Section 5 anti-pattern 4.4 M2.",
+    "User name resolution missing for 'who recorded it' display: OutcomeHistoryEntry has recordedByUserId field but UI shows userId instead of human-readable name (Story 4.1 AC9 partial, Story 4.3 AC8 partial). No follow-up story for user name resolution service. Evidence: Section 4 Story 4.1 M2, Story 4.3 M3, Section 5 anti-patterns 4.1 M2 and 4.3 M3.",
+    "Critical cache invalidation risk: pageSize not included in TanStack Query queryKey for candidate list (Story 4.1 M4). Changing page size may serve stale data from cache. No follow-up issue created despite being flagged in 3 separate mini-retros. Evidence: Section 4 Story 4.1 M4, Section 5 anti-pattern 4.1 M4.",
+    "WCAG 2.1 AA incomplete: Missing role='listbox'/role='option' on candidate list for screen reader semantic navigation (Story 4.5 M1). Keyboard navigation works but screen reader users lack list semantics. Marked as deferred accessibility but no follow-up story. Evidence: Section 4 Story 4.5 M1, Section 5 anti-pattern 4.5 M1.",
+    "Process metric failure: Fix cycle rate 100% (5/5 stories had Important/Critical findings) vs E-005 target of <50%. However, nature changed: zero AC incompleteness findings (the problem E-005 targeted); all findings were missing validators, missing tests, or React state bugs. Experiment hypothesis vs metric misalignment. Evidence: Section 6 E-005 validation.",
+    "High-priority action items carried forward without resolution: A-003 (global query filters on Recruitment/ImportSession) and A-006 (validate AssignDocument blob URL belongs to recruitment) both P1 security items from Epic 3 retro, still NOT APPLIED after Epic 4. No blocking mechanism for P1 items. Evidence: Section 6 previous action items A-003 and A-006.",
+    "Code coverage remains unmeasured for 4th consecutive epic: coverlet.collector installed but no coverage reports generated. A-005 (code coverage CI thresholds) marked P1 in Epic 3 retro, still NOT APPLIED. Backend Application.UnitTests cannot execute without .NET 10 runtime, masking potential test failures. Evidence: Section 3 code coverage, Section 6 A-005."
+  ],
+  "missing_evidence": [
+    "No instrumentation for actual user task completion time (keyboard-only screening flow). Cannot verify if 1/2/3 shortcuts + arrow navigation improve screening throughput vs mouse-only flow. Propose: add telemetry for screening session duration and actions-per-candidate.",
+    "No performance metrics for PDF pre-fetch effectiveness (Story 4.2 usePdfPrefetch). Cannot verify if adjacent candidate SAS URL pre-fetching reduces wait time during candidate switching. Propose: add timing metrics to PdfViewer load events.",
+    "No validation that toStatusVariant extraction (Story 4.3 refactor from 4.1 M1 duplication) is being consistently used. Grep shows extraction but not usage audit. Propose: ESLint rule to prevent inline status variant logic."
+  ],
+  "candidate_actions": [
+    {
+      "id": "PROD-001",
+      "title": "Document AC deviation rationale for Story 4.4 outcome persistence and toast timing",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Two AC deviations (toast 5s vs 3s, immediate persist vs delayed with undo) lack documented tradeoff justification. Future maintainers may 'fix' behavior to match original AC spec without understanding product decision.",
+      "evidence_refs": [
+        "Section 10: Story 4.4 AC5 specifies 3-second toast auto-dismiss; implementation uses 5000ms",
+        "Section 5: 4.4 M2 — immediate persist instead of delayed 3-second persist with undo (AC5/AC6 simplification)",
+        "Section 4: Story 4.4 M2 flagged as AC5/AC6 simplification"
+      ],
+      "acceptance_criteria": [
+        "Decision record exists in _bmad-output/planning-artifacts/decisions/ explaining toast timing and persistence model tradeoffs",
+        "Story 4.4 dev-agent-record updated with 'AC Deviations' section referencing decision record",
+        "Inline code comments in OutcomeForm.tsx and useScreeningSession.ts link to decision record"
+      ],
+      "automation_hints": [
+        "Grep for 5000ms toast duration and link to decision",
+        "Add pre-review checklist item: 'If AC was simplified/deviated, document rationale in decision record'"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/decisions/DECISION-007-screening-outcome-persistence.md",
+        "docs/plans/epic-4/stories/4-4-split-panel-screening-layout.md",
+        "web/src/features/screening/components/OutcomeForm.tsx",
+        "web/src/features/screening/hooks/useScreeningSession.ts"
+      ],
+      "risk_if_ignored": "Developers may 'fix' toast timing or add undo logic thinking implementation was incomplete, introducing rework and potential UX regression."
+    },
+    {
+      "id": "PROD-002",
+      "title": "Create follow-up story for user name resolution service in outcome history",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "Story 4.1 AC9 and 4.3 AC8 specify 'who recorded it' display but UI shows userId instead of name. Product incompleteness: recruiters cannot identify who made screening decisions without manual lookup.",
+      "evidence_refs": [
+        "Section 4: Story 4.1 M2 — recordedByUserId displayed but no user name resolution",
+        "Section 4: Story 4.3 M3 — 'who recorded it' not displayed in outcome history (needs user name resolution)",
+        "Section 5: 4.1 M2, 4.3 M3 anti-patterns"
+      ],
+      "acceptance_criteria": [
+        "New story created in docs/plans/epic-5/ (or backlog/) for user name resolution service",
+        "Story includes: backend user service endpoint, frontend hook, OutcomeHistory component integration",
+        "Story cross-references 4.1 M2 and 4.3 M3 as technical debt drivers",
+        "Sprint status updated with new story ID"
+      ],
+      "automation_hints": [
+        "Template: 'As a recruiter, I want to see who recorded each screening outcome (by name, not ID) so I can follow up on decisions.'",
+        "AC: GET /api/users/{id} endpoint, useFetchUserName hook, OutcomeHistory shows 'Recorded by: {Name}' instead of userId"
+      ],
+      "files_to_touch": [
+        "docs/plans/backlog/user-name-resolution-service.md",
+        ".claude/process/sprint-status.yaml",
+        "web/src/features/screening/components/OutcomeHistory.tsx"
+      ],
+      "risk_if_ignored": "Recruiters cannot audit screening decisions or identify who to contact for questions about outcome rationale. Compliance risk if audit trail requires human-readable names."
+    },
+    {
+      "id": "PROD-003",
+      "title": "Fix TanStack Query cache invalidation risk by adding pageSize to queryKey",
+      "type": "guideline_gap",
+      "priority": "P0",
+      "rationale": "pageSize not in queryKey means changing page size serves stale cached data. Flagged in Story 4.1 M4, confirmed in 3 mini-retros, but never fixed. Cache correctness bug in production.",
+      "evidence_refs": [
+        "Section 4: Story 4.1 M4 — pageSize not in TanStack Query queryKey",
+        "Section 5: 4.1 M4 anti-pattern",
+        "Key data point: pageSize not in TanStack Query key (cache risk — 4.1 M4)"
+      ],
+      "acceptance_criteria": [
+        "useCandidates hook queryKey includes pageSize parameter",
+        "Test added verifying cache miss when pageSize changes",
+        "Guideline added to patterns-frontend.md: 'All pagination params (page, pageSize, sort) must be in queryKey'",
+        "Pre-review checklist includes: 'Pagination queryKeys include all params'"
+      ],
+      "automation_hints": [
+        "ESLint rule to detect useQuery with pagination params missing from queryKey",
+        "Example: useCandidates({ page, pageSize, search }) → queryKey: ['candidates', { page, pageSize, search }]"
+      ],
+      "files_to_touch": [
+        "web/src/features/candidates/hooks/useCandidates.ts",
+        "web/src/features/candidates/hooks/useCandidates.test.ts",
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Users change page size from 20 to 50, see cached 20-item page instead of 50-item page. Data staleness breaks pagination UX."
+    },
+    {
+      "id": "PROD-004",
+      "title": "Create accessibility follow-up story for ARIA listbox semantics on candidate list",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "WCAG 2.1 AA incomplete: candidate list supports keyboard navigation but lacks role='listbox'/role='option' for screen reader semantic navigation. Deferred in Story 4.5 M1 without follow-up story.",
+      "evidence_refs": [
+        "Section 4: Story 4.5 M1 — missing role='listbox'/role='option' on candidate list",
+        "Section 5: 4.5 M1 anti-pattern (deferred accessibility)",
+        "Key data point: WCAG 2.1 AA: ARIA live regions, focus indicators, keyboard navigation — but missing role='listbox'"
+      ],
+      "acceptance_criteria": [
+        "New story created for ARIA listbox pattern on CandidateList",
+        "Story includes: role='listbox' on list container, role='option' on CandidateRow, aria-selected, aria-activedescendant",
+        "Story cross-references WCAG 2.1 AA requirement and Story 4.5 M1",
+        "Screen reader test script added (NVDA/JAWS verification)"
+      ],
+      "automation_hints": [
+        "Reference: https://www.w3.org/WAI/ARIA/apg/patterns/listbox/",
+        "Test with axe-core automated checks + manual NVDA verification"
+      ],
+      "files_to_touch": [
+        "docs/plans/backlog/aria-listbox-candidate-list.md",
+        "web/src/features/candidates/components/CandidateList.tsx",
+        "web/src/features/screening/components/CandidatePanel.tsx",
+        "_bmad-output/planning-artifacts/architecture/frontend-architecture.md (accessibility section)"
+      ],
+      "risk_if_ignored": "Screen reader users cannot efficiently navigate candidate list. WCAG 2.1 AA non-compliance may violate accessibility legal requirements (ADA, Section 508)."
+    },
+    {
+      "id": "PROD-005",
+      "title": "Enforce blocking mechanism for P0/P1 action items from retrospectives",
+      "type": "process_change",
+      "priority": "P0",
+      "rationale": "Two P1 security items (A-003 global query filters, A-006 blob URL validation) carried forward from Epic 3 to Epic 4 without resolution. No process enforcement prevents P0/P1 items from being perpetually deferred.",
+      "evidence_refs": [
+        "Section 6: A-003 (global query filters) — P1, NOT APPLIED, deferred from Epic 3",
+        "Section 6: A-006 (validate AssignDocument blob URL) — P1, NOT APPLIED, security risk carried forward",
+        "Section 6: A-005 (code coverage CI) — P1, NOT APPLIED, 4th epic without coverage"
+      ],
+      "acceptance_criteria": [
+        "Team workflow updated: P0 actions MUST be applied before next epic starts; P1 actions MUST be applied within 2 epics",
+        "Retro orchestrator verifies previous P0/P1 action item status before allowing new epic to proceed",
+        "Sprint status includes 'blocked-on-retro-actions' state to track epics waiting for P0/P1 resolution",
+        "Automated check in retro pipeline fails if P0 actions from previous retro are not applied"
+      ],
+      "automation_hints": [
+        "Retro orchestrator reads previous retro's action items, filters P0/P1, checks .git/log or changed files to verify application",
+        "If P0 not applied: block new epic, require explicit 'defer' decision with rationale",
+        "If P1 not applied after 2 epics: auto-escalate to P0"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md (add P0/P1 blocking rules)",
+        ".claude/retro/orchestrator.md (add pre-epic validation step)",
+        ".claude/retro/prompts/synthesis.md (output P0/P1 status in report)"
+      ],
+      "risk_if_ignored": "Security and quality action items perpetually deferred. A-006 (blob URL validation) is unmitigated tenant data leakage risk. A-005 (code coverage) allows regression without detection."
+    },
+    {
+      "id": "PROD-006",
+      "title": "Realign E-005 success metric to match hypothesis (AC completeness, not fix cycle rate)",
+      "type": "process_change",
+      "priority": "P2",
+      "rationale": "E-005 hypothesis targets 'AC completeness walkthrough reduces fix cycle rate' but actual finding: zero AC incompleteness issues, but 100% fix cycle rate from other causes (missing validators, tests, React bugs). Metric doesn't measure what hypothesis predicts.",
+      "evidence_refs": [
+        "Section 6 E-005: Fix cycle rate 100% vs target <50%, but NONE were 'AC not functionally complete'",
+        "Section 6 E-005: Findings were missing validators, missing tests, React state bugs — not AC incompleteness",
+        "Context note: E-005 applied AC completeness walkthrough process in team-workflow.md"
+      ],
+      "acceptance_criteria": [
+        "E-005 metric changed from 'fix cycle rate <50%' to 'AC incompleteness findings = 0'",
+        "New experiment E-007 created for reducing overall fix cycle rate (targets validators, tests, state bugs)",
+        "Retro report template updated to track AC incompleteness findings separately from other Important/Critical findings",
+        "Success criteria: Zero Critical/Important findings with root cause 'AC not fully implemented'"
+      ],
+      "automation_hints": [
+        "Parse review findings for keywords: 'partial AC', 'AC incomplete', 'missing functionality'",
+        "Separate metric: AC incompleteness vs other quality issues (tests, validators, bugs)"
+      ],
+      "files_to_touch": [
+        ".claude/retro/experiments/E-005-ac-completeness-walkthrough.md (update success metric)",
+        ".claude/retro/experiments/E-007-reduce-fix-cycle-rate.md (new experiment)",
+        ".claude/retro/prompts/synthesis.md (separate AC incompleteness tracking)"
+      ],
+      "risk_if_ignored": "Experiment validation continues to show 'failure' despite hypothesis being validated (AC incompleteness eliminated). Misleading data may cause abandoning effective process."
+    },
+    {
+      "id": "PROD-007",
+      "title": "Establish code coverage CI pipeline with 80% threshold enforcement",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "4th consecutive epic without code coverage metrics. A-005 marked P1 in Epic 3 retro, still not applied. Backend Application.UnitTests cannot execute on Linux (missing .NET 10 runtime), masking test failures. Regression risk unmitigated.",
+      "evidence_refs": [
+        "Section 3: Code coverage not measured, 4th consecutive epic without coverage metrics",
+        "Section 3: Application.UnitTests cannot execute (requires .NET 10 runtime)",
+        "Section 6: A-005 (code coverage CI thresholds) — P1, NOT APPLIED"
+      ],
+      "acceptance_criteria": [
+        "GitHub Actions workflow runs coverlet on all test projects, generates coverage report",
+        "Workflow fails if coverage below 80% (line coverage) for Domain and Application projects",
+        "Coverage badge added to README.md showing current coverage percentage",
+        "Local developer script (scripts/coverage.sh) runs coverage locally with HTML report",
+        ".NET 10 runtime installed on CI runner or test execution containerized"
+      ],
+      "automation_hints": [
+        "Use coverlet.msbuild or coverlet.collector with reportgenerator for HTML output",
+        "GitHub Actions: dotnet test --collect:'XPlat Code Coverage' --results-directory ./coverage",
+        "reportgenerator -reports:**/coverage.cobertura.xml -targetdir:./coverage-report -reporttypes:Html;Badges",
+        "Add coverage threshold check: reportgenerator threshold validation"
+      ],
+      "files_to_touch": [
+        ".github/workflows/dotnet-tests.yml (add coverage step)",
+        "api/tests/Domain.UnitTests/Domain.UnitTests.csproj (ensure coverlet.collector)",
+        "api/tests/Application.UnitTests/Application.UnitTests.csproj",
+        "scripts/coverage.sh (new local script)",
+        "README.md (add coverage badge)"
+      ],
+      "risk_if_ignored": "Regression in domain logic or application handlers goes undetected. Application.UnitTests may have failing tests masked by execution failure. No visibility into test health."
+    }
+  ]
+}

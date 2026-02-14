@@ -1,0 +1,225 @@
+{
+  "persona": "Docs/Enablement Lens",
+  "wins": [
+    "E-004 architectural test is a docs-as-code success story — AuthorizationArchitectureTests.cs (commit 6849760) eliminated the authorization gap defect class entirely with zero Epic 4 Critical/Important auth findings, replacing process documentation with structural enforcement",
+    "BackgroundService authorization pattern documented in dev-auth-patterns.md (created during Epic 3 deferred item resolution, commit 82a6f15) — provides canonical example with scope management, tenant context setup, and cross-recruitment access rules",
+    "A-008 state-change endpoint convention successfully applied to api-patterns.md line 81 — previous retro's P2 docs action fully resolved, guideline now explicitly documents 204 No Content pattern",
+    "Mini-retro process working consistently — all 5 Epic 4 stories have retro commits (context.md Section 9), demonstrating the per-story anti-pattern capture workflow is established",
+    "Architecture routing table accuracy confirmed — dev-auth-patterns.md referenced correctly in index.md line 14 and architecture.md line 34, no broken cross-references found in evidence"
+  ],
+  "problems": [
+    "Authorization section missing from all 4 Epic 4 implementation plans despite E-001 mandate — pdf-viewing-download.md, outcome-recording-workflow-enforcement.md, split-panel-screening-layout.md, keyboard-navigation-screening-flow.md have zero Authorization sections, violating team-workflow.md line 50 requirement for handler enumeration tables",
+    "Anti-patterns-pending.txt file doesn't exist yet despite evidence bundle Section 5 referencing 11 entries from all 5 stories — mini-retros captured findings but pending file was never created, breaking the workflow continuity from story completion to epic retro",
+    "Implementation plans are 700-1700 lines each (context.md line 94: plans range from 761 to 2335 lines) with no quality/length guidelines — plans have become spec documents instead of executable guides, potentially slowing story startup and reducing plan adherence",
+    "Code coverage instrumentation gap persists for 4th consecutive epic (context.md Section 3 line 113) — documentation in testing-standards.md exists but no enforcement mechanism or CI integration documented, causing recurring 'missing evidence' finding",
+    "Routing table has no entry for screening-specific frontend work — Epic 4 introduced features/screening/ directory (context.md Section 11) but architecture/index.md lacks guidance on when to load screening-specific patterns or state management docs",
+    "RecordOutcome outcome history displays step ID instead of step name (context.md Section 4 Story 4.3 M1) — no guideline in patterns-frontend.md or api-patterns.md on when DTOs should include computed/joined display values vs IDs only",
+    "Stale closure from missing useCallback dependency recurred in Story 4.5 I1 (context.md Section 4) — patterns-frontend.md has no documented rule for ref vs direct value in dependency arrays, allowing this React anti-pattern to recur"
+  ],
+  "missing_evidence": [
+    "Implementation plan Authorization section compliance logs — no way to verify whether dev agents read E-001 requirement in team-workflow.md or whether plans were generated before/after the requirement was documented",
+    "Architecture shard read logs for Epic 4 stories — cannot confirm which shards were actually loaded during implementation (gate-shard-reads enforces reads but doesn't log which shards)",
+    "Anti-patterns-pending.txt file creation date — evidence bundle references it but file doesn't exist, unclear whether mini-retros created entries or only documented intent",
+    "E-005 AC Coverage Map evidence — team-workflow.md line 67 requires Dev Agent Record to include AC Coverage Map with pass/fail status, but no evidence bundle confirms this was created or checked by review agent"
+  ],
+  "candidate_actions": [
+    {
+      "id": "DOCS-001",
+      "title": "Add Authorization section template to implementation plan requirements in writing-plans skill",
+      "type": "process_change",
+      "priority": "P0",
+      "rationale": "All 4 Epic 4 implementation plans missing Authorization sections despite E-001 mandate in team-workflow.md line 50. Process control failed because the writing-plans skill doesn't enforce the requirement — dev agents don't self-check compliance. Adding the section as a mandatory template element in the skill prompt ensures every plan includes the handler enumeration table.",
+      "evidence_refs": [
+        "docs/plans/2026-02-14-pdf-viewing-download.md (no Authorization section)",
+        "docs/plans/2026-02-14-outcome-recording-workflow-enforcement.md (no Authorization section)",
+        "docs/plans/2026-02-14-split-panel-screening-layout.md (no Authorization section)",
+        "docs/plans/2026-02-14-keyboard-navigation-screening-flow.md (no Authorization section)",
+        ".claude/process/team-workflow.md line 50 (E-001 requirement)",
+        "context.md Section 6 E-005 validation: fix cycle 100% but zero AC incompleteness — suggests process controls need skill-level enforcement"
+      ],
+      "acceptance_criteria": [
+        "writing-plans skill prompt includes mandatory Authorization section with handler enumeration table format",
+        "Skill prompts dev agent to list ALL command AND query handlers with columns: Handler, Type, Recruitment-Scoped?, Auth Pattern",
+        "Skill instructs: if story has zero handlers (frontend-only), section reads '## Authorization: No backend handlers in this story'",
+        "Next implementation plan created with writing-plans skill contains properly formatted Authorization section"
+      ],
+      "automation_hints": [
+        "Update .claude/skills/writing-plans/prompt.md or equivalent skill definition file",
+        "Add Authorization section template after Architecture/Tech Stack and before Task breakdown",
+        "Include example handler table from team-workflow.md line 51-55"
+      ],
+      "files_to_touch": [
+        ".claude/skills/writing-plans/prompt.md",
+        ".claude/superpowers/writing-plans.md"
+      ],
+      "risk_if_ignored": "Authorization gaps will recur in Epic 5 despite E-004 architectural test — test catches missing ITenantContext at CI time, but implementation plans without Authorization sections mean dev agents plan work without considering auth requirements upfront"
+    },
+    {
+      "id": "DOCS-002",
+      "title": "Create anti-patterns-pending.txt with header and Epic 4 entries from evidence bundle",
+      "type": "docs_update",
+      "priority": "P0",
+      "rationale": "Evidence bundle Section 5 references anti-patterns-pending.txt with 11 entries from all 5 stories, but the file doesn't exist. This breaks the documented workflow where mini-retros populate pending.txt and epic retros process it (team-workflow.md line 121-126, line 318-322). File must be created now with the entries documented in the evidence bundle.",
+      "evidence_refs": [
+        "context.md Section 5: lists 11 anti-pattern entries with story/finding IDs",
+        ".retro/2026-02-14T192600Z/anti-patterns-pending.txt (file not found)",
+        ".claude/process/team-workflow.md line 121-126 (mini-retro MUST modify pending file)",
+        ".claude/process/team-workflow.md line 318-322 (retro phase 4 processes pending file)"
+      ],
+      "acceptance_criteria": [
+        ".claude/hooks/anti-patterns-pending.txt exists",
+        "File contains header explaining purpose (pending anti-patterns from mini-retros, to be promoted or removed by epic retro)",
+        "File contains all 11 entries from context.md Section 5 with format: descriptive comment line starting with # including Story ID and finding ID",
+        "Entries are human-readable comments only (not REGEX|GLOB|MESSAGE format) — they document findings for retro processing, not active hooks"
+      ],
+      "automation_hints": [
+        "Copy entries verbatim from context.md Section 5 lines 175-186",
+        "Add header: # Anti-Patterns Pending (populated by mini-retros, processed by epic retro)",
+        "Keep trailing # Story X.Y finding ID comments for traceability"
+      ],
+      "files_to_touch": [
+        ".claude/hooks/anti-patterns-pending.txt"
+      ],
+      "risk_if_ignored": "Epic retro Phase 4 cannot process pending anti-patterns (required step per team-workflow.md line 318) — breaks self-healing workflow and loses 11 findings from Epic 4"
+    },
+    {
+      "id": "DOCS-003",
+      "title": "Add implementation plan length guideline to team-workflow.md and writing-plans skill",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "Epic 4 implementation plans range from 761 to 2335 lines (24,664 total across 17 plans per context.md). Plans over 1000 lines become spec documents instead of executable guides — dev agents may skip reading full plans or lose focus on critical sections. Guideline should target 300-600 line plans with links to architecture docs instead of inlining full patterns.",
+      "evidence_refs": [
+        "context.md line 94: docs/plans/*.md totals 24,664 lines",
+        "docs/plans/2026-02-14-outcome-recording-workflow-enforcement.md: 1715 lines",
+        "docs/plans/2026-02-14-split-panel-screening-layout.md: 1550 lines",
+        "docs/plans/2026-02-13-core-data-model-tenant-isolation.md: 2411 lines"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Step 2 (writing-plans skill) includes guideline: 'Keep plans focused and executable — target 300-600 lines. Link to architecture shards instead of inlining full patterns.'",
+        "writing-plans skill prompt includes: 'Avoid spec-level detail. Reference architecture docs for patterns. Focus on story-specific decisions and task sequence.'",
+        "Guideline clarifies what TO include (task sequence, story-specific decisions, test scenarios) and what NOT to include (copied architecture patterns, full code listings beyond 10-line examples)"
+      ],
+      "automation_hints": [
+        "Add guideline after team-workflow.md line 48 (writing-plans skill when section)",
+        "Update writing-plans skill prompt to emphasize brevity and cross-references"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md",
+        ".claude/skills/writing-plans/prompt.md"
+      ],
+      "risk_if_ignored": "Plans continue growing to 2000+ lines, reducing dev agent plan adherence and increasing story startup time (plans become documentation artifacts instead of executable guides)"
+    },
+    {
+      "id": "DOCS-004",
+      "title": "Document DTO design guideline for computed/display values vs ID-only references",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "Story 4.3 M1 identified outcome history displaying step ID instead of step name — no guideline in api-patterns.md or patterns-backend.md on when DTOs should include computed display values. This causes UX degradation (frontend must make additional lookups) and inconsistent DTO design across features.",
+      "evidence_refs": [
+        "context.md Section 4 Story 4.3 M1: 'Outcome history doesn't show step name (only ID)'",
+        "context.md Section 5 anti-patterns line 177: '# Story 4.3: M3 — who recorded it not displayed (needs user name resolution)'",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md DTO Mapping section (no display value guideline)",
+        "_bmad-output/planning-artifacts/architecture/api-patterns.md (no display value guideline)"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md DTO Mapping section includes subsection: 'Display Values in DTOs'",
+        "Guideline states: 'For list/history views, include computed display values (names, titles) alongside IDs to avoid N+1 frontend lookups. For create/update commands, accept IDs only.'",
+        "Example showing OutcomeHistoryDto with both WorkflowStepId and WorkflowStepName properties",
+        "Guideline clarifies when to use .Include() + .Select() projection vs separate queries for display data"
+      ],
+      "automation_hints": [
+        "Add new subsection after patterns-backend.md DTO Mapping section",
+        "Reference context.md Section 4 Story 4.3 M1 as evidence of the pattern gap",
+        "Include code example from GetCandidateOutcomeHistoryQuery showing proper projection"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "DTOs inconsistently include display values — some views require frontend to resolve names from IDs (poor UX, N+1 queries), others pre-compute (good UX) with no documented rationale"
+    },
+    {
+      "id": "DOCS-005",
+      "title": "Add routing table entry for screening/batch-processing frontend features",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Epic 4 introduced features/screening/ directory (context.md Section 11) with specialized state management (useScreeningSession, useResizablePanel), keyboard navigation, and optimistic updates. Architecture routing table (architecture/index.md) has no guidance on when to load screening-specific docs, forcing dev agents to discover patterns ad-hoc.",
+      "evidence_refs": [
+        "context.md Section 11: features/screening/ components (ScreeningLayout, CandidatePanel, OutcomeForm, useScreeningSession, useKeyboardNavigation)",
+        "_bmad-output/planning-artifacts/architecture/index.md line 6-16 (routing table with no screening entry)",
+        "_bmad-output/planning-artifacts/architecture/frontend-architecture.md has Batch Screening Architecture section"
+      ],
+      "acceptance_criteria": [
+        "architecture/index.md routing table includes row: 'Screening/batch processing UI | Add frontend-architecture.md (Batch Screening Architecture section)'",
+        "architecture.md routing table (line 24-36) includes same entry",
+        "Entry clarifies this is for split-panel layouts, keyboard-first UX, and optimistic state management patterns"
+      ],
+      "automation_hints": [
+        "Add row to architecture/index.md table after 'Frontend feature with new views' entry",
+        "Add row to architecture.md routing table at line ~34",
+        "Keep description concise (under 10 words)"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/index.md",
+        "_bmad-output/planning-artifacts/architecture.md"
+      ],
+      "risk_if_ignored": "Future screening-related stories (Epic 5+) won't know to load frontend-architecture.md Batch Screening section, causing dev agents to re-discover patterns already documented"
+    },
+    {
+      "id": "DOCS-006",
+      "title": "Document useCallback dependency array guideline with ref pattern for event handlers",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "Story 4.5 I1 was a stale closure from missing onAutoAdvance in useCallback dependency array (context.md Section 4). This is the second occurrence of React stale closures in Epic 4 (Story 4.2 I1 was useSasUrl stale initialUrl). patterns-frontend.md has no guideline on when to use refs vs direct values in dependency arrays for event handler callbacks.",
+      "evidence_refs": [
+        "context.md Section 4 Story 4.5 I1: 'options missing from handleOutcomeRecorded useCallback dependency array (stale closure)'",
+        "context.md Section 5 anti-patterns line 182: '# Story 4.5: I1 — stale closure from missing useCallback dependency (recurring React pattern)'",
+        "context.md Section 4 Story 4.2 I1: 'useSasUrl stale initialUrl (useEffect sync missing)'",
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md (no useCallback/dependency array guideline)"
+      ],
+      "acceptance_criteria": [
+        "patterns-frontend.md includes new section: 'useCallback and Dependency Arrays'",
+        "Guideline states: 'For event handler callbacks passed as props, use refs for frequently-changing values to avoid re-creating callbacks. Include stable values directly in dependency arrays.'",
+        "Example shows canonical pattern: const handlerRef = useRef(handler); useEffect(() => { handlerRef.current = handler; }, [handler]); const memoized = useCallback(() => handlerRef.current(), [])",
+        "Guideline clarifies when refs are needed (event handlers in loops, nested callbacks) vs when direct dependencies are fine (top-level handlers)"
+      ],
+      "automation_hints": [
+        "Add section after patterns-frontend.md Component Structure section",
+        "Reference commit afcca2f (Story 4.5 fix) as canonical example",
+        "Include anti-pattern example showing stale closure bug"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md"
+      ],
+      "risk_if_ignored": "Stale closure bugs recur in future React stories — subtle runtime bugs that pass tests but fail in user interaction, caught only in review or production"
+    },
+    {
+      "id": "DOCS-007",
+      "title": "Add code coverage CI enforcement to testing-standards.md with actionable setup steps",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Code coverage gap flagged in 4 consecutive epics (context.md Section 3 line 113, previous retro A-005). testing-standards.md documents frameworks but not enforcement. Adding concrete CI integration steps and threshold configuration examples would enable dev agents to apply this as a self-healing action.",
+      "evidence_refs": [
+        "context.md Section 3 line 113: '4th consecutive epic without coverage metrics'",
+        "context.md Section 6 previous retro A-005: 'Enable code coverage collection with enforced CI thresholds'",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md (no CI coverage enforcement section)",
+        ".github/workflows/ci.yml (has --collect flag but no threshold enforcement)"
+      ],
+      "acceptance_criteria": [
+        "testing-standards.md includes new section: 'Code Coverage Enforcement'",
+        "Section documents minimum thresholds: 70% Domain.UnitTests, 60% Application.UnitTests",
+        "Section includes concrete example of .github/workflows/ci.yml configuration with coverlet threshold flags",
+        "Section includes reportgenerator setup for publishing HTML coverage reports as GitHub Actions artifacts",
+        "Section clarifies baseline coverage and when to increase thresholds"
+      ],
+      "automation_hints": [
+        "Add section after testing-standards.md Test Frameworks section",
+        "Include code block with dotnet test --collect:'XPlat Code Coverage' /p:Threshold=70 example",
+        "Reference previous retro A-005 for threshold rationale"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "Coverage gap persists into Epic 5+ because no documentation exists for how to implement the fix — A-005 becomes perpetual deferred item"
+    }
+  ]
+}

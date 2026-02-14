@@ -108,6 +108,63 @@ These 8 scenarios MUST exist as integration tests before any feature tests. They
 7. **Misconfigured context:** No user ID, no service flag returns zero results (not an error)
 8. **Filter applies to all queries:** Global query filter works on direct queries, includes, and projections
 
+## Code Coverage Enforcement
+
+**Status:** Coverage tooling installed (coverlet.collector in all test .csproj files) but not yet generating reports. This section documents the target configuration.
+
+### Minimum Thresholds
+
+| Project | Line Coverage | Enforcement |
+|---------|-------------|-------------|
+| Domain.UnitTests | 70% | Fail CI if below threshold |
+| Application.UnitTests | 60% | Fail CI if below threshold |
+| Infrastructure/Web | No threshold | Integration tests suffice |
+| Frontend (Vitest) | 60% | Warn only (monitor for 1 epic before enforcing) |
+
+### Backend Coverage
+
+```bash
+# Generate coverage reports
+dotnet test --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+# Generate HTML report
+dotnet tool install -g dotnet-reportgenerator-globaltool
+reportgenerator -reports:./coverage/**/coverage.cobertura.xml -targetdir:./coverage/report -reporttypes:Html
+```
+
+coverlet.collector is already in test .csproj files. Add `--collect:"XPlat Code Coverage"` to the test command in CI.
+
+### Frontend Coverage
+
+```bash
+# Add coverage reporter (if not installed)
+npm install -D @vitest/coverage-v8
+
+# Run with coverage
+npx vitest run --coverage
+```
+
+Configure in `vitest.config.ts`:
+```typescript
+export default defineConfig({
+  test: {
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'cobertura'],
+      thresholds: { lines: 60 },
+    },
+  },
+});
+```
+
+### CI Integration
+
+CI workflow should:
+1. Run tests with coverage collection
+2. Generate coverage report (HTML + Cobertura)
+3. Publish report as CI artifact
+4. Fail if thresholds not met (after 1 epic of monitoring-only)
+
 ## Pragmatic TDD Modes
 
 Before coding any task, declare which mode applies:

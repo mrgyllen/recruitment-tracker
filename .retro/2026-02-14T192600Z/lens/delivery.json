@@ -1,0 +1,256 @@
+{
+  "persona": "Delivery Engineer Lens",
+  "wins": [
+    "Architectural test (E-004) achieved zero authorization findings across all 5 stories — compile-time reflection enforcement prevented runtime auth bugs (commit 6849760, Section 6 E-004 Validation)",
+    "Single-round fix cycles on all 5 stories — no multi-round rework despite 100% fix rate, indicating focused implementation quality (Section 4 Totals, Section 9 Per-Story Breakdown)",
+    "Comprehensive test coverage on new features — 285 frontend tests, 114 domain tests, all passing with zero TypeScript errors and clean production build (Section 3 Frontend/Backend Tests)",
+    "React hook quality improved — useSasUrl, usePdfPrefetch, useScreeningSession, useKeyboardNavigation all test-covered with domain separation (Section 11 Frontend files, Section 4 findings show React state bugs fixed in single round)",
+    "Consistent domain modeling — RecordOutcome enhancement in Candidate aggregate follows DDD boundary rules, no cross-aggregate transaction violations (Section 11 Backend Domain files, CLAUDE.md DDD rules applied)"
+  ],
+  "problems": [
+    "100% fix cycle rate (5/5 stories) despite process improvements — E-005 AC completeness walkthrough failed metric (target <50%) though nature of findings shifted from incomplete ACs to missing validators and tests (Section 4 Totals, Section 6 E-005 Validation)",
+    "Missing validators caught in review not dev — 4.1 C1 (GetCandidatesQuery, GetCandidateByIdQuery) and 4.3 I1 (GetCandidateOutcomeHistoryQuery) all caught in review rather than pre-review checklist (Section 4 Story 4.1, 4.3)",
+    "Dead code carried across stories — queryClient in useScreeningSession flagged as 4.4 M1, still present in 4.5 M3, indicating incomplete cleanup during fix cycles (Section 4 Story 4.4, 4.5, Section 5 Anti-Patterns M3)",
+    "Code coverage blind spot now 4 epics deep — coverlet.collector installed but never executed, no coverage metrics for 4th consecutive epic, quality gate missing (Section 3 Code Coverage)",
+    "Stale closure pattern recurring — 4.2 I1 (useSasUrl useEffect), 4.5 I1 (handleOutcomeRecorded useCallback), suggests React dependency tracking not part of pre-review mental model (Section 4 Story 4.2, 4.5, Section 5 Anti-Patterns I1)",
+    "Test gap in initial implementation — 4.1 C2 (zero frontend tests initially) and 4.1 C3 (missing functional tests) caught in review, indicating TDD discipline breakdown for story kickoff (Section 4 Story 4.1)",
+    "Duplicated utility function carried 2 stories — toStatusVariant() duplicated in 4.1 (M1), fixed in 4.3 after being flagged, 2-story latency on 1-line refactor (Section 4 Story 4.1 M1, Story 4.3 fix in commit a94ae27)"
+  ],
+  "missing_evidence": [
+    "Cyclomatic complexity metrics — no automated complexity analysis in git evidence, cannot identify god methods/classes without manual code inspection or SonarQube/CodeScene integration",
+    "Build time tracking — Section 9 shows 2.07 hours elapsed, 57 commits, but no per-story build time or test execution time, cannot identify slow inner loop friction points",
+    "Test execution duration — 285 frontend tests, 114 domain tests reported as passing but no timing data, cannot identify slow test suites or flaky tests",
+    "Code coverage deltas — Section 3 notes 4th epic without coverage, but no historical baseline or target thresholds defined, cannot measure coverage trend",
+    "PR review cycle time — fix commits identified in Section 9 but no timestamp data per commit, cannot calculate time-to-fix or identify bottleneck stories"
+  ],
+  "candidate_actions": [
+    {
+      "id": "DEL-001",
+      "title": "Add FluentValidation architectural test to prevent missing validators",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "Missing validators found in review twice (4.1 C1, 4.3 I1) despite E-004 architectural test success. Pattern is: new Query/Command classes added without corresponding validator registration. Need compile-time enforcement like auth test.",
+      "evidence_refs": [
+        "Section 4: Story 4.1 C1 — GetCandidatesQuery and GetCandidateByIdQuery missing validators",
+        "Section 4: Story 4.3 I1 — GetCandidateOutcomeHistoryQuery missing validator",
+        "Section 6: E-004 architectural test caught all ITenantContext violations at compile time",
+        "Commit 6849760: AuthorizationArchitectureTests.cs pattern to replicate"
+      ],
+      "acceptance_criteria": [
+        "Architectural test fails compilation if any IRequest<T> class in Application layer lacks corresponding FluentValidation.AbstractValidator<T> registration",
+        "Test uses reflection to find all MediatR request types",
+        "Test verifies each request has exactly one validator registered in DI container",
+        "Test runs as part of Application.UnitTests suite",
+        "Zero validator-related Critical or Important findings in next epic"
+      ],
+      "automation_hints": [
+        "Mirror AuthorizationArchitectureTests.cs structure",
+        "Use Assembly.GetTypes() to find all types implementing IRequest<T>",
+        "Query IServiceCollection for IValidator<TRequest> registrations",
+        "Whitelist exceptions for requests explicitly exempt from validation (e.g., notification handlers)"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Application.UnitTests/ArchitecturalTests/ValidationArchitectureTests.cs (new)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/team-workflow.md (document new test as pre-story requirement)"
+      ],
+      "risk_if_ignored": "Continued validator omissions in review cycles, potential runtime validation bypass vulnerabilities, 100% fix cycle rate persists"
+    },
+    {
+      "id": "DEL-002",
+      "title": "Enable code coverage CI with 80% minimum threshold",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "4th consecutive epic without coverage metrics despite coverlet.collector installed. A-005 from previous retro not applied. Test gap in 4.1 C2 (zero frontend tests initially) would have been caught by coverage delta check. Quality blind spot growing.",
+      "evidence_refs": [
+        "Section 3: Code Coverage — Not measured, 4th consecutive epic",
+        "Section 6: A-005 Code coverage CI thresholds — NOT APPLIED",
+        "Section 4: Story 4.1 C2 — Missing frontend tests for all new functionality (0 tests)",
+        "Section 3: coverlet.collector is installed but no coverage reports generated"
+      ],
+      "acceptance_criteria": [
+        "Backend: dotnet test runs with /p:CollectCoverage=true and generates coverage.json",
+        "Frontend: vitest --coverage generates coverage/coverage-final.json",
+        "CI pipeline fails if total coverage drops below 80%",
+        "CI pipeline fails if any new file has <70% line coverage",
+        "Coverage report published to PR comments",
+        "Coverage trend tracked in .retro/ artifacts for each epic"
+      ],
+      "automation_hints": [
+        "Backend: Add <CollectCoverage>true</CollectCoverage> to test .csproj files",
+        "Frontend: Add coverage config to vitest.config.ts with istanbul reporter",
+        "CI: Use coverlet.console or dotnet-coverage tools",
+        "Frontend: Use @vitest/coverage-v8 or @vitest/coverage-istanbul",
+        "Baseline current coverage before enforcement to avoid false negatives"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Application.UnitTests/Application.UnitTests.csproj",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/tests/Domain.UnitTests/Domain.UnitTests.csproj",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/vitest.config.ts",
+        ".github/workflows/ci.yml (if exists, otherwise document in team-workflow.md)"
+      ],
+      "risk_if_ignored": "Test coverage erosion over time, undetected test gaps like 4.1 C2 recurring, false confidence in 'all tests passing' metric"
+    },
+    {
+      "id": "DEL-003",
+      "title": "Add pre-commit hook to detect dead code (unused imports/variables)",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Dead queryClient carried from 4.4 M1 to 4.5 M3 across 2 stories despite being flagged in review. TypeScript/ESLint can detect unused variables but not enforced pre-commit. Minor finding became anti-pattern debt.",
+      "evidence_refs": [
+        "Section 4: Story 4.4 M1 — Dead queryClient in useScreeningSession",
+        "Section 4: Story 4.5 M3 — Dead queryClient (carried from 4.4 M1)",
+        "Section 5: Anti-Patterns Pending M3 — dead queryClient in useScreeningSession",
+        "Section 3: TypeScript 0 errors but dead code not caught"
+      ],
+      "acceptance_criteria": [
+        "Pre-commit hook runs ESLint with no-unused-vars rule on staged .ts/.tsx files",
+        "Hook fails commit if any unused variables detected (excluding intentional _ prefix)",
+        "Backend: Roslyn analyzer warns on unused using directives (IDE0005) promoted to error",
+        "Hook runs in <5 seconds for typical change set (1-10 files)",
+        "Documentation in .claude/process/team-workflow.md explains bypass procedure for legitimate cases"
+      ],
+      "automation_hints": [
+        "Use husky or lint-staged for pre-commit hook orchestration",
+        "ESLint: enforce @typescript-eslint/no-unused-vars with error severity",
+        "Backend: Add <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild> to Directory.Build.props",
+        "Whitelist test files if needed (e.g., fixture variables used in closures)"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/.husky/pre-commit (new or update)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/.eslintrc.json (update rules)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/api/Directory.Build.props",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Dead code accumulation, cognitive load on reviewers, anti-pattern debt compounds (already 2-story carry forward)"
+    },
+    {
+      "id": "DEL-004",
+      "title": "Extract React hook dependency tracking checklist to pre-review template",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "Stale closure bugs found in 4.2 I1 (useSasUrl useEffect missing sync) and 4.5 I1 (handleOutcomeRecorded useCallback missing dependency). Pattern recurs despite being Important-severity findings. Suggests mental model gap in React hook dependencies.",
+      "evidence_refs": [
+        "Section 4: Story 4.2 I1 — useSasUrl stale initialUrl (useEffect sync missing)",
+        "Section 4: Story 4.5 I1 — options missing from handleOutcomeRecorded useCallback dependency array",
+        "Section 5: Anti-Patterns Pending I1 — stale closure from missing useCallback dependency (recurring React pattern)",
+        "Section 9: Both bugs fixed in single round but pattern repeats across stories"
+      ],
+      "acceptance_criteria": [
+        "Pre-review checklist in team-workflow.md includes 'React Hook Dependency Audit' section",
+        "Checklist requires manual verification of all useEffect/useCallback/useMemo dependency arrays",
+        "Checklist includes ESLint exhaustive-deps rule check (react-hooks/exhaustive-deps)",
+        "Zero stale closure bugs in next epic's review findings",
+        "ESLint rule enforced with error severity in .eslintrc.json"
+      ],
+      "automation_hints": [
+        "Enable react-hooks/exhaustive-deps in ESLint config at error level",
+        "Add checklist item: 'Run ESLint with --max-warnings=0 before review'",
+        "Consider ESLint pre-commit hook (lighter than full TS check)",
+        "Document common stale closure patterns in architecture/patterns-frontend.md examples"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/team-workflow.md (pre-review checklist)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/.eslintrc.json (react-hooks/exhaustive-deps rule)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/_bmad-output/planning-artifacts/architecture/patterns-frontend.md (add stale closure anti-pattern examples)"
+      ],
+      "risk_if_ignored": "Stale closure bugs continue in every epic, Important-severity findings persist, user-facing bugs in production (e.g., state not updating on prop change)"
+    },
+    {
+      "id": "DEL-005",
+      "title": "Refactor duplicated utility functions into shared module",
+      "type": "refactor",
+      "priority": "P2",
+      "rationale": "toStatusVariant() duplicated in 4.1 M1, fixed in 4.3 after 2-story latency. Section 11 shows extraction to StatusBadge.types.ts but pattern indicates utility duplication not caught early. Low-hanging refactor debt.",
+      "evidence_refs": [
+        "Section 4: Story 4.1 M1 — Duplicated toStatusVariant() helper in CandidateList.tsx and CandidateDetail.tsx",
+        "Section 4: Story 4.3 fix in commit a94ae27 — extract shared toStatusVariant",
+        "Section 11: Shared — StatusBadge.types.ts (toStatusVariant extraction)",
+        "Section 5: Anti-Patterns Pending M1 — duplicated toStatusVariant() helper"
+      ],
+      "acceptance_criteria": [
+        "ESLint rule jscpd or eslint-plugin-no-duplicate-code integrated to detect copy-paste >10 lines",
+        "Pre-review checklist includes 'Run duplicate code detection' step",
+        "All utility functions >5 lines in /features/ directories extracted to /shared/utils/ or /shared/types/",
+        "Zero duplicate function findings in next epic",
+        "Architecture patterns-frontend.md updated with 'Extract Early' guideline"
+      ],
+      "automation_hints": [
+        "Use jscpd CLI tool with min-lines=10 and min-tokens=50 thresholds",
+        "Integrate jscpd into pre-commit hook or CI lint step",
+        "Alternatively use SonarQube duplication detection if available",
+        "Document shared/utils/ convention in architecture/frontend-architecture.md"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/src/shared/utils/ (consolidate duplicates)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/web/.jscpd.json (new config)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/team-workflow.md (pre-review checklist)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/_bmad-output/planning-artifacts/architecture/patterns-frontend.md (Extract Early guideline)"
+      ],
+      "risk_if_ignored": "Continued low-level duplication, inconsistent behavior if one copy fixed and other not, minor finding noise in reviews"
+    },
+    {
+      "id": "DEL-006",
+      "title": "Add test-first compliance gate to story start checklist",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "4.1 C2 (zero frontend tests) and 4.1 C3 (missing functional tests) indicate TDD discipline breakdown at story start. CLAUDE.md requires test-first declaration but 4.1 implementation had no tests initially, caught only in review. Process gap between policy and execution.",
+      "evidence_refs": [
+        "Section 4: Story 4.1 C2 — Missing frontend tests for all new functionality (0 tests)",
+        "Section 4: Story 4.1 C3 — Missing integration/functional tests for new API endpoints",
+        "CLAUDE.md: 'Before coding any task, declare which testing mode applies (test-first, spike, or characterization) and why'",
+        "Section 9: Fix commits 4d037a7, 52901a3, 6e38fa3 added tests after initial implementation"
+      ],
+      "acceptance_criteria": [
+        "Story start checklist in team-workflow.md requires 'Testing mode declaration' with rationale logged to story file",
+        "Test-first mode requires at least 1 failing test committed before any implementation code",
+        "Story review fails if test commits not timestamped before implementation commits (git log --follow verification)",
+        "Zero Critical test-gap findings in next epic",
+        "Testing mode declaration present in all story files for next epic"
+      ],
+      "automation_hints": [
+        "Add story template with '## Testing Mode' section requiring selection: test-first|spike|characterization",
+        "Git hook to verify test file changes exist in commit history before story marked done",
+        "Document spike → test conversion requirement before PR review",
+        "Reference docs/testing-pragmatic-tdd.md in story template"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/team-workflow.md (story start checklist)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/docs/plans/story-template.md (if exists, otherwise create)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/process/story-review-checklist.md (add test-first verification step)"
+      ],
+      "risk_if_ignored": "Continued test-after-implementation, Critical test gaps like 4.1 C2/C3 recur, regression risk increases, TDD policy becomes aspirational not enforced"
+    },
+    {
+      "id": "DEL-007",
+      "title": "Track per-story build and test execution time in retro artifacts",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Section 9 shows 2.07 hours elapsed, 57 commits, but no per-story or per-commit timing. Cannot identify slow inner loop friction (e.g., is test suite slowing down? are builds getting slower?). Need timing metrics to optimize dev experience.",
+      "evidence_refs": [
+        "Section 9: Execution Timing — 2.07 hours elapsed, 57 commits, but no per-story breakdown of build/test time",
+        "Section 3: 285 frontend tests, 114 domain tests — no execution duration data",
+        "Missing Evidence: Build time tracking, test execution duration"
+      ],
+      "acceptance_criteria": [
+        "Retro evidence bundle includes per-story build time (dotnet build duration) and test time (dotnet test + vitest duration)",
+        "CI/local script logs timing data to .retro/<run_id>/timing.json with structure: [{story, build_sec, test_sec, commit_sha}]",
+        "Retro delivery lens includes 'Build Performance' section analyzing timing trends",
+        "Baseline established for Epic 5 to compare against",
+        "Alert threshold defined for 'test suite >60s' or 'build >30s' to trigger optimization sprint"
+      ],
+      "automation_hints": [
+        "Use /usr/bin/time -v or Measure-Command (PowerShell) to wrap dotnet build/test",
+        "Frontend: vitest --reporter=json captures test duration",
+        "Store timing.json alongside context.md in .retro/<run_id>/",
+        "Parse git log --format='%H %ct' to correlate commits with timestamps",
+        "Use GitHub Actions 'time' metadata if running in CI"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/retro/scripts/collect-timing.sh (new)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.retro/2026-02-14T192600Z/timing.json (new, template for future runs)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic4/.claude/retro/prompts/delivery-lens.md (add timing analysis section)"
+      ],
+      "risk_if_ignored": "Slow inner loop goes undetected, dev friction increases over time, no data to justify optimization effort, 'builds feel slow' remains subjective"
+    }
+  ]
+}
