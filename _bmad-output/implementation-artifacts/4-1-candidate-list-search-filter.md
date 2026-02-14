@@ -787,3 +787,65 @@ MSW handlers:
 - [Source: `web/src/lib/api/candidates.ts` -- Existing API client to extend]
 - [Source: `web/src/lib/api/candidates.types.ts` -- Existing types to extend]
 - [Source: `docs/testing-pragmatic-tdd.md` -- Testing policy, mode declarations]
+
+---
+
+## Dev Agent Record
+
+### Testing Mode Rationale
+
+| Component | Mode | Rationale |
+|-----------|------|-----------|
+| CandidateDto.ComputeCurrentStep | Test-first | Core business rule: step advancement logic from outcome history |
+| GetCandidatesQueryHandler (search/filter) | Test-first | Query handler with search, step/outcome filtering, pagination |
+| GetCandidateByIdQueryHandler | Test-first | Query handler with authorization, SAS URL generation |
+| FluentValidation validators | Test-first | Input validation at application boundary |
+| CandidateList.tsx (search/filter UI) | Test-first | User interaction: debounced search, filter controls, status display |
+| CandidateDetail.tsx (outcome history) | Test-first | User-facing display: profile, documents, outcome history |
+| API client/hooks/types | Characterization | Thin wrappers tested via component integration tests |
+| MSW handlers/fixtures | Characterization | Test infrastructure supporting component tests |
+
+### Key Decisions
+
+1. **In-memory step/outcome filtering**: Current step is derived from outcome history (not a DB column), so step/outcome filters are applied in memory after loading candidates. Acceptable at current scale (~150 candidates per recruitment max).
+2. **Batch SAS URLs in list response** (Architecture Decision #6): GetCandidatesQueryHandler generates SAS URLs per candidate document for screening pre-fetch. IBlobStorageService injected into handler.
+3. **ComputeCurrentStep as internal static**: Placed on CandidateDto as `internal static` so both the DTO mapping and the handler filtering can reuse it. Exposed to Application.UnitTests via InternalsVisibleTo.
+4. **WorkflowStep.Create is internal**: Test fixtures use public aggregate root methods (`Recruitment.AddStep()`, `Candidate.RecordOutcome()`) instead of internal entity factories.
+5. **react-virtuoso for 50+ items**: Virtualized rendering kicks in only when totalCount > 50 to avoid overhead for small lists.
+6. **Radix Select in jsdom**: Select component interactions (hasPointerCapture) don't work in jsdom; filter badge tests verify control presence rather than dropdown interaction.
+
+### Files Created
+
+| File | Purpose |
+|------|---------|
+| `api/src/Application/Features/Candidates/Queries/GetCandidateById/GetCandidateByIdQuery.cs` | Query record |
+| `api/src/Application/Features/Candidates/Queries/GetCandidateById/GetCandidateByIdQueryHandler.cs` | Handler with auth, SAS URLs, outcome history |
+| `api/src/Application/Features/Candidates/Queries/GetCandidateById/CandidateDetailDto.cs` | Detail DTO with documents and outcome history |
+| `api/src/Application/Features/Candidates/Queries/GetCandidateById/GetCandidateByIdQueryValidator.cs` | FluentValidation: non-empty GUIDs |
+| `api/src/Application/Features/Candidates/Queries/GetCandidates/GetCandidatesQueryValidator.cs` | FluentValidation: page/pageSize bounds, search length |
+| `api/tests/Application.UnitTests/Features/Candidates/Mapping/CandidateDtoTests.cs` | 8 tests for ComputeCurrentStep logic |
+| `api/tests/Application.UnitTests/Features/Candidates/Queries/GetCandidateById/GetCandidateByIdQueryHandlerTests.cs` | 5 handler tests |
+| `api/tests/Application.FunctionalTests/Candidates/GetCandidatesTests.cs` | 6 integration tests |
+| `api/tests/Application.FunctionalTests/Candidates/GetCandidateByIdTests.cs` | 4 integration tests |
+| `web/src/features/candidates/hooks/useCandidateById.ts` | TanStack Query hook for candidate detail |
+| `web/src/features/candidates/CandidateDetail.test.tsx` | 6 component tests |
+
+### Files Modified
+
+| File | Changes |
+|------|---------|
+| `api/src/Application/Features/Candidates/CandidateDto.cs` | Added DocumentSasUrl, CurrentWorkflowStep* fields, ComputeCurrentStep, From() with steps param |
+| `api/src/Application/Features/Candidates/Queries/GetCandidates/GetCandidatesQuery.cs` | Added Search, StepId, OutcomeStatus params |
+| `api/src/Application/Features/Candidates/Queries/GetCandidates/GetCandidatesQueryHandler.cs` | Added IBlobStorageService, search/filter logic, batch SAS URLs |
+| `api/src/Web/Endpoints/CandidateEndpoints.cs` | Added GET /{candidateId}, search/filter query params on GET / |
+| `api/tests/Application.UnitTests/.../GetCandidatesQueryHandlerTests.cs` | Added IBlobStorageService mock, 7 new tests, helper methods |
+| `web/src/lib/api/candidates.types.ts` | Added CandidateDetailResponse, DocumentDetailDto, OutcomeHistoryEntry, documentSasUrl |
+| `web/src/lib/api/candidates.ts` | Updated getAll() with filter params, added getById() |
+| `web/src/features/candidates/hooks/useCandidates.ts` | Changed to object params with filter support |
+| `web/src/features/candidates/CandidateList.tsx` | Search input, filter dropdowns, filter badges, pagination, virtuoso, StatusBadge |
+| `web/src/features/candidates/CandidateList.test.tsx` | Added 6 new tests for search/filter/display |
+| `web/src/features/candidates/CandidateDetail.tsx` | Rewrote with useCandidateById, outcome history, SAS documents |
+| `web/src/features/candidates/ImportFlow/ImportSummary.tsx` | Updated useCandidates call signature |
+| `web/src/features/recruitments/pages/RecruitmentPage.tsx` | Passes workflowSteps to CandidateList |
+| `web/src/mocks/fixtures/candidates.ts` | Added step IDs, outcome history, detail fixtures, documentSasUrl |
+| `web/src/mocks/candidateHandlers.ts` | Added search/filter/detail MSW handlers |
