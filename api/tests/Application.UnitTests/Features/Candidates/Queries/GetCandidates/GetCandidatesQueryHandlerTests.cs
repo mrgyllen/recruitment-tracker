@@ -329,4 +329,89 @@ public class GetCandidatesQueryHandlerTests
         result.Items[0].CurrentWorkflowStepName.Should().Be("Screening");
         result.Items[0].CurrentOutcomeStatus.Should().Be("NotStarted");
     }
+
+    [Test]
+    public async Task Handle_StaleOnlyWithStepId_ReturnsOnlyStaleCandidatesAtStep()
+    {
+        var (recruitment, _) = SetUpRecruitmentWithSteps();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        var screeningStep = steps[0];
+
+        // Stale candidate at Screening: created 10 days ago, no outcome
+        var stale = Candidate.Create(
+            recruitment.Id, "Stale", "stale@example.com", null, null,
+            DateTimeOffset.UtcNow.AddDays(-10));
+        stale.AssignToWorkflowStep(screeningStep.Id);
+
+        // Fresh candidate at Screening: created today, no outcome
+        var fresh = Candidate.Create(
+            recruitment.Id, "Fresh", "fresh@example.com", null, null,
+            DateTimeOffset.UtcNow);
+        fresh.AssignToWorkflowStep(screeningStep.Id);
+
+        // Stale candidate at Interview: created 10 days ago, passed Screening
+        var staleAtInterview = Candidate.Create(
+            recruitment.Id, "StaleInterview", "staleinterview@example.com", null, null,
+            DateTimeOffset.UtcNow.AddDays(-10));
+        staleAtInterview.AssignToWorkflowStep(screeningStep.Id);
+        staleAtInterview.RecordOutcome(screeningStep.Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        SetUpCandidates(stale, fresh, staleAtInterview);
+
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage, _overviewSettings);
+        var query = new GetCandidatesQuery
+        {
+            RecruitmentId = recruitment.Id,
+            StepId = screeningStep.Id,
+            StaleOnly = true,
+        };
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        result.Items.Should().HaveCount(1);
+        result.Items[0].FullName.Should().Be("Stale");
+    }
+
+    [Test]
+    public async Task Handle_StaleOnlyWithoutStepId_ReturnsAllStaleCandidates()
+    {
+        var (recruitment, _) = SetUpRecruitmentWithSteps();
+        var steps = recruitment.Steps.OrderBy(s => s.Order).ToList();
+        var screeningStep = steps[0];
+
+        // Stale candidate at Screening: created 10 days ago, no outcome
+        var staleScreening = Candidate.Create(
+            recruitment.Id, "StaleScreening", "stalescreening@example.com", null, null,
+            DateTimeOffset.UtcNow.AddDays(-10));
+        staleScreening.AssignToWorkflowStep(screeningStep.Id);
+
+        // Stale candidate at Interview: created 10 days ago, passed Screening, no outcome at Interview
+        var staleInterview = Candidate.Create(
+            recruitment.Id, "StaleInterview", "staleinterview@example.com", null, null,
+            DateTimeOffset.UtcNow.AddDays(-10));
+        staleInterview.AssignToWorkflowStep(screeningStep.Id);
+        staleInterview.RecordOutcome(screeningStep.Id, OutcomeStatus.Pass, Guid.NewGuid(), null, steps);
+
+        // Fresh candidate: created today, no outcome
+        var fresh = Candidate.Create(
+            recruitment.Id, "Fresh", "fresh@example.com", null, null,
+            DateTimeOffset.UtcNow);
+        fresh.AssignToWorkflowStep(screeningStep.Id);
+
+        SetUpCandidates(staleScreening, staleInterview, fresh);
+
+        var handler = new GetCandidatesQueryHandler(_dbContext, _tenantContext, _blobStorage, _overviewSettings);
+        var query = new GetCandidatesQuery
+        {
+            RecruitmentId = recruitment.Id,
+            StaleOnly = true,
+        };
+
+        var result = await handler.Handle(query, CancellationToken.None);
+
+        result.Items.Should().HaveCount(2);
+        result.Items.Select(i => i.FullName).Should()
+            .Contain("StaleScreening").And
+            .Contain("StaleInterview");
+    }
 }
