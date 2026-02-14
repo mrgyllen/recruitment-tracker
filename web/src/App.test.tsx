@@ -2,6 +2,12 @@ import { render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import App from './App'
 
+vi.mock('react-pdf', () => ({
+  Document: ({ children }: any) => <div>{children}</div>,
+  Page: () => <div />,
+  pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
+}))
+
 function mockMatchMedia(matches: boolean) {
   const mql = {
     matches,

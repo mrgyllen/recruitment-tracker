@@ -1,19 +1,47 @@
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { CandidateDetail } from './CandidateDetail'
-import { mockCandidateDetail, mockCandidateId1 } from '@/mocks/fixtures/candidates'
+import {
+  mockCandidateDetail,
+  mockCandidateId1,
+} from '@/mocks/fixtures/candidates'
 import { server } from '@/mocks/server'
 import { render, screen, waitFor } from '@testing-library/react'
 import { AuthProvider } from '@/features/auth/AuthContext'
 import { Toaster } from '@/components/ui/sonner'
 
+// Mock react-pdf since jsdom cannot render canvas
+vi.mock('react-pdf', () => {
+  const Document = ({ onLoadSuccess, children, file }: any) => {
+    if (file) {
+      setTimeout(() => onLoadSuccess?.({ numPages: 1 }), 0)
+    }
+    return (
+      <div data-testid="pdf-document">
+        {children}
+      </div>
+    )
+  }
+  const Page = ({ pageNumber }: any) => (
+    <div data-testid={`pdf-page-${pageNumber}`}>Page {pageNumber}</div>
+  )
+  return {
+    Document,
+    Page,
+    pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
+  }
+})
+
 const recruitmentId = '550e8400-e29b-41d4-a716-446655440000'
 
 function renderWithRoute(candidateId: string) {
   const queryClient = new QueryClient({
-    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
   })
   return render(
     <QueryClientProvider client={queryClient}>
@@ -67,17 +95,47 @@ describe('CandidateDetail', () => {
     expect(screen.getByText('Screening')).toBeInTheDocument()
   })
 
-  it('should display documents with download action', async () => {
+  it('should render the PDF viewer when candidate has a document', async () => {
     renderWithRoute(mockCandidateId1)
 
     await waitFor(() => {
-      expect(screen.getByText('Documents')).toBeInTheDocument()
+      expect(screen.getByTestId('pdf-document')).toBeInTheDocument()
+    })
+  })
+
+  it('should show download button with SAS URL', async () => {
+    renderWithRoute(mockCandidateId1)
+
+    await waitFor(() => {
+      expect(screen.getByText('CV')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('CV')).toBeInTheDocument()
-    expect(
-      screen.getByRole('link', { name: /download/i }),
-    ).toBeInTheDocument()
+    const downloadLink = screen.getByRole('link', { name: /download/i })
+    expect(downloadLink).toBeInTheDocument()
+    expect(downloadLink).toHaveAttribute(
+      'href',
+      mockCandidateDetail.documents[0].sasUrl,
+    )
+  })
+
+  it('should show empty state when candidate has no document', async () => {
+    server.use(
+      http.get(
+        '/api/recruitments/:recruitmentId/candidates/:candidateId',
+        () => {
+          return HttpResponse.json({
+            ...mockCandidateDetail,
+            documents: [],
+          })
+        },
+      ),
+    )
+
+    renderWithRoute(mockCandidateId1)
+
+    await waitFor(() => {
+      expect(screen.getByText('No CV available')).toBeInTheDocument()
+    })
   })
 
   it('should show empty outcome history when no outcomes recorded', async () => {

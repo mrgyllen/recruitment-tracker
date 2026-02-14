@@ -1,6 +1,8 @@
 import { useParams, Link } from 'react-router'
 import { useCandidateById } from './hooks/useCandidateById'
 import { DocumentUpload } from './DocumentUpload'
+import { PdfViewer } from './PdfViewer'
+import { useSasUrl } from './hooks/useSasUrl'
 import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { StatusBadge } from '@/components/StatusBadge'
@@ -90,43 +92,44 @@ export function CandidateDetail() {
         </p>
       </div>
 
-      {/* Documents */}
+      {/* CV Viewer */}
       <div>
-        <h3 className="mb-2 text-sm font-medium">Documents</h3>
-        {candidate.documents.length > 0 ? (
-          <div className="space-y-2">
-            {candidate.documents.map((doc) => (
-              <div
-                key={doc.id}
-                className="flex items-center justify-between rounded-md border p-3"
+        <div className="mb-2 flex items-center justify-between">
+          <h3 className="text-sm font-medium">CV</h3>
+          {candidate.documents.length > 0 && (
+            <Button variant="outline" size="sm" asChild>
+              <a
+                href={candidate.documents[0].sasUrl}
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                <div>
-                  <p className="text-sm font-medium">{doc.documentType}</p>
-                  <p className="text-muted-foreground text-xs">
-                    Uploaded:{' '}
-                    {new Date(doc.uploadedAt).toLocaleDateString()}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" asChild>
-                  <a
-                    href={doc.sasUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <Download className="mr-1 size-4" />
-                    Download
-                  </a>
-                </Button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <DocumentUpload
+                <Download className="mr-1 size-4" />
+                Download
+              </a>
+            </Button>
+          )}
+        </div>
+
+        {candidate.documents.length > 0 ? (
+          <CvViewer
+            sasUrl={candidate.documents[0].sasUrl}
             recruitmentId={recruitmentId}
             candidateId={candidateId}
-            existingDocument={null}
-            isClosed={isClosed}
           />
+        ) : (
+          <div className="rounded-md border p-6 text-center">
+            <p className="text-muted-foreground mb-3 text-sm">
+              No CV available
+            </p>
+            {!isClosed && (
+              <DocumentUpload
+                recruitmentId={recruitmentId}
+                candidateId={candidateId}
+                existingDocument={null}
+                isClosed={false}
+              />
+            )}
+          </div>
         )}
       </div>
 
@@ -147,6 +150,24 @@ export function CandidateDetail() {
       </div>
     </div>
   )
+}
+
+function CvViewer({
+  sasUrl,
+  recruitmentId,
+  candidateId,
+}: {
+  sasUrl: string
+  recruitmentId: string
+  candidateId: string
+}) {
+  const { url, refresh } = useSasUrl({
+    initialUrl: sasUrl,
+    recruitmentId,
+    candidateId,
+  })
+
+  return <PdfViewer url={url} onError={refresh} />
 }
 
 function OutcomeRow({ outcome }: { outcome: OutcomeHistoryEntry }) {

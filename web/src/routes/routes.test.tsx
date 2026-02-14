@@ -7,6 +7,12 @@ import { routeConfig } from './index'
 import { useAuth } from '@/features/auth/AuthContext'
 import { server } from '@/mocks/server'
 
+vi.mock('react-pdf', () => ({
+  Document: ({ children }: any) => <div>{children}</div>,
+  Page: () => <div />,
+  pdfjs: { GlobalWorkerOptions: { workerSrc: '' } },
+}))
+
 vi.mock('@/features/auth/AuthContext', () => ({
   useAuth: vi.fn(),
 }))
