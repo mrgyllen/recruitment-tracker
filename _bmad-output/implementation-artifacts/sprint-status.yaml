@@ -68,12 +68,12 @@ development_status:
   epic-2-deferred-exception-integration-tests: backlog  # A-008: Integration tests for CustomExceptionHandler
 
   # Epic 3: Candidate Import & Document Management
-  epic-3: backlog
-  3-1-manual-candidate-management: backlog
-  3-2-xlsx-import-pipeline: backlog
-  3-3-import-wizard-summary-ui: backlog
-  3-4-pdf-bundle-upload-splitting: backlog
-  3-5-cv-auto-match-manual-assignment-individual-upload: backlog
+  epic-3: in-progress
+  3-1-manual-candidate-management: ready-for-dev
+  3-2-xlsx-import-pipeline: ready-for-dev
+  3-3-import-wizard-summary-ui: ready-for-dev
+  3-4-pdf-bundle-upload-splitting: ready-for-dev
+  3-5-cv-auto-match-manual-assignment-individual-upload: ready-for-dev
   epic-3-retrospective: optional
 
   # Epic 4: Screening & Outcome Recording
