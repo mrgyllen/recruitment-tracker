@@ -81,6 +81,27 @@ describe('OutcomeForm', () => {
     expect(screen.getByRole('button', { name: /confirm/i })).toBeDisabled()
   })
 
+  it('should display shortcut hints on outcome buttons', () => {
+    render(<OutcomeForm {...defaultProps} />)
+    expect(screen.getByRole('button', { name: /pass \(1\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /fail \(2\)/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /hold \(3\)/i })).toBeInTheDocument()
+  })
+
+  it('should apply externalOutcome prop to select outcome', () => {
+    render(<OutcomeForm {...defaultProps} externalOutcome="Hold" />)
+    expect(screen.getByRole('button', { name: /hold/i })).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: /confirm/i })).toBeEnabled()
+  })
+
+  it('should call onOutcomeSelect when outcome button is clicked', async () => {
+    const onOutcomeSelect = vi.fn()
+    const user = userEvent.setup()
+    render(<OutcomeForm {...defaultProps} onOutcomeSelect={onOutcomeSelect} />)
+    await user.click(screen.getByRole('button', { name: /pass/i }))
+    expect(onOutcomeSelect).toHaveBeenCalledWith('Pass')
+  })
+
   it('should show error on API failure', async () => {
     server.use(
       http.post(

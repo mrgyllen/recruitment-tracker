@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAppToast } from '@/hooks/useAppToast'
 import { useRecordOutcome } from './hooks/useRecordOutcome'
 import { cn } from '@/lib/utils'
@@ -12,12 +12,14 @@ interface OutcomeFormProps {
   existingOutcome: OutcomeHistoryDto | null
   isClosed: boolean
   onOutcomeRecorded?: (result: OutcomeResultDto) => void
+  onOutcomeSelect?: (outcome: OutcomeStatus) => void
+  externalOutcome?: OutcomeStatus | null
 }
 
-const outcomeOptions: { value: OutcomeStatus; label: string; className: string; selectedClassName: string }[] = [
-  { value: 'Pass', label: 'Pass', className: 'border-green-300 text-green-700 hover:bg-green-50', selectedClassName: 'bg-green-600 text-white border-green-600' },
-  { value: 'Fail', label: 'Fail', className: 'border-red-300 text-red-700 hover:bg-red-50', selectedClassName: 'bg-red-600 text-white border-red-600' },
-  { value: 'Hold', label: 'Hold', className: 'border-amber-300 text-amber-700 hover:bg-amber-50', selectedClassName: 'bg-amber-500 text-white border-amber-500' },
+const outcomeOptions: { value: OutcomeStatus; label: string; hint: string; className: string; selectedClassName: string }[] = [
+  { value: 'Pass', label: 'Pass', hint: '1', className: 'border-green-300 text-green-700 hover:bg-green-50', selectedClassName: 'bg-green-600 text-white border-green-600' },
+  { value: 'Fail', label: 'Fail', hint: '2', className: 'border-red-300 text-red-700 hover:bg-red-50', selectedClassName: 'bg-red-600 text-white border-red-600' },
+  { value: 'Hold', label: 'Hold', hint: '3', className: 'border-amber-300 text-amber-700 hover:bg-amber-50', selectedClassName: 'bg-amber-500 text-white border-amber-500' },
 ]
 
 export function OutcomeForm({
@@ -28,10 +30,18 @@ export function OutcomeForm({
   existingOutcome,
   isClosed,
   onOutcomeRecorded,
+  onOutcomeSelect,
+  externalOutcome,
 }: OutcomeFormProps) {
   const [selectedOutcome, setSelectedOutcome] = useState<OutcomeStatus | null>(
     existingOutcome?.outcome ?? null,
   )
+
+  useEffect(() => {
+    if (externalOutcome) {
+      setSelectedOutcome(externalOutcome)
+    }
+  }, [externalOutcome])
   const [reason, setReason] = useState(existingOutcome?.reason ?? '')
   const toast = useAppToast()
   const recordOutcome = useRecordOutcome()
@@ -69,14 +79,17 @@ export function OutcomeForm({
             type="button"
             aria-pressed={selectedOutcome === option.value}
             disabled={isClosed}
-            onClick={() => setSelectedOutcome(option.value)}
+            onClick={() => {
+              setSelectedOutcome(option.value)
+              onOutcomeSelect?.(option.value)
+            }}
             className={cn(
               'rounded-md border px-4 py-2 text-sm font-medium transition-colors',
               selectedOutcome === option.value ? option.selectedClassName : option.className,
               isClosed && 'cursor-not-allowed opacity-50',
             )}
           >
-            {option.label}
+            {option.label} <kbd className="ml-1 text-xs opacity-60">({option.hint})</kbd>
           </button>
         ))}
       </div>
