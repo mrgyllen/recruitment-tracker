@@ -30,5 +30,12 @@ export default defineConfig({
     env: {
       VITE_AUTH_MODE: 'development',
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'cobertura'],
+      thresholds: {
+        lines: 60,
+      },
+    },
   },
 })
