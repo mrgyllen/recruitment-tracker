@@ -24,6 +24,7 @@ public class CustomExceptionHandler : IExceptionHandler
                 { typeof(StepHasOutcomesException), HandleStepHasOutcomesException },
                 { typeof(DuplicateStepNameException), HandleDuplicateStepNameException },
                 { typeof(DomainRuleViolationException), HandleDomainRuleViolationException },
+                { typeof(DuplicateCandidateException), HandleDuplicateCandidateException },
             };
     }
 
@@ -139,6 +140,19 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Domain rule violation",
+            Detail = ex.Message,
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+        });
+    }
+
+    private async Task HandleDuplicateCandidateException(HttpContext httpContext, Exception ex)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "A candidate with this email already exists in this recruitment",
             Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
