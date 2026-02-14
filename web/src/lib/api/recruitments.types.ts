@@ -56,3 +56,18 @@ export interface CreateWorkflowStepRequest {
 export interface CreateRecruitmentResponse {
   id: string
 }
+
+export interface UpdateRecruitmentRequest {
+  title: string
+  description?: string | null
+  jobRequisitionId?: string | null
+}
+
+export interface AddWorkflowStepRequest {
+  name: string
+  order: number
+}
+
+export interface ReorderStepsRequest {
+  steps: { stepId: string; order: number }[]
+}

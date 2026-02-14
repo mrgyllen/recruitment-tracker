@@ -1,9 +1,13 @@
-import { apiGet, apiPost } from './httpClient'
+import { apiDelete, apiGet, apiPost, apiPut } from './httpClient'
 import type {
+  AddWorkflowStepRequest,
   CreateRecruitmentRequest,
   CreateRecruitmentResponse,
   PaginatedRecruitmentList,
   RecruitmentDetail,
+  ReorderStepsRequest,
+  UpdateRecruitmentRequest,
+  WorkflowStepDto,
 } from './recruitments.types'
 
 export const recruitmentApi = {
@@ -17,4 +21,16 @@ export const recruitmentApi = {
     apiGet<PaginatedRecruitmentList>(
       `/recruitments?page=${page}&pageSize=${pageSize}`,
     ),
+
+  update: (id: string, data: UpdateRecruitmentRequest) =>
+    apiPut<void>(`/recruitments/${id}`, data),
+
+  addStep: (recruitmentId: string, data: AddWorkflowStepRequest) =>
+    apiPost<WorkflowStepDto>(`/recruitments/${recruitmentId}/steps`, data),
+
+  removeStep: (recruitmentId: string, stepId: string) =>
+    apiDelete(`/recruitments/${recruitmentId}/steps/${stepId}`),
+
+  reorderSteps: (recruitmentId: string, data: ReorderStepsRequest) =>
+    apiPut<void>(`/recruitments/${recruitmentId}/steps/reorder`, data),
 }
