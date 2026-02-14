@@ -149,4 +149,66 @@ public class CandidateTests
 
         candidate.Email.Should().Be(originalEmail);
     }
+
+    [Test]
+    public void ReplaceDocument_ExistingDocument_RemovesOldAndAddsNew()
+    {
+        var candidate = CreateCandidate();
+        candidate.AttachDocument("CV", "https://blob.storage/old.pdf");
+        candidate.ClearDomainEvents();
+
+        var oldUrl = candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().Be("https://blob.storage/old.pdf");
+        candidate.Documents.Should().HaveCount(1);
+        candidate.Documents.First().BlobStorageUrl.Should().Be("https://blob.storage/new.pdf");
+    }
+
+    [Test]
+    public void ReplaceDocument_NoExistingDocument_AddsNewAndReturnsNull()
+    {
+        var candidate = CreateCandidate();
+
+        var oldUrl = candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().BeNull();
+        candidate.Documents.Should().HaveCount(1);
+    }
+
+    [Test]
+    public void ReplaceDocument_CaseInsensitiveType_ReplacesExisting()
+    {
+        var candidate = CreateCandidate();
+        candidate.AttachDocument("CV", "https://blob.storage/old.pdf");
+
+        var oldUrl = candidate.ReplaceDocument("cv", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().Be("https://blob.storage/old.pdf");
+        candidate.Documents.Should().HaveCount(1);
+    }
+
+    [Test]
+    public void ReplaceDocument_RaisesDocumentUploadedEvent()
+    {
+        var candidate = CreateCandidate();
+        candidate.ClearDomainEvents();
+
+        candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        candidate.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<DocumentUploadedEvent>();
+    }
+
+    [Test]
+    public void ReplaceDocument_WithWorkdayParams_SetsMetadataOnDocument()
+    {
+        var candidate = CreateCandidate();
+
+        candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf",
+            workdayCandidateId: "WD-123", documentSource: DocumentSource.BundleSplit);
+
+        var doc = candidate.Documents.First();
+        doc.WorkdayCandidateId.Should().Be("WD-123");
+        doc.DocumentSource.Should().Be(DocumentSource.BundleSplit);
+    }
 }
