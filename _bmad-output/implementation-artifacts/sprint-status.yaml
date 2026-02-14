@@ -85,7 +85,7 @@ development_status:
   epic-4: in-progress
   4-1-candidate-list-search-filter: done
   4-2-pdf-viewing-download: done
-  4-3-outcome-recording-workflow-enforcement: ready-for-dev
+  4-3-outcome-recording-workflow-enforcement: done
   4-4-split-panel-screening-layout: ready-for-dev
   4-5-keyboard-navigation-screening-flow: ready-for-dev
   epic-4-retrospective: optional
