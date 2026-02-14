@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import type {
   PaginatedRecruitmentList,
   RecruitmentDetail,
+  WorkflowStepDto,
 } from '@/lib/api/recruitments.types'
 
 export const mockRecruitmentId = '550e8400-e29b-41d4-a716-446655440000'
@@ -118,5 +119,93 @@ export const recruitmentHandlers = [
       pageSize: 50,
     }
     return HttpResponse.json(response)
+  }),
+
+  http.put('/api/recruitments/:id', async ({ params, request }) => {
+    const { id } = params
+    const recruitment = recruitmentsById[id as string]
+    if (!recruitment) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    if (recruitment.status === 'Closed') {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1', title: 'Recruitment is closed', status: 400 },
+        { status: 400 },
+      )
+    }
+    const body = (await request.json()) as Record<string, unknown>
+    recruitment.title = body.title as string
+    recruitment.description = (body.description as string) ?? null
+    recruitment.jobRequisitionId = (body.jobRequisitionId as string) ?? null
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post('/api/recruitments/:id/steps', async ({ params, request }) => {
+    const { id } = params
+    const recruitment = recruitmentsById[id as string]
+    if (!recruitment) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    if (recruitment.status === 'Closed') {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.1', title: 'Recruitment is closed', status: 400 },
+        { status: 400 },
+      )
+    }
+    const body = (await request.json()) as { name: string; order: number }
+    const newStep: WorkflowStepDto = {
+      id: `step-new-${Date.now()}`,
+      name: body.name,
+      order: body.order,
+    }
+    recruitment.steps.push(newStep)
+    return HttpResponse.json(newStep)
+  }),
+
+  http.delete('/api/recruitments/:id/steps/:stepId', ({ params }) => {
+    const { id, stepId } = params
+    const recruitment = recruitmentsById[id as string]
+    if (!recruitment) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    if (stepId === 'step-has-outcomes') {
+      return HttpResponse.json(
+        {
+          type: 'https://tools.ietf.org/html/rfc7231#section-6.5.8',
+          title: 'Cannot remove -- outcomes recorded at this step',
+          status: 409,
+        },
+        { status: 409 },
+      )
+    }
+    recruitment.steps = recruitment.steps.filter((s) => s.id !== stepId)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.put('/api/recruitments/:id/steps/reorder', async ({ params, request }) => {
+    const { id } = params
+    const recruitment = recruitmentsById[id as string]
+    if (!recruitment) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    const body = (await request.json()) as { steps: { stepId: string; order: number }[] }
+    for (const item of body.steps) {
+      const step = recruitment.steps.find((s) => s.id === item.stepId)
+      if (step) step.order = item.order
+    }
+    recruitment.steps.sort((a, b) => a.order - b.order)
+    return new HttpResponse(null, { status: 204 })
   }),
 ]
