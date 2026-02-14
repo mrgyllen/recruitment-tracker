@@ -1,8 +1,8 @@
-import { describe, expect, it } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { render } from '@/test-utils'
+import { describe, expect, it } from 'vitest'
 import { MemberList } from './MemberList'
+import { render } from '@/test-utils'
 
 const mockRecruitmentId = '550e8400-e29b-41d4-a716-446655440000'
 

@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useDebounce } from '@/hooks/useDebounce'
 import { useAddMember, useDirectorySearch } from './hooks/useTeamMembers'
+import type { DirectoryUserDto } from '@/lib/api/team.types'
+import { Button } from '@/components/ui/button'
 import {
   Dialog,
   DialogContent,
@@ -9,10 +10,9 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
 import { useAppToast } from '@/hooks/useAppToast'
+import { useDebounce } from '@/hooks/useDebounce'
 import { ApiError } from '@/lib/api/httpClient'
-import type { DirectoryUserDto } from '@/lib/api/team.types'
 
 interface InviteMemberDialogProps {
   recruitmentId: string

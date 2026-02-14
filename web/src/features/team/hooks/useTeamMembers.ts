@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { teamApi } from '@/lib/api/team'
 import type { AddMemberRequest } from '@/lib/api/team.types'
+import { teamApi } from '@/lib/api/team'
 
 export function useTeamMembers(recruitmentId: string) {
   return useQuery({

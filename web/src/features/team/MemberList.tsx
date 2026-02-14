@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useRemoveMember, useTeamMembers } from './hooks/useTeamMembers'
 import { InviteMemberDialog } from './InviteMemberDialog'
+import type { TeamMemberDto } from '@/lib/api/team.types'
+import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { useAppToast } from '@/hooks/useAppToast'
-import type { TeamMemberDto } from '@/lib/api/team.types'
 
 interface MemberListProps {
   recruitmentId: string
