@@ -17,6 +17,15 @@ jobs:
       - run: dotnet restore api/api.slnx
       - run: dotnet build api/api.slnx --no-restore
       - run: dotnet test api/api.slnx --no-build --collect:"XPlat Code Coverage"
+      - name: Generate coverage report
+        if: always()
+        run: |
+          dotnet tool install --global dotnet-reportgenerator-globaltool
+          reportgenerator \
+            -reports:"api/artifacts/testResults/**/coverage.cobertura.xml" \
+            -targetdir:"api/artifacts/coverage-report" \
+            -reporttypes:"TextSummary;Cobertura"
+          cat api/artifacts/coverage-report/Summary.txt
       - run: dotnet format api/api.slnx --verify-no-changes
 
   web:

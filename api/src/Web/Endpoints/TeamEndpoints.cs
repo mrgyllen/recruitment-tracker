@@ -2,18 +2,17 @@ using api.Application.Features.Team.Commands.AddMember;
 using api.Application.Features.Team.Commands.RemoveMember;
 using api.Application.Features.Team.Queries.GetMembers;
 using api.Application.Features.Team.Queries.SearchDirectory;
+using api.Web.Infrastructure;
 using MediatR;
 
 namespace api.Web.Endpoints;
 
-public static class TeamEndpoints
+public class TeamEndpoints : EndpointGroupBase
 {
-    public static void MapTeamEndpoints(this IEndpointRouteBuilder app)
-    {
-        var group = app.MapGroup("/api/recruitments/{recruitmentId:guid}")
-            .RequireAuthorization()
-            .WithTags("team");
+    public override string? GroupName => "recruitments/{recruitmentId:guid}";
 
+    public override void Map(RouteGroupBuilder group)
+    {
         group.MapGet("/members", GetMembers);
         group.MapGet("/directory-search", SearchDirectory);
         group.MapPost("/members", AddMember);

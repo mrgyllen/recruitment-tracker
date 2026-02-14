@@ -101,4 +101,114 @@ public class CandidateTests
         candidate.DateApplied.Should().Be(originalDateApplied);
         candidate.Outcomes.Should().HaveCount(1);
     }
+
+    [Test]
+    public void UpdateProfile_UpdatesAllProfileFields()
+    {
+        var candidate = CreateCandidate();
+
+        candidate.UpdateProfile("Bob Smith", "+9876543210", "London, UK", DateTimeOffset.Parse("2025-06-15T00:00:00Z"));
+
+        candidate.FullName.Should().Be("Bob Smith");
+        candidate.PhoneNumber.Should().Be("+9876543210");
+        candidate.Location.Should().Be("London, UK");
+        candidate.DateApplied.Should().Be(DateTimeOffset.Parse("2025-06-15T00:00:00Z"));
+    }
+
+    [Test]
+    public void UpdateProfile_DoesNotAffectOutcomes()
+    {
+        var candidate = CreateCandidate();
+        candidate.RecordOutcome(Guid.NewGuid(), OutcomeStatus.Pass, Guid.NewGuid());
+        var outcomeCount = candidate.Outcomes.Count;
+
+        candidate.UpdateProfile("Updated Name", null, null, DateTimeOffset.UtcNow);
+
+        candidate.Outcomes.Should().HaveCount(outcomeCount);
+    }
+
+    [Test]
+    public void UpdateProfile_DoesNotAffectDocuments()
+    {
+        var candidate = CreateCandidate();
+        candidate.AttachDocument("CV", "https://blob.storage/cv.pdf");
+        var docCount = candidate.Documents.Count;
+
+        candidate.UpdateProfile("Updated Name", null, null, DateTimeOffset.UtcNow);
+
+        candidate.Documents.Should().HaveCount(docCount);
+    }
+
+    [Test]
+    public void UpdateProfile_DoesNotChangeEmail()
+    {
+        var candidate = CreateCandidate();
+        var originalEmail = candidate.Email;
+
+        candidate.UpdateProfile("New Name", null, null, DateTimeOffset.UtcNow);
+
+        candidate.Email.Should().Be(originalEmail);
+    }
+
+    [Test]
+    public void ReplaceDocument_ExistingDocument_RemovesOldAndAddsNew()
+    {
+        var candidate = CreateCandidate();
+        candidate.AttachDocument("CV", "https://blob.storage/old.pdf");
+        candidate.ClearDomainEvents();
+
+        var oldUrl = candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().Be("https://blob.storage/old.pdf");
+        candidate.Documents.Should().HaveCount(1);
+        candidate.Documents.First().BlobStorageUrl.Should().Be("https://blob.storage/new.pdf");
+    }
+
+    [Test]
+    public void ReplaceDocument_NoExistingDocument_AddsNewAndReturnsNull()
+    {
+        var candidate = CreateCandidate();
+
+        var oldUrl = candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().BeNull();
+        candidate.Documents.Should().HaveCount(1);
+    }
+
+    [Test]
+    public void ReplaceDocument_CaseInsensitiveType_ReplacesExisting()
+    {
+        var candidate = CreateCandidate();
+        candidate.AttachDocument("CV", "https://blob.storage/old.pdf");
+
+        var oldUrl = candidate.ReplaceDocument("cv", "https://blob.storage/new.pdf");
+
+        oldUrl.Should().Be("https://blob.storage/old.pdf");
+        candidate.Documents.Should().HaveCount(1);
+    }
+
+    [Test]
+    public void ReplaceDocument_RaisesDocumentUploadedEvent()
+    {
+        var candidate = CreateCandidate();
+        candidate.ClearDomainEvents();
+
+        candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf");
+
+        candidate.DomainEvents.Should().ContainSingle()
+            .Which.Should().BeOfType<DocumentUploadedEvent>();
+    }
+
+    [Test]
+    public void ReplaceDocument_WithWorkdayParams_SetsMetadataOnDocument()
+    {
+        var candidate = CreateCandidate();
+
+        candidate.ReplaceDocument("CV", "https://blob.storage/new.pdf",
+            workdayCandidateId: "WD-123", documentSource: DocumentSource.BundleSplit);
+
+        var doc = candidate.Documents.First();
+        doc.WorkdayCandidateId.Should().Be("WD-123");
+        doc.DocumentSource.Should().Be(DocumentSource.BundleSplit);
+    }
 }

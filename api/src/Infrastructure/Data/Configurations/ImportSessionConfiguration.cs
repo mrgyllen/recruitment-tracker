@@ -17,11 +17,30 @@ public class ImportSessionConfiguration : IEntityTypeConfiguration<ImportSession
             .HasConversion<string>()
             .HasMaxLength(20);
 
+        builder.Property(s => s.SourceFileName)
+            .HasMaxLength(500);
+
         builder.Property(s => s.FailureReason)
             .HasMaxLength(2000);
 
         builder.HasIndex(s => s.RecruitmentId)
             .HasDatabaseName("IX_ImportSessions_RecruitmentId");
+
+        builder.OwnsMany(s => s.RowResults, rowBuilder =>
+        {
+            rowBuilder.ToJson();
+        });
+
+        builder.Property(s => s.OriginalBundleBlobUrl)
+            .HasMaxLength(2048);
+
+        builder.HasMany(s => s.ImportDocuments)
+            .WithOne()
+            .HasForeignKey(d => d.ImportSessionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Navigation(s => s.ImportDocuments)
+            .UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.Ignore(s => s.DomainEvents);
     }

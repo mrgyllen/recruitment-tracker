@@ -1,0 +1,189 @@
+{
+  "persona": "QA Lens",
+  "wins": [
+    "8 mandatory ITenantContext integration tests present in TenantContextFilterTests.cs using Testcontainers with real SQL Server — covers cross-recruitment isolation, positive access, multi-membership, import service scoping, GDPR bypass, misconfigured context, OR logic, and member removal access revocation",
+    "190+ frontend tests across 34 test files with zero regressions at each story checkpoint — systematic test-alongside-code discipline across all 5 stories",
+    "Domain test suite expanded to 81+ tests covering new aggregates (Candidate, ImportSession, ImportDocument) with dedicated test files for NameNormalizer, DocumentMatchingEngine, CandidateDocument, ImportRowResult, and Candidate.ReplaceDocument",
+    "Framework compliance maintained: NUnit [Test]/[TestFixture], NSubstitute Substitute.For<T>(), FluentAssertions .Should(), Testcontainers for integration tests — no xUnit, Moq, or InMemoryDatabase violations detected",
+    "All command/query handler test files include authorization denial tests (ForbiddenAccessException path) — ResolveMatchConflictCommandHandlerTests, CreateCandidateCommandHandlerTests, RemoveCandidateCommandHandlerTests, GetImportSessionQueryHandlerTests all test non-member rejection"
+  ],
+  "problems": [
+    "AssignDocumentCommandHandler and UploadDocumentCommandHandler have zero unit tests despite containing authorization logic, closed-recruitment guards, blob storage interactions, and ImportDocument status updates — these are the only command handlers in Epic 3 without dedicated test files",
+    "Application.UnitTests cannot execute locally due to missing ASP.NET Core 10 runtime — pre-existing environment limitation means handler-level test failures could go unnoticed during local development, relying solely on CI for backend test verification",
+    "Code coverage metrics remain uncollected across three consecutive epics — coverlet.collector is installed in all test projects and CI runs --collect:\"XPlat Code Coverage\" but no thresholds are enforced, no reports are published, and no baseline has been established",
+    "No functional/integration tests for any Epic 3 API endpoints — Application.FunctionalTests contains only DevAuthenticationTests and CustomExceptionHandlerTests from prior epics; import, candidate, and document endpoints lack HTTP-level integration test coverage",
+    "Story 3.2 C1 (missing auth on GetImportSessionQueryHandler) was the same defect class as Epic 2 Story 2.3 — E-001 experiment to prevent this via mandatory Authorization section in implementation plans failed because query handlers were not covered by the documented pattern",
+    "Anti-pattern scanning experiment (E-002) provides false confidence — anti-patterns-pending.txt contains only 1 regex entry, yet average minor findings per story was 4.4; most quality issues are contextual design decisions that cannot be caught by regex matching",
+    "Story 3.3 C1 matchIndex bug (filtered array index vs full-array index) and I1 (handler missing actual candidate operations for AC7/AC8) indicate acceptance criteria were not systematically mapped to test cases before implementation — both were logic completeness gaps caught only in review"
+  ],
+  "missing_evidence": [
+    "Code coverage percentage reports — coverlet is installed and CI collects coverage but no actual metrics are surfaced or archived",
+    "Application.UnitTests execution results — these tests build but cannot run locally; no CI output is provided to confirm they pass",
+    "Endpoint-level HTTP test results for import, candidate, and document APIs — no functional tests exist for Epic 3 features",
+    "Testing mode declarations per story — Pragmatic TDD policy requires declaring test-first/spike/characterization per task but no evidence of these declarations in the bundle",
+    "Flaky test signals — no data on test timing variance, retry counts, or non-deterministic behavior across the 271+ tests"
+  ],
+  "candidate_actions": [
+    {
+      "id": "QA-001",
+      "title": "Add unit tests for AssignDocumentCommandHandler and UploadDocumentCommandHandler",
+      "type": "test_gap",
+      "priority": "P0",
+      "rationale": "These handlers contain authorization checks (ITenantContext membership), closed-recruitment guards, blob storage operations, and ImportDocument status mutations — all high-risk paths. They are the only command handlers in Epic 3 without any test coverage. The authorization gap pattern (Story 3.2 C1) already recurred once; untested handlers are where it will recur again.",
+      "evidence_refs": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "api/src/Application/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandHandler.cs",
+        "context.md Section 4 — Story 3.2 C1 (auth gap on query handler)",
+        "testing-standards.md — 'Domain/application changes have test coverage including at least one negative case'"
+      ],
+      "acceptance_criteria": [
+        "AssignDocumentCommandHandlerTests.cs exists with tests for: happy path, recruitment not found, user not member (403), recruitment closed, candidate not found, old document replaced and blob deleted, ImportDocument status updated when ImportSessionId provided",
+        "UploadDocumentCommandHandlerTests.cs exists with tests for: happy path with blob upload, recruitment not found, user not member (403), recruitment closed, candidate not found, old document replaced and blob deleted",
+        "All tests use NUnit [Test], NSubstitute, FluentAssertions",
+        "All tests pass in CI"
+      ],
+      "automation_hints": [
+        "Follow ResolveMatchConflictCommandHandlerTests.cs as pattern — same SetUp structure with mocked IApplicationDbContext, ITenantContext, IBlobStorageService",
+        "Use MockQueryable.NSubstitute for DbSet mocking"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandValidatorTests.cs",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandHandlerTests.cs",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandValidatorTests.cs"
+      ],
+      "risk_if_ignored": "Authorization bypass or blob storage leak in document assignment/upload goes undetected until production — same defect class as the recurrent Story 3.2 C1 finding"
+    },
+    {
+      "id": "QA-002",
+      "title": "Enforce code coverage thresholds in CI pipeline",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Code coverage has been flagged as missing evidence in three consecutive retrospectives (Epics 1, 2, and 3). coverlet.collector is installed in all four test projects and CI runs --collect but no thresholds are enforced, no reports are published, and no baseline exists. Without coverage data, test gaps like QA-001 remain invisible until code review catches them.",
+      "evidence_refs": [
+        "context.md Section 3 — 'Code Coverage: Not measured (pre-existing gap from Epic 2)'",
+        ".github/workflows/ci.yml line 19 — --collect:\"XPlat Code Coverage\" present but no threshold enforcement",
+        "api/tests/Application.UnitTests/Application.UnitTests.csproj — coverlet.collector installed",
+        ".retro/2026-02-14T013000Z/lens/qa.json — 'Code coverage metrics still not evidenced'"
+      ],
+      "acceptance_criteria": [
+        "CI pipeline publishes coverage report as GitHub Actions artifact",
+        "Coverage summary is logged in CI output showing line/branch percentages per project",
+        "Minimum coverage thresholds are configured (suggest 70% for Domain.UnitTests, 60% for Application.UnitTests) — failing the build on regression",
+        "Baseline coverage numbers documented in testing-standards.md"
+      ],
+      "automation_hints": [
+        "Add reportgenerator dotnet tool to CI for merging Cobertura reports",
+        "Use coverlet.msbuild /p:Threshold=70 or dotnet test /p:CollectCoverage=true /p:Threshold=70",
+        "Upload coverage HTML report as actions/upload-artifact"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "Test gaps continue to accumulate undetected — each epic adds more untested handlers and the cost of closing gaps compounds over time"
+    },
+    {
+      "id": "QA-003",
+      "title": "Extend authorization check requirement to cover query handlers explicitly",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "E-001 experiment failed because the documented authorization pattern targeted command handlers but Story 3.2 C1 was a missing auth check on a query handler (GetImportSessionQueryHandler). The same defect class recurred from Epic 2. Query handlers that return tenant-scoped data are equally security-sensitive and need the same mandatory verification step.",
+      "evidence_refs": [
+        "context.md Section 6 — E-001 result: FAIL, 'auth gap was on a *query* handler, not a command handler'",
+        "context.md Section 4 — Story 3.2 C1: GetImportSessionQueryHandler missing ITenantContext membership verification",
+        "commit 340e888 — fix adding auth check after review caught it"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md Authorization section explicitly lists query handlers as requiring ITenantContext membership checks",
+        "team-workflow.md implementation plan template includes 'Authorization Check' section that covers both commands and queries",
+        "Code review checklist includes explicit query handler authorization verification item",
+        "Next epic has zero authorization-related Critical findings on query handlers"
+      ],
+      "automation_hints": [
+        "Consider adding a Roslyn analyzer or architecture test that scans for IRequestHandler implementations and verifies they reference ITenantContext",
+        "Alternatively, add to anti-patterns a regex scanning for handler files missing ITenantContext injection"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Authorization bypass on query handlers continues to recur — data leakage across tenants is a critical security risk that has now occurred in two consecutive epics"
+    },
+    {
+      "id": "QA-004",
+      "title": "Add functional/API-level tests for Epic 3 import and document endpoints",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "Application.FunctionalTests contains only pre-Epic-3 tests (DevAuthenticationTests, CustomExceptionHandlerTests). No HTTP-level tests exist for import upload, import session polling, candidate CRUD, or document endpoints. The test pyramid prescribes 'integration tests cover authz for sensitive endpoints and at least one end-to-end workflow', but this layer is entirely absent for Epic 3 features.",
+      "evidence_refs": [
+        "api/tests/Application.FunctionalTests/ — only Authentication and Infrastructure subdirectories, no Candidates/Import/Documents",
+        "testing-pragmatic-tdd.md — 'Integration tests cover authz for sensitive endpoints and at least one end-to-end workflow'",
+        "context.md Section 3 — 'Application.UnitTests: Build successfully but cannot execute locally'"
+      ],
+      "acceptance_criteria": [
+        "At least one functional test per Epic 3 endpoint group: Candidates (CRUD), Import (start, poll, resolve), Documents (assign, upload)",
+        "Tests exercise authorization denial (non-member gets 403) at HTTP level",
+        "Tests use WebApplicationFactory and Testcontainers (no InMemoryDatabase)",
+        "All tests pass in CI"
+      ],
+      "automation_hints": [
+        "Extend existing CustomWebApplicationFactory and SqlTestcontainersTestDatabase for test setup",
+        "Create CandidateEndpointTests, ImportEndpointTests, DocumentEndpointTests following DevAuthenticationTests pattern"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Features/Candidates/CandidateEndpointTests.cs",
+        "api/tests/Application.FunctionalTests/Features/Import/ImportEndpointTests.cs",
+        "api/tests/Application.FunctionalTests/Features/Documents/DocumentEndpointTests.cs"
+      ],
+      "risk_if_ignored": "Endpoint registration errors, middleware ordering issues, and serialization bugs go undetected — unit tests with mocked DbSets do not exercise the real HTTP pipeline"
+    },
+    {
+      "id": "QA-005",
+      "title": "Add acceptance-criteria-to-test traceability for stories with logic completeness gaps",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Story 3.3 had both C1 (matchIndex bug) and I1 (handler missing actual candidate operations for AC7/AC8) — two distinct logic completeness gaps where acceptance criteria existed but corresponding test cases and implementation were missing. A lightweight AC-to-test mapping step before declaring done would catch these earlier than code review.",
+      "evidence_refs": [
+        "context.md Section 4 — Story 3.3 C1 and I1",
+        "context.md Section 5 — Fix Cycle Analysis: 'I1: handler incomplete (missing candidate operations)'",
+        "context.md Section 1 — Story 3.3 ACs: match review (confirm/reject)"
+      ],
+      "acceptance_criteria": [
+        "Story completion checklist includes 'Each AC has at least one corresponding test case' verification step",
+        "team-workflow.md updated with AC-to-test mapping requirement before declaring story done",
+        "Next epic: zero I-level findings for missing AC implementation"
+      ],
+      "automation_hints": [
+        "Add a section to Dev Agent Record template: 'AC Coverage Map' listing each AC and its test file/method",
+        "Could be enforced via review checklist item rather than automation"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Logic completeness gaps continue to slip through to review — fix cycles remain at 80% rather than decreasing"
+    },
+    {
+      "id": "QA-006",
+      "title": "Resolve Application.UnitTests local execution blocker",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Application.UnitTests build but cannot execute locally due to missing ASP.NET Core 10 runtime. This means 40+ handler-level tests are only validated in CI, not during local development. The feedback loop for catching handler bugs is delayed, increasing the chance of defects reaching review.",
+      "evidence_refs": [
+        "context.md Section 3 — 'Application.UnitTests: Build successfully but cannot execute locally (ASP.NET Core 10 runtime not installed)'",
+        "context.md Section 5 — Fix cycles on handler-level issues (3.2 C1, 3.3 I1, 3.5 I1)"
+      ],
+      "acceptance_criteria": [
+        "ASP.NET Core 10 runtime installed in development environment OR test project restructured to not require it",
+        "dotnet test api/tests/Application.UnitTests runs and passes locally",
+        "Developer can verify handler tests before submitting for review"
+      ],
+      "automation_hints": [
+        "Install .NET 10 SDK/runtime locally (dotnet-install script or package manager)",
+        "Alternatively, use a devcontainer with .NET 10 pre-installed"
+      ],
+      "files_to_touch": [],
+      "risk_if_ignored": "Handler-level defects continue to be caught only in CI or review rather than during development — longer feedback loops and more fix cycles"
+    }
+  ]
+}

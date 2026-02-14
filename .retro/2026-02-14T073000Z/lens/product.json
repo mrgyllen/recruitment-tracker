@@ -1,0 +1,174 @@
+{
+  "persona": "Product Lens",
+  "wins": [
+    "All 20 Functional Requirements (FR14-FR17, FR19-FR25, FR28-FR33, FR55, FR62) across Stories 3.1-3.5 were implemented and verified, delivering the full Candidate Import and Document Management capability as specified in the epic.",
+    "Import pipeline correctly implements the core user journey J0/J2 (setup activity): XLSX upload, async processing via Channel<T>, candidate matching with email/name+phone confidence tiers, and guided wizard UI with match review -- matching the PRD's emphasis on this being the densest domain area (32% of all FRs).",
+    "PDF bundle splitting with TOC parsing, blob storage, and auto-matching by normalized name delivers a complete end-to-end document management flow, reducing Erik's manual effort from per-candidate file handling to a single bundle upload.",
+    "Story 3.4 achieved a clean pass (0 Critical, 0 Important findings) -- the only story in Epic 3 to do so -- demonstrating that infrastructure-heavy stories with clear boundaries produce higher first-pass quality.",
+    "Two deferred items from Epic 2 (A-006 TeamEndpoints standardization, A-008 exception handler integration tests) were resolved at the start of Epic 3, showing backlog hygiene discipline."
+  ],
+  "problems": [
+    "Story 3.3 I1 finding revealed that ResolveMatchConflictCommandHandler was incomplete: it only updated ImportRowResult.Resolution without performing actual Candidate operations (UpdateProfile on confirm, Create on reject per AC7/AC8). This means the match review feature was functionally non-operational until the fix cycle -- a partial AC implementation that passed initial development but was caught in review.",
+    "Story 3.5 I1 finding (CandidateDetail always passed existingDocument={null}) meant the document replacement flow (AC: 'the new document replaces the previous one') was broken -- users could not see existing documents to know they were replacing one. The root cause was CandidateDto missing the document field and the query missing .Include(c => c.Documents).",
+    "Story 3.3 C1 matchIndex bug: MatchReviewStep used filtered array index instead of full-array index when calling backend, meaning confirm/reject actions on low-confidence matches could target the wrong match row. This is a data integrity risk in the user's most sensitive workflow action.",
+    "Story 3.5 M3 explicitly deferred the full Assign UI (dropdown/combobox for selecting candidates to assign unmatched documents to), delivering only a base Assign button. The AC states 'a dropdown or search allows the user to select a candidate to assign it to' -- this is a partial implementation with no follow-up story tracked.",
+    "A-007 (CloseRecruitment returns 200 instead of 204) remains unresolved from Epic 2 retro. While minor, this violates the API patterns documented in api-patterns.md and sets an inconsistent precedent for new endpoint development.",
+    "ImportSession aggregate boundary in architecture.md still describes it as having 'no children -- tracks row-level results as value objects', but Story 3.4 added ImportDocument as a child entity collection. This architecture documentation drift creates risk for future agents who rely on architecture.md as the source of truth.",
+    "Code coverage remains unmeasured (pre-existing gap from Epic 2). With 12.7K lines of new code across domain logic, import pipeline, PDF splitting, and frontend components, there is no quantitative signal on which code paths lack test coverage."
+  ],
+  "missing_evidence": [
+    "No WCAG 2.1 AA accessibility audit evidence for the import wizard UI (Story 3.3), file upload interactions (Stories 3.2, 3.4), or document assignment UI (Story 3.5). The architecture specifies WCAG 2.1 AA across all core flows but no accessibility testing was reported.",
+    "No evidence of loading, empty, and error state handling verification across the new frontend components (ImportWizard, ImportSummary, MatchReviewStep, FileUploadStep, CandidateDetail, DocumentUpload). The SkeletonLoader anti-pattern entry exists in pending.txt but only covers 'Loading...' text.",
+    "No performance measurement for NFR10 (import summary renders within 2 seconds) or NFR7 (PDF splitting of 150 candidates / 100 MB within 60 seconds). These NFRs are stated in Stories 3.3 and 3.4 technical notes but no benchmarks were captured.",
+    "No evidence of ubiquitous language consistency audit across the 138 changed files. The architecture.md glossary defines precise terms (e.g., ImportSession not 'Upload', Candidate not 'Applicant') but no verification was performed."
+  ],
+  "candidate_actions": [
+    {
+      "id": "PROD-001",
+      "title": "Create follow-up story for full unmatched-document assignment UI (dropdown/search)",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "Story 3.5 AC states 'a dropdown or search allows the user to select a candidate to assign it to' and 'only candidates without a document are suggested first, with all candidates available'. The current implementation delivers only a base Assign button (M3 deferral). Without a proper selection UI, Erik cannot efficiently assign unmatched documents from a PDF bundle to the correct candidates, which is the final step of the import journey (J2).",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.5 M3: 'Deferred full Assign UI dropdown/combobox (base Assign button only)'",
+        "epic-3-candidate-import-document-management.md Story 3.5 AC: 'a dropdown or search allows the user to select a candidate to assign it to'"
+      ],
+      "acceptance_criteria": [
+        "A backlog story or enhancement ticket exists for the full assignment dropdown/search UI",
+        "The story references Story 3.5 M3 deferral as its origin",
+        "sprint-status.yaml reflects the new backlog item"
+      ],
+      "automation_hints": [
+        "Add a new story to the Epic 4 or Epic 3 addendum section in sprint-status.yaml",
+        "Reference the deferred AC text from Story 3.5"
+      ],
+      "files_to_touch": [
+        "_bmad-output/implementation-artifacts/sprint-status.yaml"
+      ],
+      "risk_if_ignored": "Users cannot efficiently assign unmatched documents to candidates, reducing the value of the PDF bundle splitting feature and forcing workarounds (individual uploads per candidate)."
+    },
+    {
+      "id": "PROD-002",
+      "title": "Update ImportSession aggregate boundary in architecture.md to include ImportDocument child entity",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Story 3.4 added ImportDocument as a child entity of ImportSession (commit 1bdd20a), but architecture.md still states ImportSession has 'no children -- tracks row-level results as value objects'. Future agents reading architecture.md will get an incorrect picture of the aggregate boundary, potentially leading to direct ImportDocument manipulation bypassing the aggregate root.",
+      "evidence_refs": [
+        "context.md Section 2 commit 1bdd20a: 'feat(3.4): add ImportDocument child entity with match status tracking'",
+        "architecture.md line 211: 'ImportSession | (no children -- tracks row-level results as value objects)'"
+      ],
+      "acceptance_criteria": [
+        "architecture.md Aggregate Boundaries table lists ImportDocument as a child of ImportSession",
+        "Key invariants for ImportSession mention document match status tracking"
+      ],
+      "automation_hints": [
+        "Update the Aggregate Boundaries table in architecture.md",
+        "Add ImportDocument to ImportSession's Owned Entities column",
+        "Add relevant invariants (e.g., document match status transitions)"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture.md"
+      ],
+      "risk_if_ignored": "Architecture documentation drift causes future agents to violate aggregate root access rules for ImportDocument, potentially creating data consistency bugs."
+    },
+    {
+      "id": "PROD-003",
+      "title": "Add AC completeness verification step to review checklist",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "Two stories (3.3 and 3.5) shipped with partially implemented ACs that were only caught during review. Story 3.3 I1 had a handler that updated a string but did not perform the actual candidate operations (confirm=UpdateProfile, reject=Create). Story 3.5 I1 had a component that always received null for existing documents. Both represent cases where the code compiled and tests passed but the AC was not functionally complete. A systematic AC-by-AC verification before declaring 'done' would catch these gaps earlier.",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.3 I1: 'ResolveMatchConflictCommandHandler only updated ImportRowResult.Resolution string without performing actual Candidate operations'",
+        "context.md Section 4 Story 3.5 I1: 'CandidateDetail always passed existingDocument={null} because CandidateDto didn't include document data'",
+        "context.md Section 5: Fix cycle rate 80% (4/5 stories)"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Story Completion section includes an explicit 'AC completeness walkthrough' step",
+        "The step requires verifying each AC end-to-end (not just that code exists, but that it functionally works)",
+        "The step is documented as occurring before the anti-pattern scan"
+      ],
+      "automation_hints": [
+        "Add a checklist item to team-workflow.md verification-before-completion section",
+        "Consider requiring the Dev Agent to list each AC with a pass/fail status in the Dev Agent Record"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Fix cycle rate remains high (80%) as partial AC implementations continue to reach review, costing an extra review-fix round per story."
+    },
+    {
+      "id": "PROD-004",
+      "title": "Resolve A-007: CloseRecruitment endpoint returns 200 instead of 204",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "This item has been deferred across two retro cycles (Epic 2 and Epic 3). The API patterns document specifies 204 No Content for state-change endpoints that return no body. Leaving this inconsistency creates a precedent that documented API patterns can be ignored without consequence.",
+      "evidence_refs": [
+        "context.md Section 1b: 'A-007: Fix CloseRecruitment endpoint to return 204 -- NOT RESOLVED (still returns 200)'",
+        "context.md Section 10: '# A-007: CloseRecruitment returns 200 instead of 204 -- NOT RESOLVED'"
+      ],
+      "acceptance_criteria": [
+        "CloseRecruitment endpoint returns 204 No Content",
+        "Existing tests updated to assert 204",
+        "A-007 marked as resolved in sprint-status.yaml"
+      ],
+      "automation_hints": [
+        "Change Results.Ok() to Results.NoContent() in the CloseRecruitment endpoint",
+        "Update corresponding endpoint and integration tests"
+      ],
+      "files_to_touch": [
+        "_bmad-output/implementation-artifacts/sprint-status.yaml"
+      ],
+      "risk_if_ignored": "Documented API conventions lose credibility when known violations persist across multiple epics, leading to inconsistent endpoint behavior across the codebase."
+    },
+    {
+      "id": "PROD-005",
+      "title": "Instrument accessibility testing for import wizard and document management UI",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "Epic 3 introduced significant new UI surfaces (ImportWizard with multi-step flow, FileUploadStep, ImportSummary, MatchReviewStep, CandidateDetail with DocumentUpload) that are part of the J0/J2 user journey. The architecture mandates WCAG 2.1 AA compliance but no accessibility verification was performed or reported for any of these components. Since these components involve dynamic state changes (polling, step transitions, confirm/reject actions), ARIA live regions and focus management are especially important.",
+      "evidence_refs": [
+        "context.md Section 3: no mention of accessibility testing in quality signals",
+        "architecture.md NFRs: 'WCAG 2.1 AA across all core flows. ARIA live regions for dynamic content. Focus management in sequential workflows.'"
+      ],
+      "acceptance_criteria": [
+        "Accessibility audit checklist exists for import wizard components",
+        "ARIA roles and live regions verified for polling/progress states",
+        "Focus management verified for wizard step transitions",
+        "Keyboard navigation verified for match review confirm/reject actions"
+      ],
+      "automation_hints": [
+        "Add axe-core or similar automated accessibility testing to frontend test suite",
+        "Add accessibility verification step to the frontend review checklist"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-frontend.md",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "WCAG 2.1 AA non-compliance in core workflows could create usability barriers and potential legal exposure, especially since the architecture explicitly calls out accessibility as a non-negotiable requirement."
+    },
+    {
+      "id": "PROD-006",
+      "title": "Capture code coverage metrics for Epic 3 code",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "Epic 3 added 12,696 lines across domain logic (matching engines, name normalizers, PDF splitting), application layer (command/query handlers, validators), and frontend components. Code coverage thresholds were configured in Epic 1 but actual metrics have never been captured. Without coverage data, there is no way to identify untested paths in security-sensitive code (authorization checks, tenant isolation) or complex domain logic (candidate matching, PDF TOC parsing).",
+      "evidence_refs": [
+        "context.md Section 3: 'Code Coverage: Not measured (pre-existing gap from Epic 2, coverage thresholds configured but no actual metrics captured)'",
+        "context.md Section 2: '+12,696 lines'"
+      ],
+      "acceptance_criteria": [
+        "Code coverage report generated for backend and frontend test suites",
+        "Coverage metrics visible in CI pipeline output",
+        "Coverage thresholds enforced (as configured in Epic 1)"
+      ],
+      "automation_hints": [
+        "Add coverage collection to CI workflow (dotnet test --collect, vitest --coverage)",
+        "Integrate coverage reporting into PR checks"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml"
+      ],
+      "risk_if_ignored": "Increasing codebase size without coverage visibility means untested code paths accumulate silently, especially in security-critical areas like authorization and tenant isolation."
+    }
+  ]
+}

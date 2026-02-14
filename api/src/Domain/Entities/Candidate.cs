@@ -65,6 +65,38 @@ public class Candidate : GuidEntity
         AddDomainEvent(new DocumentUploadedEvent(Id, document.Id));
     }
 
+    public string? ReplaceDocument(
+        string documentType,
+        string newBlobStorageUrl,
+        string? workdayCandidateId = null,
+        DocumentSource documentSource = DocumentSource.IndividualUpload)
+    {
+        var existing = _documents.FirstOrDefault(
+            d => d.DocumentType.Equals(documentType, StringComparison.OrdinalIgnoreCase));
+
+        string? oldBlobUrl = null;
+
+        if (existing is not null)
+        {
+            oldBlobUrl = existing.BlobStorageUrl;
+            _documents.Remove(existing);
+        }
+
+        var newDoc = CandidateDocument.Create(Id, documentType, newBlobStorageUrl, workdayCandidateId, documentSource);
+        _documents.Add(newDoc);
+        AddDomainEvent(new DocumentUploadedEvent(Id, newDoc.Id));
+
+        return oldBlobUrl;
+    }
+
+    public void UpdateProfile(string fullName, string? phoneNumber, string? location, DateTimeOffset dateApplied)
+    {
+        FullName = fullName;
+        PhoneNumber = phoneNumber;
+        Location = location;
+        DateApplied = dateApplied;
+    }
+
     public void Anonymize()
     {
         FullName = null;

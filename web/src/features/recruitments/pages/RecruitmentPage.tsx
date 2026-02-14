@@ -7,6 +7,7 @@ import { WorkflowStepEditor } from '../WorkflowStepEditor'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { CandidateList } from '@/features/candidates/CandidateList'
 import { MemberList } from '@/features/team/MemberList'
 import { ApiError } from '@/lib/api/httpClient'
 
@@ -101,6 +102,8 @@ export function RecruitmentPage() {
       />
 
       <MemberList recruitmentId={data.id} disabled={isClosed} />
+
+      <CandidateList recruitmentId={data.id} isClosed={isClosed} />
 
       <CloseRecruitmentDialog
         recruitmentId={data.id}

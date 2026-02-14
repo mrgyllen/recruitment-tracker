@@ -1,0 +1,201 @@
+{
+  "persona": "Architecture Lens",
+  "wins": [
+    "Domain layer has zero infrastructure or web dependencies — grep across api/src/Domain/ found no 'using api.Infrastructure' or 'using api.Web' references, confirming Clean Architecture layering is intact after 12.7K lines added (context.md section 2, Domain grep result)",
+    "All domain entities use private setters and factory methods consistently — Candidate, ImportSession, ImportDocument, CandidateDocument all enforce encapsulation via 'private set' and static Create() factories with private constructors for EF Core (Candidate.cs, ImportSession.cs, ImportDocument.cs, CandidateDocument.cs)",
+    "ImportDocument child entity is correctly accessible only through ImportSession aggregate root — no DbSet<ImportDocument> exposed on IApplicationDbContext, and all mutations go through ImportSession methods (UpdateImportDocumentMatch, AddImportDocument, ClearImportDocuments) (IApplicationDbContext.cs, ImportSession.cs lines 109-137)",
+    "All EF Core configurations use Fluent API only with correct naming conventions — IX_ prefix for indexes, PascalCase table names, builder.Ignore(e => e.DomainEvents) on all new entity configs, no DataAnnotations on domain entities (ImportSessionConfiguration.cs, ImportDocumentConfiguration.cs, CandidateDocumentConfiguration.cs)",
+    "All endpoint classes inherit EndpointGroupBase consistently — all 5 endpoint files (RecruitmentEndpoints, TeamEndpoints, ImportEndpoints, ImportSessionEndpoints, CandidateEndpoints) follow the canonical pattern, resolving Epic 2 deferred item A-006 (context.md section 1, commit 92f64e1)"
+  ],
+  "problems": [
+    "ImportSession aggregate boundary has silently expanded from the architecture doc's definition of 'no children — tracks row-level results as value objects' to now owning ImportDocument child entities with full lifecycle management — architecture.md Aggregate Boundaries table states ImportSession has '(no children)' but code has _importDocuments collection with cascade delete (architecture.md section 'Aggregate Boundaries', ImportSession.cs lines 31-32, ImportSessionConfiguration.cs lines 37-43)",
+    "ImportPipelineHostedService modifies multiple aggregates in a single SaveChangesAsync — creates/updates Candidate entities AND mutates ImportSession state AND calls ImportSession.UpdateImportDocumentMatch, all saved in one transaction at line 207, violating the 'one aggregate per transaction' rule (architecture.md aggregate rule 5, ImportPipelineHostedService.cs lines 60-207)",
+    "AssignDocumentCommandHandler modifies both Candidate and ImportSession aggregates in one SaveChangesAsync call — loads Candidate to call ReplaceDocument() then loads ImportSession to call UpdateImportDocumentMatch(), saving both in a single transaction (architecture.md aggregate rule 5, AssignDocumentCommandHandler.cs lines 40-64)",
+    "ResolveMatchConflictCommandHandler modifies both ImportSession (ConfirmMatch/RejectMatch) and Candidate (UpdateProfile or Create) in a single SaveChangesAsync — cross-aggregate mutation without domain events (architecture.md aggregate rule 5, ResolveMatchConflictCommandHandler.cs lines 33-68)",
+    "DocumentMatchingEngine and NameNormalizer placed in Domain/Services while taking Candidate entity collections as input — review finding M1 in Story 3.5 noted this as a 'pragmatic deviation', but Domain/Services is not in the documented project structure (patterns-backend.md Structure Patterns section shows Domain containing Entities, ValueObjects, Enums, Events, Exceptions only — no Services or Models folders)",
+    "ImportRowResult evolved from sealed record (value object) to sealed class with mutable Confirm()/Reject() methods and private setters — this is no longer a value object in DDD terms but a mutable child with behavior, yet it lives in ValueObjects/ and is persisted via OwnsMany/ToJson which treats it as an owned type (context.md review finding M1 in Story 3.3, ImportRowResult.cs lines 50-66)",
+    "Epic 2 deferred item A-007 (CloseRecruitment returns 200 instead of 204) is listed as NOT RESOLVED in sprint-status but code inspection shows Results.NoContent() which returns 204 — either the sprint-status tracking is stale or there is a discrepancy between the endpoint and an integration test expectation (context.md section 10, RecruitmentEndpoints.cs lines 91-97)"
+  ],
+  "missing_evidence": [
+    "No code coverage metrics captured for Epic 3 — the evidence bundle notes this as a pre-existing gap from Epic 2. Cannot assess whether the 25+ new backend test files adequately cover the new domain logic, especially the import pipeline and document matching (context.md section 3 'Code Coverage')",
+    "No integration tests for ImportPipelineHostedService — this is the most complex component spanning multiple aggregates, multiple services (IXlsxParser, ICandidateMatchingEngine, DocumentMatchingEngine, IPdfSplitter, IBlobStorageService), and multiple failure modes, yet Application.UnitTests cannot execute locally (context.md section 3 'Test Results')",
+    "No evidence of global query filter verification for new entities — ImportSession, ImportDocument, and CandidateDocument were added but the mandatory security test scenarios (architecture.md section 'Authentication & Security') have no verification that tenant isolation filters are applied correctly to these entities",
+    "No audit trail evidence — none of the new handlers in Epic 3 (StartImport, ResolveMatchConflict, UploadDocument, AssignDocument, etc.) appear to emit audit events, despite AuditBehaviour.cs existing in the application pipeline and architecture.md listing audit as a cross-cutting concern"
+  ],
+  "candidate_actions": [
+    {
+      "id": "ARCH-001",
+      "title": "Update architecture.md to reflect ImportSession aggregate expansion with ImportDocument children",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "rationale": "The architecture doc states ImportSession has '(no children)' but it now owns ImportDocument entities with cascade delete, factory methods, and status lifecycle. The documented aggregate boundary has drifted from reality, which will mislead future development and code review.",
+      "evidence_refs": [
+        "architecture.md Aggregate Boundaries table: ImportSession '(no children — tracks row-level results as value objects)'",
+        "api/src/Domain/Entities/ImportSession.cs lines 31-32, 109-137",
+        "api/src/Domain/Entities/ImportDocument.cs",
+        "api/src/Infrastructure/Data/Configurations/ImportSessionConfiguration.cs lines 37-43"
+      ],
+      "acceptance_criteria": [
+        "architecture.md Aggregate Boundaries table lists ImportDocument and ImportRowResult as owned entities under ImportSession",
+        "Key invariants updated to reflect ImportDocument lifecycle rules (status transitions, match resolution)"
+      ],
+      "automation_hints": [
+        "Update the ImportSession row in the Aggregate Boundaries table in architecture.md"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture.md"
+      ],
+      "risk_if_ignored": "Future stories and code reviews will apply incorrect aggregate rules to ImportSession, potentially allowing direct ImportDocument modifications that bypass the aggregate root"
+    },
+    {
+      "id": "ARCH-002",
+      "title": "Refactor cross-aggregate mutations to use domain events or accept the deviation with documented rationale",
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "rationale": "Three handlers (ImportPipelineHostedService, AssignDocumentCommandHandler, ResolveMatchConflictCommandHandler) modify multiple aggregates in a single transaction. The architecture doc specifies 'one aggregate per transaction; use domain events for cross-aggregate coordination'. At current scale this works, but it sets a precedent that erodes the aggregate boundary rule. Either refactor to use domain events or add an explicit documented exception for import-pipeline cross-aggregate operations.",
+      "evidence_refs": [
+        "architecture.md aggregate rule 5: 'Command handlers operate on one aggregate per transaction'",
+        "api/src/Infrastructure/Services/ImportPipelineHostedService.cs lines 60-207 (single SaveChangesAsync)",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs lines 40-64",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs lines 33-68"
+      ],
+      "acceptance_criteria": [
+        "Either: (a) Cross-aggregate mutations are refactored to emit domain events consumed by separate handlers, OR (b) architecture.md documents an explicit exception for import pipeline operations with rationale and boundary conditions"
+      ],
+      "automation_hints": [
+        "Domain events CandidateMatchConfirmedEvent, CandidateMatchRejectedEvent, DocumentAutoMatchedEvent could coordinate the Candidate-side mutations",
+        "ImportPipelineHostedService could use MediatR.Publish() to trigger candidate-side handlers"
+      ],
+      "files_to_touch": [
+        "api/src/Infrastructure/Services/ImportPipelineHostedService.cs",
+        "api/src/Application/Features/Import/Commands/ResolveMatchConflict/ResolveMatchConflictCommandHandler.cs",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "_bmad-output/planning-artifacts/architecture.md"
+      ],
+      "risk_if_ignored": "As the import pipeline grows (e.g., batch operations in Epic 4+), multi-aggregate transactions become harder to reason about and may introduce subtle consistency bugs under concurrent access"
+    },
+    {
+      "id": "ARCH-003",
+      "title": "Document Domain/Services and Domain/Models as approved folders in project structure",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "NameNormalizer (static class) and DocumentMatchingEngine were placed in Domain/Services/, and SplitDocument/DocumentMatchResult in Domain/Models/. These folders are not in the documented project structure (patterns-backend.md shows Domain containing only Entities, ValueObjects, Enums, Events, Exceptions). The placement is pragmatically correct — these are pure domain functions with no external dependencies — but the structure docs should reflect reality.",
+      "evidence_refs": [
+        "patterns-backend.md 'Backend Project Organization' section: Domain/ only lists Entities, ValueObjects, Enums, Events, Exceptions",
+        "api/src/Domain/Services/NameNormalizer.cs",
+        "api/src/Domain/Services/DocumentMatchingEngine.cs",
+        "api/src/Domain/Models/SplitDocument.cs",
+        "api/src/Domain/Models/DocumentMatchResult.cs",
+        "context.md review finding M1 Story 3.5: 'pragmatic deviation from strict layers'"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md project structure includes Domain/Services/ and Domain/Models/ with usage guidance",
+        "Guidance clarifies: Domain services must be pure (no infrastructure deps), and Models are DTOs/records used only within the domain layer"
+      ],
+      "automation_hints": [
+        "Add Domain/Services/ and Domain/Models/ to the project structure tree in patterns-backend.md with a brief description"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future code may place infrastructure-dependent services in Domain/Services/ without pushback, since the convention is undocumented and the precedent is ambiguous"
+    },
+    {
+      "id": "ARCH-004",
+      "title": "Reclassify ImportRowResult from ValueObjects/ to a location reflecting its mutable-entity semantics",
+      "type": "refactor",
+      "priority": "P2",
+      "rationale": "ImportRowResult was originally a sealed record (immutable value object) but was changed to a sealed class with mutable Confirm()/Reject() methods during Story 3.3. It now has behavior, mutable state, and is EF-persisted via OwnsMany/ToJson. Living in ValueObjects/ misrepresents its nature and may confuse expectations about immutability.",
+      "evidence_refs": [
+        "api/src/Domain/ValueObjects/ImportRowResult.cs: mutable Confirm()/Reject() methods, private setters",
+        "context.md review finding M1 Story 3.3: 'ImportRowResult changed from sealed record to sealed class (needed mutable state)'"
+      ],
+      "acceptance_criteria": [
+        "ImportRowResult either: (a) moved to Entities/ or a new OwnedTypes/ folder with documentation, OR (b) stays in ValueObjects/ with an explicit comment explaining the deviation and why OwnsMany semantics require mutability"
+      ],
+      "automation_hints": [
+        "If moving: update namespace, update ImportSession using directive, verify EF OwnsMany still works after move"
+      ],
+      "files_to_touch": [
+        "api/src/Domain/ValueObjects/ImportRowResult.cs"
+      ],
+      "risk_if_ignored": "Developers may treat other value objects as mutable, eroding the distinction between entities and value objects in the domain model"
+    },
+    {
+      "id": "ARCH-005",
+      "title": "Clarify A-007 status — CloseRecruitment endpoint already returns 204",
+      "type": "guideline_gap",
+      "priority": "P2",
+      "rationale": "The sprint-status snapshot lists A-007 (CloseRecruitment returns 200 instead of 204) as NOT RESOLVED, but code inspection confirms RecruitmentEndpoints.CloseRecruitment() returns Results.NoContent() (HTTP 204). The tracking artifact is stale, which undermines trust in the deferred-item tracking process.",
+      "evidence_refs": [
+        "context.md section 10: 'A-007: CloseRecruitment returns 200 instead of 204 — NOT RESOLVED'",
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs lines 91-97: 'return Results.NoContent();'"
+      ],
+      "acceptance_criteria": [
+        "Sprint-status and retro tracking updated to reflect A-007 as resolved",
+        "Verify with an actual HTTP call or integration test that 204 is returned (not intercepted by middleware)"
+      ],
+      "automation_hints": [
+        "Update sprint-status.yaml to mark A-007 as done",
+        "Add integration test asserting 204 response code for CloseRecruitment"
+      ],
+      "files_to_touch": [
+        "sprint-status.yaml"
+      ],
+      "risk_if_ignored": "Deferred items list accumulates false entries, reducing credibility of the tracking process and wasting review time in future retros"
+    },
+    {
+      "id": "ARCH-006",
+      "title": "Add tenant isolation verification tests for ImportSession and CandidateDocument entities",
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "rationale": "Architecture.md mandates security test scenarios verifying that data queries go through ITenantContext. Epic 3 added ImportSession (with query by ID, not filtered by tenant) and CandidateDocument entities, but no evidence exists of global query filter tests for these. The GetImportSessionQueryHandler needed a manual auth fix (C1 Story 3.2), demonstrating that the data layer alone does not catch access control gaps.",
+      "evidence_refs": [
+        "architecture.md 'Mandatory security test scenarios' section",
+        "context.md Story 3.2 C1: GetImportSessionQueryHandler missing ITenantContext membership verification",
+        "api/src/Application/Features/Import/Queries/GetImportSession/GetImportSessionQueryHandler.cs: manual auth check added post-review",
+        "context.md section 3: 'Application.UnitTests: Build successfully but cannot execute locally'"
+      ],
+      "acceptance_criteria": [
+        "Integration test verifies user in Recruitment A cannot access ImportSession from Recruitment B",
+        "Integration test verifies CandidateDocument access is scoped to recruitment membership",
+        "Tests run in CI even if not locally executable"
+      ],
+      "automation_hints": [
+        "Use WebApplicationFactory with test users scoped to different recruitments",
+        "Assert 403 when accessing cross-recruitment ImportSession"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/"
+      ],
+      "risk_if_ignored": "Recurring authorization gaps — the same pattern (missing auth on query handler) appeared in both Epic 2 (Story 2.3) and Epic 3 (Story 3.2) despite E-001 experiment specifically targeting this"
+    },
+    {
+      "id": "ARCH-007",
+      "title": "Extend authorization check requirement to explicitly cover query handlers, not just commands",
+      "type": "guideline_gap",
+      "priority": "P0",
+      "rationale": "Experiment E-001 (authorization check requirement in implementation plans) was specifically designed to prevent missing ITenantContext checks, yet Story 3.2 had the exact same pattern — missing auth on a query handler. The documented pattern in patterns-backend.md correctly says 'ALL command and query handlers' but the 'When Is This Required?' table may create a false impression that queries are lower risk. The E-001 experiment failed because implementation plans did not include an Authorization section for query handlers.",
+      "evidence_refs": [
+        "context.md section 6 E-001: 'FAIL — Story 3.2 C1 had GetImportSessionQueryHandler missing auth'",
+        "context.md E-001 analysis: 'auth gap was on a *query* handler, not a command handler'",
+        "patterns-backend.md 'Handler Authorization' section: 'ALL command and query handlers'",
+        "commit 340e888: fix added after review"
+      ],
+      "acceptance_criteria": [
+        "Implementation plan template includes a mandatory 'Authorization Verification' section with explicit query handler checklist",
+        "The authorization pattern documentation emphasizes that queries are equally at risk as commands",
+        "Review checklist includes a specific line item: 'Every query handler loading recruitment-scoped data verifies membership'"
+      ],
+      "automation_hints": [
+        "Add a Roslyn analyzer or architectural test that scans for IRequestHandler implementations accessing dbContext.Recruitments/Candidates/ImportSessions without ITenantContext usage",
+        "Alternatively, add a grep-based CI check for handler files missing 'tenantContext' reference"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Third consecutive epic with the same authorization gap pattern — without structural enforcement (analyzer or CI check), human review remains the only safety net and has a demonstrated miss rate"
+    }
+  ]
+}

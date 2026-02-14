@@ -26,6 +26,23 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
         base.OnModelCreating(builder);
         builder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
 
+        // Global query filter on Recruitment -- defense-in-depth for handler auth checks
+        builder.Entity<Recruitment>().HasQueryFilter(r =>
+            _tenantContext.IsServiceContext ||
+            (_tenantContext.RecruitmentId != null && r.Id == _tenantContext.RecruitmentId) ||
+            (_tenantContext.UserGuid != null &&
+             r.Members.Any(m => m.UserId == _tenantContext.UserGuid))
+        );
+
+        // Global query filter on ImportSession -- scoped via Recruitment membership
+        builder.Entity<ImportSession>().HasQueryFilter(s =>
+            _tenantContext.IsServiceContext ||
+            (_tenantContext.RecruitmentId != null && s.RecruitmentId == _tenantContext.RecruitmentId) ||
+            (_tenantContext.UserGuid != null &&
+             EF.Property<Recruitment>(s, "Recruitment").Members
+                .Any(m => m.UserId == _tenantContext.UserGuid))
+        );
+
         // Global query filter on Candidate -- the security boundary
         builder.Entity<Candidate>().HasQueryFilter(c =>
             // Service context bypasses all filters (GDPR job)

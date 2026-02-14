@@ -64,17 +64,22 @@ development_status:
   2-5-close-recruitment-read-only-view: done
   epic-2-retrospective: done
   # Deferred items from Epic 2 retro (tracked for next sprint)
-  epic-2-deferred-team-endpoints: backlog       # A-006: Standardize TeamEndpoints to use EndpointGroupBase
-  epic-2-deferred-exception-integration-tests: backlog  # A-008: Integration tests for CustomExceptionHandler
+  epic-2-deferred-team-endpoints: done            # A-006: Standardize TeamEndpoints to use EndpointGroupBase
+  epic-2-deferred-exception-integration-tests: done     # A-008: Integration tests for CustomExceptionHandler
 
   # Epic 3: Candidate Import & Document Management
-  epic-3: in-progress
-  3-1-manual-candidate-management: ready-for-dev
-  3-2-xlsx-import-pipeline: ready-for-dev
-  3-3-import-wizard-summary-ui: ready-for-dev
-  3-4-pdf-bundle-upload-splitting: ready-for-dev
-  3-5-cv-auto-match-manual-assignment-individual-upload: ready-for-dev
-  epic-3-retrospective: optional
+  epic-3: done
+  3-1-manual-candidate-management: done
+  3-2-xlsx-import-pipeline: done
+  3-3-import-wizard-summary-ui: done
+  3-4-pdf-bundle-upload-splitting: done
+  3-5-cv-auto-match-manual-assignment-individual-upload: done
+  epic-3-retrospective: done
+  # Deferred items from Epic 3 retro
+  epic-3-deferred-unmatched-document-assign-ui: backlog  # Full dropdown/combobox for unmatched doc assignment (Story 3.5 M3)
+  epic-3-deferred-background-service-auth-docs: backlog  # BackgroundService authorization pattern documentation
+  epic-3-deferred-sas-token-max-enforcement: backlog     # SAS token 15-minute maximum enforcement (SEC-003)
+  epic-3-deferred-rate-limiting-uploads: backlog          # Rate limiting on file upload endpoints (SEC-006)
 
   # Epic 4: Screening & Outcome Recording
   epic-4: backlog

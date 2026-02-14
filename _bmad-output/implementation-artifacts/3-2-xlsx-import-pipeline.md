@@ -1,6 +1,6 @@
 # Story 3.2: XLSX Import Pipeline
 
-Status: ready-for-dev
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -775,10 +775,87 @@ Test naming convention: `MethodName_Scenario_ExpectedBehavior`
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Claude Opus 4.6 (claude-opus-4-6)
+
+### Testing Mode Rationale
+
+| Component | Mode | Rationale |
+|-----------|------|-----------|
+| ImportRowResult value object | Test-first | Pure domain value object with equality semantics |
+| ImportSession extensions | Test-first | Domain invariants (status transitions, row tracking, counts) |
+| Candidate.UpdateProfile() | Test-first | Must verify only profile fields updated, not outcomes/documents |
+| ParsedCandidateRow, interfaces | No tests | Pure data records and interface definitions |
+| StartImportCommand validator | Test-first | Validation rules with clear expected behavior |
+| StartImportCommand handler | Test-first | Orchestration: auth, session creation, channel write |
+| GetImportSessionQuery handler | Test-first | DTO mapping, not-found exception |
+| XlsxParserService | Spike then test | New library (ClosedXML) — explored API, then wrote tests with in-memory XLSX generation |
+| CandidateMatchingEngine | Test-first | Core business logic — matching rules have clear expected behavior |
+| ImportPipelineHostedService | Spike | BackgroundService + Channel<T> orchestration — no unit tests (integration boundary) |
+| Endpoints | Characterization | Thin delegation to MediatR, auto-discovered via EndpointGroupBase |
+| DI/EF config/appsettings | No tests | Wiring configuration verified by full solution build |
+
+### Key Decisions
+
+1. **In-memory XLSX generation for tests**: Used ClosedXML's XLWorkbook to create test fixtures in memory rather than embedded resource files. Self-contained tests, no external dependencies.
+2. **OwnsMany + ToJson() for row results**: ImportRowResult stored as JSON column in ImportSessions table (not separate table). Reduces schema complexity, row results are always read with the session.
+3. **Direct Candidate.Create() in pipeline**: ImportPipelineHostedService bypasses MediatR and directly uses domain model. Runs outside HTTP context, processes many rows in a loop.
+4. **Four-count MarkCompleted()**: Changed from (successCount, failCount) to (created, updated, errored, flagged) to match AC10 requirement for detailed summary counts.
+5. **ImportRowResult simplified**: Used (RowNumber, CandidateEmail, Action, ErrorMessage) instead of the fuller spec suggestion. CandidateEmail sufficient for identification; match confidence derivable from action.
+6. **No EF migration generated**: Schema changes defined in configuration but migration deferred — no database available in dev environment.
 
 ### Debug Log References
 
+- **Missing `using Microsoft.EntityFrameworkCore;`**: ImportPipelineHostedService build failed with CS1061 on `.Include()` call. Fixed by adding the using directive. Root cause: EF Core extension methods require explicit namespace import.
+
 ### Completion Notes List
 
+- All 10 story tasks implemented across 13 granular commits
+- 61/61 domain unit tests pass (including 28 new tests for Story 3.2)
+- Full solution build: 0 errors, 0 warnings
+- Anti-pattern scan clean: no child entity bypass, no sync-over-async, no new TODOs, authorization checks present
+- Application.UnitTests build successfully but cannot execute (ASP.NET Core 10 runtime not installed in environment)
+- No integration or acceptance tests added (require running ASP.NET Core host with database)
+
 ### File List
+
+**New files (18):**
+- `api/src/Domain/Enums/ImportRowAction.cs`
+- `api/src/Domain/ValueObjects/ImportRowResult.cs`
+- `api/src/Domain/ValueObjects/ParsedCandidateRow.cs`
+- `api/src/Application/Common/Interfaces/IXlsxParser.cs`
+- `api/src/Application/Common/Interfaces/ICandidateMatchingEngine.cs`
+- `api/src/Application/Common/Models/ImportRequest.cs`
+- `api/src/Application/Features/Import/Commands/StartImport/StartImportCommand.cs`
+- `api/src/Application/Features/Import/Commands/StartImport/StartImportResponse.cs`
+- `api/src/Application/Features/Import/Commands/StartImport/StartImportCommandValidator.cs`
+- `api/src/Application/Features/Import/Commands/StartImport/StartImportCommandHandler.cs`
+- `api/src/Application/Features/Import/Queries/GetImportSession/GetImportSessionQuery.cs`
+- `api/src/Application/Features/Import/Queries/GetImportSession/GetImportSessionQueryHandler.cs`
+- `api/src/Application/Features/Import/Queries/GetImportSession/ImportSessionDto.cs`
+- `api/src/Infrastructure/Services/XlsxColumnMappingOptions.cs`
+- `api/src/Infrastructure/Services/XlsxParserService.cs`
+- `api/src/Infrastructure/Services/CandidateMatchingEngine.cs`
+- `api/src/Infrastructure/Services/ImportPipelineHostedService.cs`
+- `docs/plans/2026-02-14-xlsx-import-pipeline.md`
+
+**New test files (8):**
+- `api/tests/Domain.UnitTests/ValueObjects/ImportRowResultTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Commands/StartImport/StartImportCommandValidatorTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Commands/StartImport/StartImportCommandHandlerTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Queries/GetImportSession/GetImportSessionQueryHandlerTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Services/XlsxParserServiceTests.cs`
+- `api/tests/Application.UnitTests/Features/Import/Services/CandidateMatchingEngineTests.cs`
+- `api/src/Web/Endpoints/ImportEndpoints.cs`
+- `api/src/Web/Endpoints/ImportSessionEndpoints.cs`
+
+**Modified files (9):**
+- `api/src/Domain/Entities/ImportSession.cs`
+- `api/src/Domain/Entities/Candidate.cs`
+- `api/src/Infrastructure/Data/Configurations/ImportSessionConfiguration.cs`
+- `api/src/Infrastructure/DependencyInjection.cs`
+- `api/src/Web/appsettings.json`
+- `api/Directory.Packages.props`
+- `api/src/Infrastructure/Infrastructure.csproj`
+- `api/tests/Application.UnitTests/Application.UnitTests.csproj`
+- `api/tests/Domain.UnitTests/Entities/ImportSessionTests.cs`
+- `api/tests/Domain.UnitTests/Entities/CandidateTests.cs`

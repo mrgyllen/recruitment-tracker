@@ -1,0 +1,201 @@
+{
+  "persona": "Docs/Enablement Lens",
+  "wins": [
+    "Handler Authorization section in patterns-backend.md includes a canonical code example, a 'When Is This Required?' decision table, and historical evidence from Story 2.3 — this is high-quality reference documentation that enabled the review agent to catch the same gap in Story 3.2 C1.",
+    "Architecture shard routing table in architecture.md and index.md is accurate and comprehensive — all 8 topic shards are routed correctly, and the gate-shard-reads hook enforces pre-read requirements before code writes.",
+    "Epic 2 retro actions A-001 through A-005 were all verified as applied before Epic 3 started, demonstrating strong retro-to-action continuity. The team-workflow.md was updated with E-001, E-002, and E-003 experiment integrations.",
+    "Anti-patterns-pending.txt mini-retro comments are present for every story (3.1 through 3.5) with finding IDs and rationale, proving the per-story mini-retro process ran consistently as documented in team-workflow.md.",
+    "The Endpoint Registration pattern in api-patterns.md was updated with the EndpointGroupBase canonical example after Epic 2 A-003, and Epic 2 deferred A-006 was resolved in commit 92f64e1 — documentation and code are now aligned."
+  ],
+  "problems": [
+    "Handler Authorization documentation in patterns-backend.md uses a command handler as its canonical example (AddWorkflowStepCommandHandler) but the recurring auth gap in Epic 3 Story 3.2 C1 was on a query handler (GetImportSessionQueryHandler). The 'When Is This Required?' table says 'Query that returns recruitment data: Yes — always' but the example does not show a query handler pattern, and the E-001 experiment text in team-workflow.md says 'command/query handlers' without a separate query example. This documentation gap contributed to the same auth bug recurring across two epics.",
+    "No documented pattern exists for pure-function domain services (static classes without external dependencies placed in the Domain layer). Story 3.5 M1 noted NameNormalizer and DocumentMatchingEngine as 'pragmatic deviations from strict layers' — this is an undocumented pattern that future agents will not know is acceptable without prior context.",
+    "The anti-patterns-pending.txt file has only 1 regex entry (SkeletonLoader Loading text) across all of Epic 3 despite 22 minor findings (4.4M per story average). E-002 experiment concluded that most minor findings are 'contextual and cannot be caught by regex patterns,' indicating the anti-pattern scanning mechanism is structurally limited and providing false confidence per the evidence bundle.",
+    "Code coverage is described as 'not measured' in the evidence bundle (Section 3), carried forward from Epic 2 as a pre-existing gap. Coverage thresholds are configured in project files but no metrics are captured. This is a recurring instrumentation gap that has survived two retros without resolution.",
+    "Epic 2 deferred item A-007 (CloseRecruitment returns 200 instead of 204) remains unresolved through two retro cycles. The api-patterns.md does not document the expected status code for close/state-change endpoints, which means there is no authoritative reference to enforce the correct behavior.",
+    "The routing table in architecture.md and index.md has no entry for 'blob storage work' or 'file upload/document management' as a routing category. Story 3.4 (PDF splitting with BlobStorageService) and Story 3.5 (document upload) required infrastructure.md and patterns-backend.md, but agents must infer this rather than finding an explicit routing entry.",
+    "Background service authorization pattern is not documented. Story 3.2 M1 noted that ImportPipelineHostedService 'bypasses MediatR' because there is no HTTP context, and infrastructure.md mentions 'ITenantContext with appropriate service context (not HTTP user context)' but provides no canonical example of how to set up ITenantContext in a BackgroundService. This will cause confusion for future background processing stories."
+  ],
+  "missing_evidence": [
+    "No evidence of which architecture shards each story's Dev Agent actually read before implementation — the gate-shard-reads hook enforces reads but does not log them, making it impossible to verify discoverability issues or determine whether agents found the right docs.",
+    "No code coverage metrics captured despite coverage thresholds being configured in project files — this gap has persisted since Epic 1 and prevents quantitative assessment of test adequacy.",
+    "No evidence of implementation plan content for Stories 3.1-3.5 — the evidence bundle references plans being written via the writing-plans skill but does not include whether the E-001 'Authorization section' was present in each plan."
+  ],
+  "candidate_actions": [
+    {
+      "id": "DOCS-001",
+      "title": "Add query handler canonical example to Handler Authorization section in patterns-backend.md",
+      "type": "docs_update",
+      "priority": "P0",
+      "rationale": "The same authorization gap on query handlers has recurred across Epic 2 (Story 2.3) and Epic 3 (Story 3.2 C1). The documentation shows only a command handler example. Adding an explicit query handler example with a comment like '// Query handlers need the same check' reduces ambiguity and makes the pattern copy-pasteable for both handler types.",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.2 C1: GetImportSessionQueryHandler missing ITenantContext",
+        "context.md Section 6 E-001 Result: FAIL",
+        "patterns-backend.md lines 109-156: Handler Authorization section with command-only example",
+        "team-workflow.md line 50: E-001 says 'command/query handlers' but canonical example is command-only"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md Handler Authorization section contains two canonical examples: one command handler and one query handler",
+        "Query handler example loads entity with .Include(r => r.Members) and checks _tenantContext.UserGuid",
+        "A note explicitly states: 'Query handlers are equally at risk — do not skip this check on read paths'"
+      ],
+      "automation_hints": [
+        "Add a second code block under the existing canonical example showing a query handler pattern",
+        "Update the 'When Is This Required?' table row for queries to include '(see query example above)'"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Authorization gaps on query handlers will continue to recur in future epics, as the documented pattern only demonstrates command handlers."
+    },
+    {
+      "id": "DOCS-002",
+      "title": "Document pure-function domain service pattern in patterns-backend.md",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Story 3.5 placed NameNormalizer (static class) and DocumentMatchingEngine in the Domain layer as 'pragmatic deviations.' Without documented guidance, future agents will either avoid the Domain layer for services (adding unnecessary abstraction) or place impure services there (violating layering). A short section clarifying when static/pure-function helpers belong in Domain vs Application provides consistent guidance.",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.5 M1: NameNormalizer and DocumentMatchingEngine placed in Domain layer",
+        "context.md Section 4 Story 3.5 M2: No interface for stateless NameNormalizer",
+        "patterns-backend.md: no existing guidance on domain-layer services or static helpers"
+      ],
+      "acceptance_criteria": [
+        "patterns-backend.md contains a 'Domain Services' or 'Pure-Function Helpers in Domain' subsection",
+        "Section states: static classes with zero external dependencies and pure functions may live in Domain layer",
+        "Section states: services with I/O, DI dependencies, or side effects belong in Application or Infrastructure",
+        "NameNormalizer and DocumentMatchingEngine cited as canonical examples"
+      ],
+      "automation_hints": [
+        "Add subsection after 'Structure Patterns' in patterns-backend.md",
+        "Keep it concise — 5-10 lines with a decision table"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future agents will treat domain-layer pure functions as violations and either relocate them unnecessarily or avoid the pattern, creating inconsistency."
+    },
+    {
+      "id": "DOCS-003",
+      "title": "Add state-change endpoint status code convention to api-patterns.md",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Epic 2 deferred item A-007 (CloseRecruitment returns 200 instead of 204) has survived two retro cycles. The api-patterns.md API Response Formats table has entries for creation (201), async (202), and errors, but no entry for state-change operations (close, archive, resolve). Without an authoritative reference, the correct status code remains ambiguous.",
+      "evidence_refs": [
+        "context.md Section 1b: A-007 NOT RESOLVED — CloseRecruitment returns 200 instead of 204",
+        "context.md Section 10: sprint-status confirms A-007 unresolved",
+        "api-patterns.md lines 73-82: API Response Formats table missing state-change entry"
+      ],
+      "acceptance_criteria": [
+        "api-patterns.md API Response Formats table includes a row for 'State change (no body)' with format '204 No Content'",
+        "Example shows CloseRecruitment or similar action-only endpoint"
+      ],
+      "automation_hints": [
+        "Add row to the table in api-patterns.md between 'Creation' and 'Async operation' rows"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/api-patterns.md"
+      ],
+      "risk_if_ignored": "A-007 will remain ambiguous and continue to be deferred. State-change endpoints will inconsistently return 200 or 204 across the codebase."
+    },
+    {
+      "id": "DOCS-004",
+      "title": "Add blob storage and document management routing entry to architecture shard routing table",
+      "type": "docs_update",
+      "priority": "P2",
+      "rationale": "Stories 3.4 and 3.5 required BlobStorageService, PdfSplitterService, and document upload patterns but the routing table in architecture.md has no explicit entry for 'file upload,' 'blob storage,' or 'document management' tasks. Agents must infer they need infrastructure.md from the 'DevOps/deployment' row, which is not intuitive.",
+      "evidence_refs": [
+        "architecture.md lines 26-36: routing table has no blob/document/file-upload entry",
+        "index.md lines 6-18: same routing table replicated, same gap",
+        "context.md Section 1 Story 3.4: PDF bundle upload with BlobStorageService",
+        "context.md Section 1 Story 3.5: document upload and replacement"
+      ],
+      "acceptance_criteria": [
+        "architecture.md routing table includes a row: 'File upload / document storage' -> 'Add infrastructure.md + api-patterns.md'",
+        "index.md routing table matches"
+      ],
+      "automation_hints": [
+        "Add row to both routing tables in architecture.md and architecture/index.md"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture.md",
+        "_bmad-output/planning-artifacts/architecture/index.md"
+      ],
+      "risk_if_ignored": "Future document/upload stories may miss infrastructure.md patterns, leading to inconsistent blob storage usage."
+    },
+    {
+      "id": "DOCS-005",
+      "title": "Document BackgroundService authorization pattern with ITenantContext service context example",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Infrastructure.md states 'Both use ITenantContext with appropriate service context (not HTTP user context)' but provides no code example. Story 3.2 M1 noted ImportPipelineHostedService bypasses MediatR because there is no HTTP context. Without a canonical example, future background service implementations will lack guidance on how to handle authorization outside of HTTP request scope.",
+      "evidence_refs": [
+        "infrastructure.md line 27: 'Both use ITenantContext with appropriate service context'",
+        "context.md Section 4 Story 3.2 M1: ImportPipelineHostedService bypasses MediatR",
+        "patterns-backend.md: no guidance on BackgroundService authorization"
+      ],
+      "acceptance_criteria": [
+        "infrastructure.md Background Processing section includes a canonical code example showing how a BackgroundService sets up ITenantContext for service-context operations",
+        "Example shows the difference between HTTP-context and service-context authorization",
+        "Note explains when MediatR bypass is acceptable (background services with no HTTP context)"
+      ],
+      "automation_hints": [
+        "Expand the Background Processing section in infrastructure.md with a code example from ImportPipelineHostedService",
+        "Cross-reference from patterns-backend.md Handler Authorization 'When Is This Required?' table"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture/infrastructure.md",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future background processing stories will either incorrectly apply HTTP-context auth patterns or skip authorization entirely, creating security gaps."
+    },
+    {
+      "id": "DOCS-006",
+      "title": "Restructure E-001 experiment to require explicit query handler enumeration in implementation plans",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "E-001 failed because the implementation plan for Story 3.2 did not include an Authorization section despite the experiment being applied to team-workflow.md. The experiment text in team-workflow.md says 'command/query handlers' but the dev agent did not enumerate query handlers. The experiment needs to be more prescriptive: require a checklist of ALL handlers (commands AND queries) with their authorization status.",
+      "evidence_refs": [
+        "context.md Section 6 E-001: FAIL — Story 3.2 plan did not include Authorization section",
+        "context.md Section 6 E-001 Analysis: 'auth gap was on a *query* handler, not a command handler'",
+        "team-workflow.md lines 50-51: E-001 text references 'command/query handlers' but example is command-only"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md E-001 section requires implementation plans to include a table listing ALL command and query handler classes with columns: Handler Name, Recruitment-Scoped? (Y/N), Auth Check Required? (Y/N)",
+        "The requirement explicitly calls out query handlers as equally at risk",
+        "Example table shows at least one query handler row"
+      ],
+      "automation_hints": [
+        "Update the E-001 block in team-workflow.md Step 1.2 to include a handler enumeration table requirement"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "E-001 will continue to fail silently — the experiment text is present but insufficiently prescriptive, allowing query handler auth gaps to recur."
+    },
+    {
+      "id": "DOCS-007",
+      "title": "Replace E-002 anti-pattern regex scanning with structured checklist verification",
+      "type": "process_change",
+      "priority": "P2",
+      "rationale": "E-002 was inconclusive because anti-patterns-pending.txt has only 1 regex entry while most minor findings (4.4M per story average) are contextual design/pattern issues that cannot be expressed as regex. The experiment provides 'false confidence' per the evidence bundle. A structured checklist of common minor finding categories (DTO completeness, .Include() coverage, Dev Agent Record non-empty) would be more effective than regex scanning.",
+      "evidence_refs": [
+        "context.md Section 6 E-002: INCONCLUSIVE — 4.4M per story average, only 1 regex entry",
+        "context.md Section 6 E-002 Analysis: 'most minor findings are design/pattern issues, not text-matchable'",
+        "anti-patterns-pending.txt: only 1 regex entry (Loading text)"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md E-002 section is updated to include a pre-review checklist of 5-7 common minor finding categories derived from Epic 2 and Epic 3 patterns",
+        "Checklist items include: DTO fields match entity properties, query includes all navigation properties needed by DTO mapping, Dev Agent Record section is non-empty, no hardcoded status codes in handlers",
+        "Regex scanning against anti-patterns files is retained as supplementary, not primary"
+      ],
+      "automation_hints": [
+        "Add checklist to team-workflow.md Step 1.4 alongside existing E-002 text",
+        "Derive checklist items from recurring minor findings across Epic 2 and Epic 3"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Anti-pattern scanning will continue to provide false confidence while failing to catch the contextual issues that account for the majority of minor findings."
+    }
+  ]
+}

@@ -1,0 +1,513 @@
+{
+  "run_id": "2026-02-14T073000Z",
+  "scope": {
+    "level": "epic",
+    "items": [
+      {
+        "id": "3.1",
+        "title": "Manual Candidate Management",
+        "acceptance_criteria": ["Add candidate form", "Create with validation", "Duplicate email detection", "Remove with confirmation", "Closed recruitment guard"]
+      },
+      {
+        "id": "3.2",
+        "title": "XLSX Import Pipeline",
+        "acceptance_criteria": ["File upload validation", "ImportSession creation", "Async Channel<T> processing", "XLSX parsing", "Candidate matching (email/name+phone)", "Idempotent re-import", "Status polling"]
+      },
+      {
+        "id": "3.3",
+        "title": "Import Wizard & Summary UI",
+        "acceptance_criteria": ["Sheet wizard", "File upload step", "Processing/polling", "Summary with counts", "Error detail", "Match review confirm/reject", "Discrepancy notice", "Failure handling"]
+      },
+      {
+        "id": "3.4",
+        "title": "PDF Bundle Upload & Splitting",
+        "acceptance_criteria": ["PDF validation", "TOC parsing", "Page boundary detection", "Individual PDF extraction", "Blob storage", "Error handling", "Partial success", "Progress reporting"]
+      },
+      {
+        "id": "3.5",
+        "title": "CV Auto-Match, Manual Assignment & Individual Upload",
+        "acceptance_criteria": ["Name-based auto-matching", "Unmatched document display", "Manual assignment UI", "Individual upload", "Document replacement", "Closed recruitment guard"]
+      }
+    ],
+    "git": {
+      "base": "c5ee999",
+      "head": "2848d22"
+    }
+  },
+  "timing": {
+    "first_commit": "2026-02-14T08:30:23+01:00",
+    "last_commit": "2026-02-14T10:48:01+01:00",
+    "elapsed_hours": 2.3,
+    "total_commits": 52,
+    "stories_count": 5,
+    "commits_per_story": 10.4
+  },
+  "summary": {
+    "wins": [
+      "All 20 functional requirements (FR14-FR33, FR55, FR62) delivered across 5 full-stack stories — complete candidate import pipeline from XLSX parsing through PDF splitting to CV auto-matching, with 52 commits and 12.7K lines in 2.3 hours",
+      "Clean Architecture layering maintained with zero cross-layer dependency violations — Domain has no infrastructure references, all endpoints use EndpointGroupBase, all EF configs use Fluent API only",
+      "Strong DDD aggregate discipline — ImportDocument correctly encapsulated through ImportSession root, Candidate.ReplaceDocument enforces document lifecycle, all domain entities use private setters and factory methods",
+      "Story 3.4 (PDF Bundle Upload & Splitting) achieved the only clean review pass (0C, 0I), validating that infrastructure-focused stories with clear boundaries are lower risk",
+      "All fix cycles resolved in a single round — no multi-round fix cycles across the 4 stories requiring fixes, indicating review findings were clear and actionable"
+    ],
+    "problems": [
+      "Authorization gap pattern recurred for the third consecutive epic: Story 3.2 C1 (GetImportSessionQueryHandler missing auth) is the same defect class as Epic 2 Story 2.3. E-001 experiment targeting this explicitly FAILED — the documented pattern covers commands but the recurring gap is on query handlers",
+      "Fix cycle rate regressed from 60% (Epic 2) to 80% (Epic 3, 4/5 stories) despite three experiments applied. All experiments evaluated as FAIL or INCONCLUSIVE, suggesting process-based controls are insufficient for the observed defect categories",
+      "Two stories shipped with partially-implemented ACs caught only in review: Story 3.3 I1 (handler updated string but didn't perform candidate operations for AC7/AC8), Story 3.5 I1 (CandidateDetail always received null document because DTO/query were incomplete)",
+      "AssignDocumentCommand accepts arbitrary blob URLs without validating they belong to the same recruitment's storage path — a cross-recruitment document access vector",
+      "Code coverage remains unmeasured across three consecutive epics — no visibility into which of the 12.7K new lines lack test coverage, making test gaps invisible until review"
+    ],
+    "root_cause_hypotheses": [
+      "Authorization gap recurrence: Process controls (E-001 plan requirement) don't enforce compliance — they rely on the dev agent to self-check, which is the same failure mode as not having the control. Structural enforcement (architectural test, MediatR behaviour, or global query filter) would eliminate the category",
+      "High fix cycle rate: Stories 3.3 I1 and 3.5 I1 were both 'code compiles and tests pass but AC not functionally complete' — the verification step checks test results but not AC completeness end-to-end. A systematic AC walkthrough would catch these",
+      "E-002 false confidence: Anti-pattern scanning provides comfort ('scan clean') but catches none of the actual defect categories (incomplete handlers, missing DTO fields, wrong array index). The tool doesn't match the problem",
+      "Untested handlers: AssignDocument and UploadDocument handlers have zero tests despite being the only handlers introduced in Story 3.5 — likely because they were added late in the story and the verification step checks 'tests pass' not 'test coverage exists'"
+    ],
+    "missing_evidence": [
+      "Code coverage metrics — configured but never captured across three epics",
+      "Application.UnitTests execution results — build-only verification locally, no CI output provided",
+      "Accessibility audit results for import wizard UI components (WCAG 2.1 AA)",
+      "Performance benchmarks for NFR7 (PDF splitting 150 candidates in 60s) and NFR10 (import summary renders in 2s)"
+    ]
+  },
+  "experiment_validation": [
+    {
+      "id": "E-001",
+      "hypothesis": "Adding a mandatory 'Authorization Check' section to implementation plans will prevent missing ITenantContext checks in command handlers",
+      "success_metric": "Zero authorization-related Critical findings in Epic 3 reviews",
+      "result": "fail",
+      "evidence": "Story 3.2 C1: GetImportSessionQueryHandler shipped without ITenantContext membership check (commit 340e888 fix). The implementation plan for Story 3.2 did not include an explicit Authorization section. The documented pattern shows only a command handler example, but the gap was on a query handler.",
+      "recommendation": "modify"
+    },
+    {
+      "id": "E-002",
+      "hypothesis": "Running anti-pattern scanning against pending.txt entries before review will catch minor findings early",
+      "success_metric": "Minor findings per story drop from 3+ to 1 or fewer in Epic 3",
+      "result": "inconclusive",
+      "evidence": "Dev Agent reported running scans ('anti-pattern scan clean' in each story), but minor findings averaged 4.4 per story (3.1=4M, 3.2=5M, 3.3=4M, 3.4=5M, 3.5=4M). anti-patterns-pending.txt has only 1 regex entry — most minors are contextual design issues not matchable by regex.",
+      "recommendation": "modify"
+    },
+    {
+      "id": "E-003",
+      "hypothesis": "First-of-kind stories benefit from pattern establishment phase where implementation is documented as canonical example",
+      "success_metric": "Fix cycle rate drops below 40% in Epic 3 (from 60% in Epic 2)",
+      "result": "fail",
+      "evidence": "Fix cycle rate was 80% (4/5 stories), worse than Epic 2's 60%. Each Epic 3 story introduced distinct domain areas (candidates, import, wizard UI, PDF splitting, CV matching) — the experiment assumes first-of-kind followed by similar stories, but Epic 3 stories are all different verticals. Fix cycle causes (auth, logic bugs, incomplete DTOs) are not pattern-establishment issues.",
+      "recommendation": "drop"
+    }
+  ],
+  "actions": [
+    {
+      "id": "A-001",
+      "title": "Eliminate authorization bypass defect class via architectural test and documentation",
+      "type": "security_hardening",
+      "priority": "P0",
+      "owner_persona": "Security",
+      "rationale": "The same auth gap pattern has recurred across 3 consecutive epics (Epic 1 not applicable, Epic 2 Story 2.3 C1, Epic 3 Story 3.2 C1). E-001 process control failed. Six lens reports independently flagged this. Structural enforcement is needed: an architectural test that fails when any IRequestHandler lacks ITenantContext, plus documentation showing both command and query handler examples.",
+      "evidence_refs": [
+        "context.md Section 6 E-001: FAIL",
+        "context.md Section 4 Story 3.2 C1: GetImportSessionQueryHandler missing auth",
+        "commit 340e888 (fix)",
+        "DEL-001, QA-003, ARCH-007, DOCS-001, SEC-005, DOCS-006 (6 lens reports)"
+      ],
+      "acceptance_criteria": [
+        "Architectural test exists that scans all IRequestHandler implementations and asserts ITenantContext is a constructor parameter",
+        "Test fails on CI if a new handler is added without ITenantContext",
+        "patterns-backend.md Handler Authorization section includes both a command handler AND a query handler canonical example",
+        "team-workflow.md E-001 section requires explicit handler enumeration table (command AND query) in implementation plans"
+      ],
+      "automation_hints": [
+        "Create api/tests/Application.UnitTests/Architecture/AuthorizationArchitectureTests.cs using reflection",
+        "Add second code block to patterns-backend.md showing GetImportSessionQueryHandler as query example",
+        "Update E-001 in team-workflow.md to require handler enumeration table"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/Architecture/AuthorizationArchitectureTests.cs",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Fourth consecutive epic with the same authorization gap — without structural enforcement, human review remains the only safety net (demonstrated miss rate: 1 Critical per epic)"
+    },
+    {
+      "id": "A-002",
+      "title": "Add unit tests for AssignDocumentCommandHandler and UploadDocumentCommandHandler",
+      "type": "test_gap",
+      "priority": "P0",
+      "owner_persona": "QA",
+      "rationale": "These are the only command handlers in Epic 3 without any test coverage. They contain authorization checks, closed-recruitment guards, blob storage interactions, and ImportDocument status updates — all high-risk paths. The authorization gap pattern already recurred once; untested handlers are where it will recur again.",
+      "evidence_refs": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "api/src/Application/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandHandler.cs",
+        "context.md Section 4 Story 3.2 C1 (auth gap pattern)",
+        "testing-pragmatic-tdd.md Definition of Done"
+      ],
+      "acceptance_criteria": [
+        "AssignDocumentCommandHandlerTests.cs exists with tests for: happy path, not found, non-member (403), closed recruitment, old document replaced",
+        "UploadDocumentCommandHandlerTests.cs exists with tests for: happy path with blob upload, not found, non-member (403), closed recruitment, document replacement",
+        "Corresponding validator test files exist",
+        "All tests use NUnit, NSubstitute, FluentAssertions"
+      ],
+      "automation_hints": [
+        "Follow ResolveMatchConflictCommandHandlerTests.cs as the pattern",
+        "Use MockQueryable.NSubstitute for DbSet mocking"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/UploadDocument/"
+      ],
+      "risk_if_ignored": "Authorization bypass or blob storage leak in document operations goes undetected until production"
+    },
+    {
+      "id": "A-003",
+      "title": "Add global query filters on Recruitment and ImportSession entities",
+      "type": "security_hardening",
+      "priority": "P1",
+      "owner_persona": "Security",
+      "rationale": "Only Candidate has a global query filter. Recruitment and ImportSession rely entirely on handler-level auth checks, which have already failed (Story 3.2 C1). Adding EF Core query filters creates defense-in-depth that prevents data leaks even when handler checks are omitted.",
+      "evidence_refs": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs (only Candidate has HasQueryFilter)",
+        "context.md Section 4 Story 3.2 C1",
+        "SEC-001, ARCH-006 lens reports"
+      ],
+      "acceptance_criteria": [
+        "HasQueryFilter configured on Recruitment scoped to ITenantContext membership",
+        "HasQueryFilter configured on ImportSession via Recruitment relationship",
+        "TenantContextFilterTests expanded with cross-tenant tests for Recruitment and ImportSession",
+        "All existing tests pass"
+      ],
+      "automation_hints": [
+        "Add filter in ApplicationDbContext.OnModelCreating",
+        "Expand TenantContextFilterTests with new scenarios"
+      ],
+      "files_to_touch": [
+        "api/src/Infrastructure/Data/ApplicationDbContext.cs",
+        "api/tests/Infrastructure.IntegrationTests/Data/TenantContextFilterTests.cs"
+      ],
+      "risk_if_ignored": "Any future handler querying Recruitment or ImportSession without explicit auth check leaks data across tenants"
+    },
+    {
+      "id": "A-004",
+      "title": "Update architecture.md to reflect ImportSession aggregate expansion and cross-aggregate exceptions",
+      "type": "guideline_gap",
+      "priority": "P1",
+      "owner_persona": "Architecture",
+      "rationale": "architecture.md states ImportSession has 'no children' but it now owns ImportDocument entities. Additionally, three handlers modify multiple aggregates in single transactions (ImportPipelineHostedService, AssignDocumentCommandHandler, ResolveMatchConflictCommandHandler). Both facts need documentation to prevent future agents from getting incorrect guidance.",
+      "evidence_refs": [
+        "architecture.md Aggregate Boundaries table: ImportSession '(no children)'",
+        "api/src/Domain/Entities/ImportSession.cs (ImportDocument collection)",
+        "api/src/Infrastructure/Services/ImportPipelineHostedService.cs (cross-aggregate SaveChanges)",
+        "ARCH-001, ARCH-002, PROD-002 lens reports"
+      ],
+      "acceptance_criteria": [
+        "ImportSession row in Aggregate Boundaries table lists ImportDocument and ImportRowResult as owned entities",
+        "A documented exception for import-pipeline cross-aggregate operations exists with rationale and boundary conditions",
+        "Domain/Services and Domain/Models folders documented in project structure"
+      ],
+      "automation_hints": [
+        "Update Aggregate Boundaries table in architecture.md",
+        "Add 'Import Pipeline Exception' note to the one-aggregate-per-transaction rule",
+        "Add Domain/Services and Domain/Models to patterns-backend.md project structure"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/architecture.md",
+        "_bmad-output/planning-artifacts/architecture/patterns-backend.md"
+      ],
+      "risk_if_ignored": "Future agents apply incorrect aggregate rules, potentially manipulating ImportDocument outside the aggregate root or being confused by legitimate cross-aggregate import operations"
+    },
+    {
+      "id": "A-005",
+      "title": "Enable code coverage collection with enforced CI thresholds",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "owner_persona": "QA",
+      "rationale": "Code coverage has been flagged as missing evidence in three consecutive retrospectives. coverlet.collector is installed but no thresholds enforced, no reports published. Without coverage data, test gaps like the untested AssignDocument/UploadDocument handlers remain invisible.",
+      "evidence_refs": [
+        "context.md Section 3: 'Code Coverage: Not measured'",
+        "DEL-004, QA-002, PROD-006 (3 lens reports)",
+        ".github/workflows/ci.yml (--collect present but no threshold)"
+      ],
+      "acceptance_criteria": [
+        "CI pipeline publishes coverage report as GitHub Actions artifact",
+        "Minimum thresholds configured (70% Domain.UnitTests, 60% Application.UnitTests)",
+        "Build fails on coverage regression below thresholds",
+        "Baseline coverage numbers documented in testing-standards.md"
+      ],
+      "automation_hints": [
+        "Add reportgenerator for merging Cobertura reports",
+        "Use coverlet.msbuild /p:Threshold=70",
+        "Upload HTML report as actions/upload-artifact"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml",
+        "_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "Test gaps accumulate undetected with each epic — cost of closing gaps compounds over time"
+    },
+    {
+      "id": "A-006",
+      "title": "Validate AssignDocumentCommand blob URL belongs to same recruitment's storage path",
+      "type": "security_hardening",
+      "priority": "P1",
+      "owner_persona": "Security",
+      "rationale": "AssignDocumentCommand accepts an arbitrary DocumentBlobUrl string with no validation that it belongs to the target recruitment's path. A team member on Recruitment A could supply a blob URL from Recruitment B's documents, bypassing data isolation at the storage layer.",
+      "evidence_refs": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommand.cs",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandValidator.cs (only NotEmpty check)",
+        "SEC-002 lens report"
+      ],
+      "acceptance_criteria": [
+        "Handler or validator verifies DocumentBlobUrl corresponds to an ImportDocument in the same recruitment's ImportSession",
+        "Unit test confirms rejection of cross-recruitment blob URLs",
+        "Error returns Problem Details explaining the validation failure"
+      ],
+      "automation_hints": [
+        "Validate in handler by checking ImportDocument belongs to a session with matching RecruitmentId",
+        "Or validate URL path prefix in validator"
+      ],
+      "files_to_touch": [
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandValidator.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment document access via blob URL injection"
+    },
+    {
+      "id": "A-007",
+      "title": "Add AC completeness verification step to story completion workflow",
+      "type": "process_change",
+      "priority": "P1",
+      "owner_persona": "Product",
+      "rationale": "80% fix cycle rate (4/5 stories) is driven by 'code compiles and tests pass but AC not functionally complete' gaps. Stories 3.3 I1 (handler didn't perform candidate operations) and 3.5 I1 (DTO missing document field) were both partial implementations caught only in review. A systematic AC walkthrough before declaring done would catch these earlier.",
+      "evidence_refs": [
+        "context.md Section 4 Story 3.3 I1",
+        "context.md Section 4 Story 3.5 I1",
+        "context.md Section 5: Fix cycle rate 80%",
+        "PROD-003, QA-005 lens reports"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Story Completion section includes 'AC completeness walkthrough' step before anti-pattern scan",
+        "Step requires verifying each AC end-to-end (not just that code exists)",
+        "Dev Agent Record template includes AC Coverage Map listing each AC with its test file/method"
+      ],
+      "automation_hints": [
+        "Add checklist item to team-workflow.md verification-before-completion section",
+        "Add AC Coverage Map section to Dev Agent Record template"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Fix cycle rate remains at 80% as partial AC implementations continue reaching review"
+    },
+    {
+      "id": "A-008",
+      "title": "Clarify A-007 resolution status and add state-change endpoint convention",
+      "type": "docs_update",
+      "priority": "P2",
+      "owner_persona": "Delivery",
+      "rationale": "A-007 (CloseRecruitment 200 vs 204) has been tracked as unresolved through two retro cycles, but Delivery lens found the code already returns Results.NoContent(). Sprint-status tracking is stale. Additionally, api-patterns.md lacks a state-change endpoint convention, which is the root cause of the ambiguity.",
+      "evidence_refs": [
+        "api/src/Web/Endpoints/RecruitmentEndpoints.cs (Results.NoContent())",
+        "context.md Section 10: 'A-007: NOT RESOLVED'",
+        "DEL-006, ARCH-005, PROD-004, DOCS-003 lens reports"
+      ],
+      "acceptance_criteria": [
+        "Sprint-status.yaml reflects A-007 as resolved",
+        "api-patterns.md API Response Formats table includes row for 'State change (no body): 204 No Content'"
+      ],
+      "automation_hints": [
+        "Update sprint-status.yaml A-007 line",
+        "Add row to api-patterns.md response format table"
+      ],
+      "files_to_touch": [
+        "_bmad-output/implementation-artifacts/sprint-status.yaml",
+        "_bmad-output/planning-artifacts/architecture/api-patterns.md"
+      ],
+      "risk_if_ignored": "Deferred items list loses credibility when resolved items remain listed as outstanding"
+    },
+    {
+      "id": "A-009",
+      "title": "Redact entity keys from NotFoundException ProblemDetails responses",
+      "type": "security_hardening",
+      "priority": "P2",
+      "owner_persona": "Security",
+      "rationale": "NotFoundException includes entity type name and GUID in its message, and CustomExceptionHandler passes this directly to ProblemDetails.Detail. This reveals internal entity structure to API consumers, aiding enumeration attacks.",
+      "evidence_refs": [
+        "api/src/Application/Common/Exceptions/NotFoundException.cs",
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs",
+        "SEC-004 lens report"
+      ],
+      "acceptance_criteria": [
+        "ProblemDetails for 404 uses generic message without entity type or ID",
+        "Entity type and key logged server-side at Warning level",
+        "CustomExceptionHandler integration tests verify no entity keys in response body"
+      ],
+      "automation_hints": [
+        "Set Detail to fixed string in HandleNotFoundException",
+        "Log original message at Warning before writing response"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs"
+      ],
+      "risk_if_ignored": "Information disclosure of internal entity structure aids attackers in mapping API surface"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E-004",
+      "hypothesis": "An architectural test enforcing ITenantContext on all IRequestHandler implementations will eliminate the authorization bypass defect class entirely",
+      "how": "Create a reflection-based test that scans all IRequestHandler<,> implementations and asserts they inject ITenantContext. Run in CI.",
+      "success_metric": "Zero authorization-related Critical or Important findings in Epic 4 reviews"
+    },
+    {
+      "id": "E-005",
+      "hypothesis": "An AC completeness walkthrough (verifying each AC end-to-end before declaring done) will reduce the fix cycle rate below 50%",
+      "how": "Add AC Coverage Map to Dev Agent Record requiring each AC listed with pass/fail status. Review verifies the map matches implementation.",
+      "success_metric": "Fix cycle rate drops from 80% to below 50% in Epic 4"
+    },
+    {
+      "id": "E-006",
+      "hypothesis": "Replacing E-002's regex-based anti-pattern scanning with a structured pre-review checklist of common defect categories will catch more issues before review",
+      "how": "Create a 5-7 item checklist derived from recurring minors: DTO completeness, .Include() coverage, Dev Agent Record non-empty, handler auth check present, no magic strings. Replace E-002 text in team-workflow.md.",
+      "success_metric": "Average minor findings per story drops from 4.4 to below 3 in Epic 4"
+    }
+  ],
+  "lens_reports": [
+    {
+      "persona": "Delivery Engineer",
+      "wins": [
+        "Channel<T> + scoped DI architecture in ImportPipelineHostedService correctly separates HTTP lifecycle from background processing",
+        "Domain entities enforce invariants via private setters and guard methods consistently",
+        "Story 3.4 clean pass demonstrates infrastructure stories with clear boundaries are lower risk",
+        "Frontend wizard decomposition follows single-responsibility with 190+ passing tests",
+        "All fix cycles resolved in single round — no multi-round cycles"
+      ],
+      "problems": [
+        "Authorization check is copy-pasted across 16+ handlers — DRY violation and root cause of auth-bypass defects",
+        "Magic strings for match resolution actions instead of enums",
+        "ImportPipelineHostedService.ProcessImportAsync is 100+ line complexity hotspot",
+        "Fix cycle rate regressed from 60% to 80% despite three experiments",
+        "Code coverage not measured (carried from Epic 2)"
+      ],
+      "missing_evidence": [
+        "Code coverage metrics",
+        "Cyclomatic complexity metrics",
+        "Performance benchmarks for XLSX/PDF processing"
+      ],
+      "candidate_actions": ["DEL-001", "DEL-002", "DEL-003", "DEL-004"]
+    },
+    {
+      "persona": "QA",
+      "wins": [
+        "8 mandatory ITenantContext integration tests present with Testcontainers",
+        "190+ frontend tests with zero regressions",
+        "Domain test suite expanded to 81+ tests",
+        "Framework compliance maintained (NUnit, NSubstitute, FluentAssertions)",
+        "All handler test files include authorization denial paths"
+      ],
+      "problems": [
+        "AssignDocument and UploadDocument handlers have zero unit tests",
+        "Application.UnitTests cannot execute locally",
+        "Code coverage metrics uncollected across three epics",
+        "No functional/API tests for Epic 3 endpoints",
+        "E-001 failed because query handlers not covered by pattern"
+      ],
+      "missing_evidence": [
+        "Code coverage reports",
+        "Application.UnitTests CI execution results",
+        "Endpoint HTTP-level test results"
+      ],
+      "candidate_actions": ["QA-001", "QA-002", "QA-003", "QA-004"]
+    },
+    {
+      "persona": "Architecture",
+      "wins": [
+        "Clean Architecture layering intact — Domain has zero infrastructure dependencies",
+        "All domain entities use private setters and factory methods",
+        "ImportDocument correctly encapsulated through ImportSession aggregate root",
+        "EF Core configurations use Fluent API only with correct naming conventions",
+        "All endpoints inherit EndpointGroupBase consistently"
+      ],
+      "problems": [
+        "ImportSession aggregate boundary expanded beyond documentation",
+        "Three handlers violate one-aggregate-per-transaction rule",
+        "Domain/Services and Domain/Models not in documented project structure",
+        "ImportRowResult evolved from value object to mutable entity in ValueObjects/",
+        "A-007 tracking is stale"
+      ],
+      "missing_evidence": [
+        "Code coverage metrics",
+        "Global query filter verification for new entities",
+        "Audit trail evidence for new handlers"
+      ],
+      "candidate_actions": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-007"]
+    },
+    {
+      "persona": "Security",
+      "wins": [
+        "Fallback authorization policy requires authenticated user on all endpoints",
+        "DevAuth properly gated behind IsDevelopment()",
+        "All 8 Epic 3 handlers inject ITenantContext with membership verification (post-fix)",
+        "Global query filter on Candidate with 8 comprehensive integration tests",
+        "File upload validation enforces type and size restrictions"
+      ],
+      "problems": [
+        "Story 3.2 C1: auth gap recurrence (third epic)",
+        "No global query filter on Recruitment or ImportSession",
+        "AssignDocumentCommand accepts arbitrary blob URLs without path validation",
+        "GenerateSasUri has no maximum validity enforcement",
+        "NotFoundException leaks entity type and GUID in ProblemDetails"
+      ],
+      "missing_evidence": [
+        "SAS token usage evidence (no callers found in Epic 3)",
+        "CORS configuration evidence",
+        "Rate limiting on upload endpoints"
+      ],
+      "candidate_actions": ["SEC-001", "SEC-002", "SEC-005"]
+    },
+    {
+      "persona": "Docs/Enablement",
+      "wins": [
+        "Handler Authorization documentation is high-quality with canonical example and decision table",
+        "Architecture shard routing table is accurate with gate-shard-reads enforcement",
+        "Strong retro-to-action continuity (all 5 Epic 2 actions verified applied)",
+        "Mini-retro comments present for every story in anti-patterns-pending.txt",
+        "EndpointGroupBase documentation aligned with code after A-003/A-006"
+      ],
+      "problems": [
+        "Handler Authorization shows only command handler example — query handlers are the recurring gap",
+        "No documented pattern for pure-function domain services",
+        "Anti-pattern scanning structurally limited (1 regex vs 22 minors)",
+        "No routing table entry for blob storage/document management tasks",
+        "BackgroundService authorization pattern undocumented"
+      ],
+      "missing_evidence": [
+        "Architecture shard read logs",
+        "Implementation plan content (E-001 verification)",
+        "Code coverage metrics"
+      ],
+      "candidate_actions": ["DOCS-001", "DOCS-002", "DOCS-006"]
+    },
+    {
+      "persona": "Product",
+      "wins": [
+        "All 20 Functional Requirements delivered",
+        "Import pipeline implements J0/J2 setup journey correctly",
+        "PDF bundle splitting delivers end-to-end document management",
+        "Story 3.4 achieved clean pass",
+        "Epic 2 deferred items resolved at sprint start"
+      ],
+      "problems": [
+        "Two stories shipped with partially-implemented ACs (3.3 I1, 3.5 I1)",
+        "Story 3.3 C1 matchIndex bug risked data integrity in match review",
+        "Deferred full Assign UI with no follow-up story tracked",
+        "A-007 unresolved through two retro cycles",
+        "Architecture documentation drift on ImportSession aggregate"
+      ],
+      "missing_evidence": [
+        "Accessibility audit for import wizard",
+        "NFR performance benchmarks",
+        "Ubiquitous language consistency audit"
+      ],
+      "candidate_actions": ["PROD-001", "PROD-003"]
+    }
+  ]
+}

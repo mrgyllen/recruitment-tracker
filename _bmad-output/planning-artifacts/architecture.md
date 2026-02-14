@@ -208,7 +208,7 @@ The domain uses three aggregates. Each aggregate root enforces its own invariant
 |----------------|---------------|----------------|
 | **Recruitment** | `WorkflowStep`, `RecruitmentMember` | Cannot close with active candidates in progress. Step names unique within recruitment. Step order is contiguous. Members require valid role. At least one Recruiting Leader must exist. |
 | **Candidate** | `CandidateOutcome`, `CandidateDocument` | Outcomes reference valid workflow steps. Cannot record outcome on a step that doesn't exist in the recruitment. Cannot delete candidate with recorded outcomes (soft-delete or archive). One primary document per type. |
-| **ImportSession** | _(no children — tracks row-level results as value objects)_ | Status transitions: Processing → Completed or Failed. Cannot transition backwards. Row results are immutable once written. |
+| **ImportSession** | `ImportDocument`, `ImportRowResult` (owned via OwnsMany/ToJson) | Status transitions: Processing → Completed or Failed. Cannot transition backwards. ImportDocuments tracked through aggregate root methods (AddImportDocument, UpdateImportDocumentMatch, ClearImportDocuments). ImportRowResult has mutable Confirm()/Reject() for match resolution. |
 
 **Standalone entities (not aggregates):**
 - `AuditEntry` — append-only, no business rules, no aggregate root needed
@@ -219,6 +219,7 @@ The domain uses three aggregates. Each aggregate root enforces its own invariant
 3. Cross-aggregate references use IDs only (e.g., `Candidate` holds `RecruitmentId`, not a navigation property to `Recruitment`)
 4. Domain events are raised by aggregate roots when significant state changes occur
 5. Command handlers operate on one aggregate per transaction — if a command affects two aggregates, use domain events for eventual consistency
+6. **Import pipeline exception:** The import pipeline (ImportPipelineHostedService, AssignDocumentCommandHandler, ResolveMatchConflictCommandHandler) modifies both ImportSession and Candidate aggregates in a single transaction. This is an accepted deviation because import operations are inherently cross-aggregate (matching documents to candidates) and the consistency guarantee of atomic import-then-match outweighs the aggregate boundary rule at current scale. If concurrency increases, refactor to domain events (CandidateMatchConfirmedEvent, DocumentAutoMatchedEvent).
 
 **Testing implication:** Test aggregate behavior through the root's public methods. Unit tests verify invariants (e.g., "adding a duplicate step name throws `DuplicateStepException`"). No need to test child entity properties in isolation.
 

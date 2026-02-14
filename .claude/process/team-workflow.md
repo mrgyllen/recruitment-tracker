@@ -47,8 +47,24 @@ Repeat this cycle for each story in the sprint:
 
 1. Dev Agent reads the story file and all required architecture shards
 2. Dev Agent uses `writing-plans` skill to create an implementation plan
+   - **Authorization requirement (E-001, revised after Epic 3 failure):** Implementation plans MUST include a dedicated "Authorization" section with a **handler enumeration table** listing ALL command AND query handlers in the story. Query handlers are equally at risk as commands — the same auth gap recurred on query handlers in Epic 2 Story 2.3 AND Epic 3 Story 3.2. The table format:
+     | Handler | Type | Recruitment-Scoped? | Auth Pattern |
+     |---------|------|--------------------|--------------|
+     | CreateFooCommandHandler | Command | Yes | Load with .Include(r => r.Members), check _tenantContext.UserGuid, throw ForbiddenAccessException |
+     | GetFooQueryHandler | Query | Yes | Same pattern — queries need the SAME check |
+     | ListBarsQueryHandler | Query | No — filtered by global query filter | N/A |
+     Plans missing this table for any story with recruitment-scoped handlers are incomplete.
 3. Dev Agent implements using `test-driven-development` skill
 4. Dev Agent runs `verification-before-completion` before declaring done
+   - **Anti-pattern scanning (E-006, replaces E-002):** Before declaring done, Dev Agent MUST run through this structured pre-review checklist (not just regex scanning):
+     - [ ] All DTOs include every field referenced in ACs (DTO completeness)
+     - [ ] All EF queries use `.Include()` for navigation properties accessed after query (no lazy loading)
+     - [ ] All recruitment-scoped handlers verify ITenantContext membership (see Authorization table from step 2)
+     - [ ] No magic strings — use constants or enums for status values, action types, etc.
+     - [ ] Anti-pattern scan: check source files against `.claude/hooks/anti-patterns.txt` and `.claude/hooks/anti-patterns-pending.txt`
+     - [ ] Domain entity properties use private setters
+     - [ ] FluentValidation on all command/query inputs
+   - **AC completeness walkthrough (E-005):** Before declaring done, Dev Agent MUST create an AC Coverage Map listing each acceptance criterion from the story with pass/fail/partial status and evidence (test name, file:line, or manual verification). Any AC marked partial or fail must be resolved before handoff.
 5. Dev Agent commits work and sends message to Team Lead
 
 ### Step 2: Review Agent Reviews
@@ -100,15 +116,16 @@ After Review Agent explicitly approves the story, Team Lead runs the Story Compl
 - [ ] Mini-retro completed (anti-patterns captured)
 - [ ] Only THEN create/assign next story's tasks
 
-1. **Mini-retro (REQUIRED — not optional):** Team Lead reviews ALL Minor findings from the Review Agent for this story and converts actionable ones into anti-pattern entries.
+1. **Pattern establishment:** If this story is the first implementation of a new domain area (e.g., first Candidate handler, first Import endpoint, first PDF processing), update architecture docs with the established patterns before starting the next story. This includes: documenting the canonical code example in the relevant architecture shard, noting any deviations from existing patterns, and confirming the pattern is consistent with architecture.md. First-of-kind stories set precedent — subsequent stories copy the pattern. _(Note: E-003 experiment dropped after Epic 3 — fix cycle rate did not improve because Epic 3 stories were distinct verticals, not repeating patterns. Keep the practice but remove the experiment tracking.)_
+2. **Mini-retro (REQUIRED — not optional):** Team Lead reviews ALL Minor findings from the Review Agent for this story and converts actionable ones into anti-pattern entries.
    - For each Minor finding, decide: Is this a pattern that could recur? If yes → add to pending.
    - Add new entries to `.claude/hooks/anti-patterns-pending.txt`
    - Format: `REGEX|FILE_GLOB|MESSAGE  # Story X.Y finding ID`
    - Include the story and finding ID as a trailing comment for traceability
    - If the review had zero Minor findings, add a comment line: `# Story X.Y: no new anti-patterns identified`
    - **The pending file MUST be modified in every story completion** — this proves the mini-retro ran
-2. **Update sprint-status:** Mark story status as `done` in `sprint-status.yaml`
-3. **Commit:** Commit sprint-status update AND anti-patterns-pending.txt changes together
+3. **Update sprint-status:** Mark story status as `done` in `sprint-status.yaml`
+4. **Commit:** Commit sprint-status update AND anti-patterns-pending.txt changes together
 
 ## Task Structure for Story Cycle
 

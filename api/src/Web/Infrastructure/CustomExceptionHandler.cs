@@ -9,10 +9,12 @@ namespace api.Web.Infrastructure;
 
 public class CustomExceptionHandler : IExceptionHandler
 {
+    private readonly ILogger<CustomExceptionHandler> _logger;
     private readonly Dictionary<Type, Func<HttpContext, Exception, Task>> _exceptionHandlers;
 
-    public CustomExceptionHandler()
+    public CustomExceptionHandler(ILogger<CustomExceptionHandler> logger)
     {
+        _logger = logger;
         // Register known exception types and handlers.
         _exceptionHandlers = new()
             {
@@ -24,6 +26,7 @@ public class CustomExceptionHandler : IExceptionHandler
                 { typeof(StepHasOutcomesException), HandleStepHasOutcomesException },
                 { typeof(DuplicateStepNameException), HandleDuplicateStepNameException },
                 { typeof(DomainRuleViolationException), HandleDomainRuleViolationException },
+                { typeof(DuplicateCandidateException), HandleDuplicateCandidateException },
             };
     }
 
@@ -55,7 +58,7 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)
     {
-        var exception = (NotFoundException)ex;
+        _logger.LogWarning(ex, "Resource not found: {Message}", ex.Message);
 
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
 
@@ -64,7 +67,6 @@ public class CustomExceptionHandler : IExceptionHandler
             Status = StatusCodes.Status404NotFound,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
             Title = "The specified resource was not found.",
-            Detail = exception.Message
         });
     }
 
@@ -139,6 +141,19 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Domain rule violation",
+            Detail = ex.Message,
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
+        });
+    }
+
+    private async Task HandleDuplicateCandidateException(HttpContext httpContext, Exception ex)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "A candidate with this email already exists in this recruitment",
             Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
