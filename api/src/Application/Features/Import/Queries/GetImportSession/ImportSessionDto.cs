@@ -43,6 +43,7 @@ public record ImportRowResultDto
     public string? CandidateEmail { get; init; }
     public string Action { get; init; } = string.Empty;
     public string? ErrorMessage { get; init; }
+    public string? Resolution { get; init; }
 
     public static ImportRowResultDto From(ImportRowResult row) => new()
     {
@@ -50,5 +51,6 @@ public record ImportRowResultDto
         CandidateEmail = row.CandidateEmail,
         Action = row.Action.ToString(),
         ErrorMessage = row.ErrorMessage,
+        Resolution = row.Resolution,
     };
 }
