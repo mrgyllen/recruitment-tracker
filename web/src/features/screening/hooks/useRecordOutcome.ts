@@ -22,6 +22,9 @@ export function useRecordOutcome() {
       queryClient.invalidateQueries({
         queryKey: ['candidates', variables.recruitmentId],
       })
+      queryClient.invalidateQueries({
+        queryKey: ['recruitment', variables.recruitmentId, 'overview'],
+      })
     },
   })
 }

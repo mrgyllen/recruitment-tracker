@@ -2,6 +2,7 @@ import { http, HttpResponse } from 'msw'
 import type {
   PaginatedRecruitmentList,
   RecruitmentDetail,
+  RecruitmentOverview,
   WorkflowStepDto,
 } from '@/lib/api/recruitments.types'
 
@@ -43,6 +44,43 @@ const mockRecruitment2: RecruitmentDetail = {
   members: [{ id: 'member-2', userId: mockUserId, role: 'Recruiting Leader' }],
 }
 
+export const mockOverviewData: RecruitmentOverview = {
+  recruitmentId: mockRecruitmentId,
+  totalCandidates: 130,
+  pendingActionCount: 47,
+  totalStale: 3,
+  staleDays: 5,
+  steps: [
+    {
+      stepId: 'step-1',
+      stepName: 'Screening',
+      stepOrder: 1,
+      totalCandidates: 80,
+      pendingCount: 30,
+      staleCount: 2,
+      outcomeBreakdown: { notStarted: 30, pass: 35, fail: 10, hold: 5 },
+    },
+    {
+      stepId: 'step-2',
+      stepName: 'Technical Test',
+      stepOrder: 2,
+      totalCandidates: 35,
+      pendingCount: 12,
+      staleCount: 1,
+      outcomeBreakdown: { notStarted: 12, pass: 15, fail: 5, hold: 3 },
+    },
+    {
+      stepId: 'step-3',
+      stepName: 'Technical Interview',
+      stepOrder: 3,
+      totalCandidates: 15,
+      pendingCount: 5,
+      staleCount: 0,
+      outcomeBreakdown: { notStarted: 5, pass: 8, fail: 2, hold: 0 },
+    },
+  ],
+}
+
 const recruitmentsById: Record<string, RecruitmentDetail> = {
   [mockRecruitmentId]: mockRecruitment,
   [mockRecruitmentId2]: mockRecruitment2,
@@ -59,6 +97,23 @@ export const recruitmentHandlers = [
         },
       },
     )
+  }),
+
+  http.get('/api/recruitments/:id/overview', ({ params }) => {
+    const { id } = params
+    if (id === forbiddenRecruitmentId) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.3', title: 'Forbidden', status: 403 },
+        { status: 403 },
+      )
+    }
+    if (!recruitmentsById[id as string]) {
+      return HttpResponse.json(
+        { type: 'https://tools.ietf.org/html/rfc7231#section-6.5.4', title: 'Not Found', status: 404 },
+        { status: 404 },
+      )
+    }
+    return HttpResponse.json({ ...mockOverviewData, recruitmentId: id })
   }),
 
   http.get('/api/recruitments/:id', ({ params }) => {

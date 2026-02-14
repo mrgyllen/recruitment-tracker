@@ -8,6 +8,7 @@ import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { CandidateList } from '@/features/candidates/CandidateList'
+import { OverviewDashboard } from '@/features/overview/OverviewDashboard'
 import { MemberList } from '@/features/team/MemberList'
 import { ApiError } from '@/lib/api/httpClient'
 
@@ -15,6 +16,25 @@ export function RecruitmentPage() {
   const { recruitmentId } = useParams<{ recruitmentId: string }>()
   const { data, isPending, error } = useRecruitment(recruitmentId ?? '')
   const [closeDialogOpen, setCloseDialogOpen] = useState(false)
+  const [overviewStepFilter, setOverviewStepFilter] = useState<
+    string | undefined
+  >()
+  const [overviewStaleOnly, setOverviewStaleOnly] = useState(false)
+
+  function handleStepFilter(stepId: string) {
+    setOverviewStaleOnly(false)
+    setOverviewStepFilter(stepId)
+  }
+
+  function handleStaleFilter(stepId: string) {
+    setOverviewStepFilter(stepId)
+    setOverviewStaleOnly(true)
+  }
+
+  function handleClearOverviewFilters() {
+    setOverviewStepFilter(undefined)
+    setOverviewStaleOnly(false)
+  }
 
   if (isPending) {
     return (
@@ -106,10 +126,21 @@ export function RecruitmentPage() {
 
       <MemberList recruitmentId={data.id} disabled={isClosed} />
 
+      {!isClosed && (
+        <OverviewDashboard
+          recruitmentId={data.id}
+          onStepFilter={handleStepFilter}
+          onStaleFilter={handleStaleFilter}
+        />
+      )}
+
       <CandidateList
         recruitmentId={data.id}
         isClosed={isClosed}
         workflowSteps={data.steps}
+        externalStepFilter={overviewStepFilter}
+        externalStaleOnly={overviewStaleOnly}
+        onClearExternalFilters={handleClearOverviewFilters}
       />
 
       <CloseRecruitmentDialog

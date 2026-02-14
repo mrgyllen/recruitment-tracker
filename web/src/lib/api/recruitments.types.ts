@@ -71,3 +71,29 @@ export interface AddWorkflowStepRequest {
 export interface ReorderStepsRequest {
   steps: { stepId: string; order: number }[]
 }
+
+export interface OutcomeBreakdown {
+  notStarted: number
+  pass: number
+  fail: number
+  hold: number
+}
+
+export interface StepOverview {
+  stepId: string
+  stepName: string
+  stepOrder: number
+  totalCandidates: number
+  pendingCount: number
+  staleCount: number
+  outcomeBreakdown: OutcomeBreakdown
+}
+
+export interface RecruitmentOverview {
+  recruitmentId: string
+  totalCandidates: number
+  pendingActionCount: number
+  totalStale: number
+  staleDays: number
+  steps: StepOverview[]
+}

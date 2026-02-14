@@ -1,9 +1,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { http } from 'msw'
 import { createMemoryRouter, RouterProvider } from 'react-router'
 import { describe, expect, it } from 'vitest'
 import { RecruitmentPage } from './RecruitmentPage'
+import { AuthProvider } from '@/features/auth/AuthContext'
 import {
   forbiddenRecruitmentId,
   mockRecruitmentId,
@@ -21,7 +23,9 @@ function renderWithRoute(recruitmentId: string) {
   )
   return render(
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
     </QueryClientProvider>,
   )
 }
@@ -132,5 +136,98 @@ describe('RecruitmentPage', () => {
     expect(
       screen.queryByRole('button', { name: /close recruitment/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('should filter candidate list when step is clicked in overview', async () => {
+    const user = userEvent.setup()
+    renderWithRoute(mockRecruitmentId)
+
+    // Wait for overview to load
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Total Candidates: 130'),
+      ).toBeInTheDocument()
+    })
+
+    // Click step in overview
+    await user.click(
+      screen.getByRole('button', { name: /filter by step: screening/i }),
+    )
+
+    // External filter badge should appear
+    await waitFor(() => {
+      expect(screen.getByLabelText('Clear overview filter')).toBeInTheDocument()
+    })
+  })
+
+  it('should filter to stale candidates when stale indicator is clicked', async () => {
+    const user = userEvent.setup()
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Total Candidates: 130'),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /show stale candidates at step: screening/i,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText(/stale only/i)).toBeInTheDocument()
+    })
+  })
+
+  it('should show active filter indicator with clear button', async () => {
+    const user = userEvent.setup()
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Total Candidates: 130'),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: /filter by step: screening/i }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Clear overview filter'),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('should clear filter and show all candidates when clear button is clicked', async () => {
+    const user = userEvent.setup()
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Total Candidates: 130'),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole('button', { name: /filter by step: screening/i }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByLabelText('Clear overview filter'),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(screen.getByLabelText('Clear overview filter'))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByLabelText('Clear overview filter'),
+      ).not.toBeInTheDocument()
+    })
   })
 })

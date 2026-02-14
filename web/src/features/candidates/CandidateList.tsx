@@ -43,6 +43,9 @@ interface CandidateListProps {
   workflowSteps?: WorkflowStepDto[]
   selectedId?: string | null
   onSelect?: (id: string) => void
+  externalStepFilter?: string
+  externalStaleOnly?: boolean
+  onClearExternalFilters?: () => void
 }
 
 const OUTCOME_OPTIONS = ['NotStarted', 'Pass', 'Fail', 'Hold'] as const
@@ -54,6 +57,9 @@ export function CandidateList({
   workflowSteps = [],
   selectedId,
   onSelect,
+  externalStepFilter,
+  externalStaleOnly,
+  onClearExternalFilters,
 }: CandidateListProps) {
   const [searchInput, setSearchInput] = useState('')
   const [stepFilter, setStepFilter] = useState<string | undefined>()
@@ -63,12 +69,16 @@ export function CandidateList({
   const debouncedSearch = useDebounce(searchInput, 300)
   const search = debouncedSearch || undefined
 
+  const effectiveStepFilter = externalStepFilter ?? stepFilter
+  const effectiveStaleOnly = externalStaleOnly || undefined
+
   const { data, isPending } = useCandidates({
     recruitmentId,
     page,
     search,
-    stepId: stepFilter,
+    stepId: effectiveStepFilter,
     outcomeStatus: outcomeFilter,
+    staleOnly: effectiveStaleOnly,
   })
   const removeMutation = useRemoveCandidate(recruitmentId)
   const toast = useAppToast()
@@ -120,7 +130,7 @@ export function CandidateList({
     setPage(1)
   }
 
-  const hasActiveFilters = !!search || !!stepFilter || !!outcomeFilter
+  const hasActiveFilters = !!search || !!stepFilter || !!outcomeFilter || !!externalStepFilter || !!externalStaleOnly
 
   if (isPending) {
     return (
@@ -152,6 +162,28 @@ export function CandidateList({
           </div>
         )}
       </div>
+
+      {/* External filter badges (from overview) */}
+      {(externalStepFilter || externalStaleOnly) && (
+        <div
+          className="mb-4 flex flex-wrap items-center gap-2"
+          aria-live="polite"
+        >
+          <Badge variant="secondary" className="gap-1">
+            Step:{' '}
+            {workflowSteps.find((s) => s.id === externalStepFilter)?.name ??
+              'Unknown'}
+            {externalStaleOnly && ' (stale only)'}
+            <button
+              onClick={onClearExternalFilters}
+              className="ml-1"
+              aria-label="Clear overview filter"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </Badge>
+        </div>
+      )}
 
       {/* Search and filter controls */}
       <div className="mb-4 flex flex-wrap items-center gap-3">

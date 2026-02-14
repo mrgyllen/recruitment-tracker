@@ -451,4 +451,36 @@ Claude Opus 4.6 (claude-opus-4-6)
 
 ### Completion Notes List
 
+- All 8 story tasks implemented with TDD (test-first for hooks/containers/integration, characterization for presentational components)
+- 26 new tests added (311 total, up from 285)
+- TypeScript compilation: 0 errors
+- Backend build: 0 warnings, 0 errors
+- Anti-pattern scan: 0 violations
+- CandidateList extended with controlled external filter props (externalStepFilter, externalStaleOnly, onClearExternalFilters) to enable click-to-filter from overview without breaking existing internal filter behavior
+- Brand colors: used closest Tailwind equivalents (amber-50 for cream, stone-700/900 for warm browns) since custom brand tokens not yet defined
+- Test file for useRecruitmentOverview hook uses .tsx extension (contains JSX wrapper)
+
 ### File List
+
+**New files created:**
+- `web/src/features/overview/hooks/useRecruitmentOverview.ts` -- TanStack Query hook
+- `web/src/features/overview/hooks/useRecruitmentOverview.test.tsx` -- 3 tests
+- `web/src/features/overview/KpiCard.tsx` -- Presentational KPI card
+- `web/src/features/overview/KpiCard.test.tsx` -- 3 tests
+- `web/src/features/overview/StepSummaryCard.tsx` -- Per-step display with click-to-filter
+- `web/src/features/overview/StepSummaryCard.test.tsx` -- 7 tests
+- `web/src/features/overview/PendingActionsPanel.tsx` -- Pending actions count
+- `web/src/features/overview/PendingActionsPanel.test.tsx` -- 1 test
+- `web/src/features/overview/OverviewDashboard.tsx` -- Collapsible container
+- `web/src/features/overview/OverviewDashboard.test.tsx` -- 7 tests
+- `web/src/features/screening/hooks/useRecordOutcome.test.tsx` -- 1 test
+- `docs/plans/2026-02-14-overview-dashboard-ui.md` -- Implementation plan
+
+**Existing files modified:**
+- `web/src/lib/api/recruitments.types.ts` -- Added RecruitmentOverview, StepOverview, OutcomeBreakdown types
+- `web/src/lib/api/recruitments.ts` -- Added getOverview method
+- `web/src/mocks/recruitmentHandlers.ts` -- Added overview MSW mock handler + fixture data
+- `web/src/features/screening/hooks/useRecordOutcome.ts` -- Added overview cache invalidation
+- `web/src/features/candidates/CandidateList.tsx` -- Added external filter props for overview integration
+- `web/src/features/recruitments/pages/RecruitmentPage.tsx` -- Added OverviewDashboard + filter state coordination
+- `web/src/features/recruitments/pages/RecruitmentPage.test.tsx` -- Added 4 integration tests + AuthProvider wrapper

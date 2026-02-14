@@ -5,6 +5,7 @@ import type {
   CreateRecruitmentResponse,
   PaginatedRecruitmentList,
   RecruitmentDetail,
+  RecruitmentOverview,
   ReorderStepsRequest,
   UpdateRecruitmentRequest,
   WorkflowStepDto,
@@ -35,4 +36,7 @@ export const recruitmentApi = {
     apiPut<void>(`/recruitments/${recruitmentId}/steps/reorder`, data),
 
   close: (id: string) => apiPost<void>(`/recruitments/${id}/close`),
+
+  getOverview: (id: string) =>
+    apiGet<RecruitmentOverview>(`/recruitments/${id}/overview`),
 }
