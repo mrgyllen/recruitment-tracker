@@ -64,8 +64,8 @@ development_status:
   2-5-close-recruitment-read-only-view: done
   epic-2-retrospective: done
   # Deferred items from Epic 2 retro (tracked for next sprint)
-  epic-2-deferred-team-endpoints: backlog       # A-006: Standardize TeamEndpoints to use EndpointGroupBase
-  epic-2-deferred-exception-integration-tests: backlog  # A-008: Integration tests for CustomExceptionHandler
+  epic-2-deferred-team-endpoints: done            # A-006: Standardize TeamEndpoints to use EndpointGroupBase
+  epic-2-deferred-exception-integration-tests: done     # A-008: Integration tests for CustomExceptionHandler
 
   # Epic 3: Candidate Import & Document Management
   epic-3: in-progress
