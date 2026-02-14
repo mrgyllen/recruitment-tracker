@@ -1,0 +1,153 @@
+{
+  "persona": "QA Lens",
+  "wins": [
+    {
+      "title": "All Epic 4 P0/P1 quality gates applied before Epic 5 start",
+      "evidence_refs": ["Section 1b: 10/10 actions APPLIED", "E-009 experiment: PASS"],
+      "impact": "Pre-epic gate mechanism successfully prevented quality debt carryforward"
+    },
+    {
+      "title": "FluentValidation architectural test eliminated validator gaps",
+      "evidence_refs": ["E-007: Zero validator-related Critical/Important findings", "Action A-001 from Epic 4"],
+      "impact": "Experiment validated — structural enforcement prevents review-time validator findings"
+    },
+    {
+      "title": "ESLint exhaustive-deps enforcement eliminated stale closure findings",
+      "evidence_refs": ["E-008: PASS — zero stale closure findings", "Action A-006 from Epic 4"],
+      "impact": "Hook dependency defects prevented at build time instead of review time"
+    },
+    {
+      "title": "Important finding fixed within same epic (fast feedback)",
+      "evidence_refs": ["Story 5.1 IMPORTANT-1: missing StaleOnly filter tests", "Fixed in commit c89a6ee"],
+      "impact": "1 fix cycle, same-day resolution, re-verified and approved"
+    },
+    {
+      "title": "26 new frontend tests added with zero failures",
+      "evidence_refs": ["Section 3: 51 test files, 311 tests (285→311)", "Duration 10.23s"],
+      "impact": "Test suite growth aligned with feature growth, fast execution time maintained"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Backend test execution blocked — zero Epic 5 backend tests verified",
+      "evidence_refs": ["Section 3: Backend Tests not executed — requires .NET 10 runtime", "17 new tests added but not run"],
+      "severity": "critical",
+      "impact": "17 new backend tests (9 handler + 2 validator + 4 functional + 2 filter) written but never executed; regression risk unknown"
+    },
+    {
+      "title": "Demo walkthrough completely blocked — zero ACs verified end-to-end",
+      "evidence_refs": ["Section 10: 0/16 ACs verified", "Demo BLOCKED — .NET 10 runtime not installed", "Docker Compose exists but not exercised"],
+      "severity": "critical",
+      "impact": "100% of acceptance criteria (16 ACs across Stories 5.1 and 5.2) unverified in integrated environment; AC verification relies solely on unit/integration tests"
+    },
+    {
+      "title": "Code coverage measurement missing — no regression baseline",
+      "evidence_refs": ["Section 3: Code Coverage — Not measured", "Epic 4 action A-002: Code coverage CI with thresholds — APPLIED"],
+      "severity": "important",
+      "impact": "Coverage CI configured (Epic 4 A-002) but no coverage data reported; cannot verify coverage thresholds or identify untested paths"
+    },
+    {
+      "title": "ESLint results not captured — hook dependency verification incomplete",
+      "evidence_refs": ["Section 3: ESLint — Not captured", "E-008 experiment relies on ESLint exhaustive-deps enforcement"],
+      "severity": "important",
+      "impact": "Experiment E-008 reports PASS based on review findings, but ESLint gate not verified; hook compliance unconfirmed"
+    },
+    {
+      "title": "Pre-existing TypeScript errors carried from Epic 4",
+      "evidence_refs": ["Section 3: 3 tsc errors — ALL PRE-EXISTING from Epic 4 screening feature", "ScreeningLayout.tsx:47, useScreeningSession.ts:19,30"],
+      "severity": "minor",
+      "impact": "Unused variable errors in screening feature persisted across epics; quality gate tolerates non-zero tsc error count"
+    },
+    {
+      "title": "Fix cycle rate at 50% — 1 of 2 stories required rework",
+      "evidence_refs": ["Section 4 Summary: Story 5.1 1 fix cycle, Story 5.2 0 fix cycles", "Fix cycle rate: 50%"],
+      "severity": "minor",
+      "impact": "Story 5.1 IMPORTANT finding (missing StaleOnly filter tests) caught in review; test-first compliance incomplete"
+    },
+    {
+      "title": "Limited sample size for E-008 experiment validation",
+      "evidence_refs": ["E-008 result: PASS (limited sample — only 1 new hook vs 5+ hooks in Epic 4)"],
+      "severity": "minor",
+      "impact": "Experiment E-008 declared PASS with insufficient data; validation based on 1 new hook vs 5+ in prior epic"
+    }
+  ],
+  "missing_evidence": [
+    {
+      "category": "test_execution",
+      "item": "Backend test execution results (.NET 10 runtime dependency)",
+      "impact": "Cannot verify 17 new backend tests pass; unknown if tests are syntactically valid or produce false positives",
+      "proposed_instrumentation": "Add CI job with .NET 10 SDK or Docker-based test execution; block merge on backend test pass"
+    },
+    {
+      "category": "quality_gate",
+      "item": "Code coverage report and threshold enforcement",
+      "impact": "Coverage CI configured (A-002) but no coverage data collected; cannot verify coverage targets or identify gaps",
+      "proposed_instrumentation": "Execute coverage tooling in CI; emit coverage percentage to evidence bundle; fail build on threshold violation"
+    },
+    {
+      "category": "quality_gate",
+      "item": "ESLint execution results (hook dependency compliance)",
+      "impact": "E-008 experiment validation incomplete; exhaustive-deps enforcement not verified",
+      "proposed_instrumentation": "Capture ESLint output in quality signals section; fail on any exhaustive-deps warnings/errors"
+    },
+    {
+      "category": "demo_verification",
+      "item": "End-to-end AC verification in integrated environment",
+      "impact": "Zero Epic 5 ACs verified in browser; Docker Compose exists but unused; integration gaps undetected",
+      "proposed_instrumentation": "Use Docker Compose for demo walkthrough; verify all ACs in containerized environment; document demo results per AC"
+    },
+    {
+      "category": "quality_gate",
+      "item": "TypeScript error count baseline and enforcement",
+      "impact": "Pre-existing tsc errors tolerated; no signal when new errors introduced vs carried forward",
+      "proposed_instrumentation": "Record tsc error baseline per epic; fail CI if error count increases; create backlog item to resolve pre-existing errors"
+    }
+  ],
+  "candidate_actions": [
+    {
+      "id": "QA-001",
+      "title": "Unblock backend test execution with .NET 10 runtime or Docker-based CI",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "problem_refs": ["Backend test execution blocked", "Demo walkthrough blocked"],
+      "description": "Backend tests and demos are completely blocked by missing .NET 10 runtime. Install .NET 10 SDK on host OR configure CI to run tests in Docker container using existing Dockerfile.",
+      "success_criteria": "Backend test suite executes successfully in CI; test results included in evidence bundle; demo walkthrough uses Docker Compose for integrated AC verification"
+    },
+    {
+      "id": "QA-002",
+      "title": "Execute and report code coverage in evidence bundle",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "problem_refs": ["Code coverage measurement missing"],
+      "description": "Coverage CI configured (Epic 4 A-002) but no coverage data collected in Epic 5. Execute coverage tooling (dotnet test --collect:\"XPlat Code Coverage\" and vitest --coverage) and include results in Section 3 Quality Signals.",
+      "success_criteria": "Frontend and backend coverage percentages reported in evidence bundle; coverage thresholds enforced in CI; build fails if coverage drops below configured threshold"
+    },
+    {
+      "id": "QA-003",
+      "title": "Capture ESLint results in quality signals",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "problem_refs": ["ESLint results not captured", "E-008 experiment validation incomplete"],
+      "description": "ESLint exhaustive-deps enforcement is critical for E-008 experiment, but ESLint results not included in evidence bundle. Run ESLint and capture output in Section 3 Quality Signals.",
+      "success_criteria": "ESLint execution results included in evidence bundle; zero exhaustive-deps warnings/errors; CI fails on any ESLint errors"
+    },
+    {
+      "id": "QA-004",
+      "title": "Resolve pre-existing TypeScript errors in screening feature",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "problem_refs": ["Pre-existing TypeScript errors carried from Epic 4"],
+      "description": "Three unused variable errors in ScreeningLayout.tsx and useScreeningSession.ts carried from Epic 4 into Epic 5. Remove unused variables or apply them to resolve tsc errors.",
+      "success_criteria": "tsc -b reports zero errors; TypeScript error count baseline documented; CI fails on any new tsc errors"
+    },
+    {
+      "id": "QA-005",
+      "title": "Add test-first compliance check to prevent missing test findings",
+      "type": "test_gap",
+      "priority": "P1",
+      "problem_refs": ["Fix cycle rate at 50%", "Story 5.1 missing StaleOnly filter tests"],
+      "description": "Story 5.1 IMPORTANT finding revealed missing StaleOnly filter tests, caught in review rather than pre-commit. Add checklist to implementation plans: 'All query parameters have corresponding handler tests (happy path + edge cases)'.",
+      "success_criteria": "Fix cycle rate drops below 25% in Epic 6; zero 'missing test' findings for query/command parameters in Epic 6 reviews"
+    }
+  ]
+}

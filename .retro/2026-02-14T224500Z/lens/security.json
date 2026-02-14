@@ -1,0 +1,212 @@
+{
+  "persona": "Security Lens",
+  "wins": [
+    {
+      "title": "ITenantContext authorization enforced on overview endpoint",
+      "description": "GetRecruitmentOverviewQueryHandler implements membership verification via ITenantContext.UserGuid against recruitment.Members, throwing ForbiddenAccessException for non-members. Pattern consistent with existing handlers (GetCandidatesQueryHandler).",
+      "evidence_refs": [
+        "context.md Section 2: api/src/Application/Features/Recruitments/Queries/GetRecruitmentOverview/GetRecruitmentOverviewQueryHandler.cs lines 43-46",
+        "context.md Section 4: Story 5.1 AC-6 verified (Non-member gets 403 Forbidden)",
+        "context.md Section 4: RecruitmentOverviewEndpointTests.GetOverview_NonMember_ReturnsForbidden (line 68-84)"
+      ],
+      "impact": "Cross-recruitment data isolation maintained for new overview endpoint — users cannot access aggregate statistics from recruitments they do not belong to"
+    },
+    {
+      "title": "FluentValidation architectural test eliminated validator gaps",
+      "description": "Zero validator-related Critical/Important findings in both Story 5.1 and 5.2. E-007 experiment validated — GetRecruitmentOverviewQueryValidator created proactively with .NotEmpty() validation for RecruitmentId Guid.",
+      "evidence_refs": [
+        "context.md Section 1b: E-007 experiment PASS — zero validator findings in Epic 5",
+        "context.md Section 2: GetRecruitmentOverviewQueryValidator.cs created",
+        "context.md Section 4: Story 5.1 zero validator-related findings, Story 5.2 frontend-only"
+      ],
+      "impact": "Input validation security boundary consistently enforced — architectural test from A-001 (Epic 4 retro) proving effective at compile-time enforcement"
+    },
+    {
+      "title": "StaleOnly filter uses same time calculation as overview",
+      "description": "GetCandidatesQueryHandler StaleOnly filter and GetRecruitmentOverviewQueryHandler both consume OverviewSettings.StaleDays via IOptions injection, ensuring stale thresholds remain synchronized. Both use DateTimeOffset.UtcNow.AddDays(-_settings.StaleDays) pattern.",
+      "evidence_refs": [
+        "context.md Section 2: GetCandidatesQueryHandler.cs lines 79-86 (StaleOnly filter)",
+        "context.md Section 2: GetRecruitmentOverviewQueryHandler.cs line 49 (staleCutoff)",
+        "context.md Section 2: api/src/Web/appsettings.json lines 17-19 (OverviewSettings: StaleDays: 5)"
+      ],
+      "impact": "No configuration drift between aggregate counting and list filtering — single source of truth for stale threshold prevents inconsistent business logic"
+    },
+    {
+      "title": "Cross-recruitment isolation verified with existing tenant test suite",
+      "description": "TenantIsolationTests.cs (from Epic 4 A-004) provides 6 functional tests verifying ForbiddenAccessException for cross-recruitment access attempts (GetCandidates, GetCandidateById, RecordOutcome, AssignDocument, GetOutcomeHistory). No new cross-recruitment vectors introduced by overview endpoint as evidenced by consistent authorization pattern.",
+      "evidence_refs": [
+        "context.md Section 1b: A-004 Cross-recruitment isolation tests — APPLIED (test skeletons)",
+        "TenantIsolationTests.cs full implementation with 6 test methods",
+        "context.md Section 2: GetRecruitmentOverviewQueryHandler authorization at lines 43-46 matches pattern"
+      ],
+      "impact": "Defense-in-depth via test coverage — new overview query follows established pattern verified by existing isolation suite"
+    },
+    {
+      "title": "No PII exposure in aggregate overview data",
+      "description": "RecruitmentOverviewDto exposes only aggregate counts (TotalCandidates, PendingActionCount, TotalStale, per-step breakdowns) and workflow step metadata (StepId, StepName, StepOrder). Zero candidate names, emails, phone numbers, or document references in overview response.",
+      "evidence_refs": [
+        "context.md Section 2: RecruitmentOverviewDto.cs — only Guid/int/string step metadata",
+        "context.md Section 2: GetRecruitmentOverviewQueryHandler.cs lines 103-111 — aggregated counts only"
+      ],
+      "impact": "Reduced PII attack surface in dashboard view — overview endpoint cannot be used for candidate enumeration or PII extraction"
+    }
+  ],
+  "problems": [
+    {
+      "title": "Missing functional test for cross-recruitment overview access",
+      "severity": "Important",
+      "description": "TenantIsolationTests.cs does not include GetRecruitmentOverviewQuery test case. While GetRecruitmentOverviewQueryHandler implements authorization (lines 43-46) and unit test exists (GetRecruitmentOverviewQueryHandlerTests.Handle_UserNotMember_ThrowsForbiddenAccessException), no functional test verifies end-to-end 403 behavior via HTTP endpoint for cross-recruitment access.",
+      "evidence_refs": [
+        "TenantIsolationTests.cs methods: GetCandidates, GetCandidateById, RecordOutcome, AssignDocument, GetOutcomeHistory — missing GetRecruitmentOverview",
+        "context.md Section 4: RecruitmentOverviewEndpointTests.GetOverview_NonMember_ReturnsForbidden tests authorization but not cross-recruitment scenario (creates single recruitment, tests non-member, not member-of-other-recruitment)"
+      ],
+      "risk": "Gap in tenant isolation test coverage — cross-recruitment access vector for overview endpoint not verified at integration level despite implementation correctness",
+      "evidence_quality": "High — confirmed via direct file inspection"
+    },
+    {
+      "title": "Guid.Empty validation test but no tenant context null guard test",
+      "severity": "Minor",
+      "description": "GetRecruitmentOverviewQueryHandlerTests and RecruitmentOverviewEndpointTests cover Guid.Empty validation (InvalidGuid_ReturnsBadRequest) and user-not-member scenario, but no test verifies behavior when ITenantContext.UserGuid returns null. Handler code guards with 'userId is null' check (line 44), but condition is untested.",
+      "evidence_refs": [
+        "context.md Section 2: GetRecruitmentOverviewQueryHandler.cs line 44 — 'if (userId is null || !recruitment.Members.Any(m => m.UserId == userId))'",
+        "context.md Section 2: GetRecruitmentOverviewQueryHandlerTests.cs — no test case for null UserGuid",
+        "context.md Section 4: RecruitmentOverviewEndpointTests.cs line 114-124 — tests Guid.Empty, not null tenant context"
+      ],
+      "risk": "Untested null-guard branch — if ITenantContext.UserGuid can return null in production (e.g., anonymous request bypassing auth middleware), behavior is unverified",
+      "evidence_quality": "Medium — unclear from evidence if null UserGuid is possible in production runtime given authentication middleware"
+    },
+    {
+      "title": "No monitoring/logging for authorization denials on new endpoint",
+      "severity": "Minor",
+      "description": "GetRecruitmentOverviewQueryHandler throws ForbiddenAccessException for non-members but produces no audit trail. No evidence of security event logging when users attempt cross-recruitment access. Missing evidence: no instrumentation added to track failed authorization attempts for security monitoring.",
+      "evidence_refs": [
+        "context.md Section 2: GetRecruitmentOverviewQueryHandler.cs lines 43-46 — throws ForbiddenAccessException with no logging",
+        "context.md Section 10: Missing Evidence — no mention of security event logging or audit trail",
+        "context.md Section 1b: Previous retro A-007 'Exception handler entity key redaction' — APPLIED but no mention of authorization denial logging"
+      ],
+      "risk": "No visibility into potential authorization attacks — cannot detect patterns of users probing for other recruitments' data",
+      "evidence_quality": "Medium — absence of evidence (no logging instrumentation visible in changed files)"
+    },
+    {
+      "title": "localStorage used for UI state without encryption or sanitization validation",
+      "severity": "Minor",
+      "description": "OverviewDashboard.tsx persists collapsed state to localStorage with key pattern 'overview-collapsed:{recruitmentId}'. RecruitmentId (Guid) is used directly in storage key without validation that it matches actual user-accessible recruitment. No evidence of XSS risk mitigation if malicious recruitmentId provided (though TypeScript typing provides some protection).",
+      "evidence_refs": [
+        "OverviewDashboard.tsx line 25 — storageKey = `overview-collapsed:${recruitmentId}`",
+        "OverviewDashboard.tsx line 27-28 — localStorage.getItem(storageKey) / line 40 — localStorage.setItem(storageKey, ...)"
+      ],
+      "risk": "Low severity localStorage pollution vector — malicious recruitmentId values could create arbitrary keys (though limited to boolean 'true'/'false' values), no evidence of XSS vulnerability given React rendering",
+      "evidence_quality": "Low — theoretical risk, no evidence of exploitability in current implementation"
+    }
+  ],
+  "missing_evidence": [
+    {
+      "item": "GetRecruitmentOverview authorization denial logging/metrics",
+      "why_needed": "Security monitoring requires visibility into failed authorization attempts. Current evidence shows ForbiddenAccessException thrown but no logging instrumentation to track who is attempting cross-recruitment access.",
+      "how_to_get": "Add structured logging in GetRecruitmentOverviewQueryHandler before throwing ForbiddenAccessException. Include userId, recruitmentId, timestamp. Alternatively, centralize authorization failure logging in exception handler middleware."
+    },
+    {
+      "item": "OverviewSettings configuration validation tests",
+      "why_needed": "StaleDays setting affects security-relevant business logic (stale candidate detection). No evidence of tests verifying behavior when StaleDays is negative, zero, or extremely large (e.g., 999999 days). Missing boundary value testing for configuration-driven security logic.",
+      "how_to_get": "Add unit tests to GetRecruitmentOverviewQueryHandlerTests and GetCandidatesQueryHandlerTests with edge-case StaleDays values (0, -1, Int32.MaxValue). Document expected behavior in OverviewSettings.cs."
+    },
+    {
+      "item": "Rate limiting or query performance security characteristics for overview endpoint",
+      "why_needed": "Story 5.1 AC-2 specifies '500ms response time' via GROUP BY aggregation, but no evidence of performance tests under high candidate volumes or rate limiting to prevent DoS via repeated expensive queries. Missing: does handler scale to 10,000 candidates? Can user trigger DB resource exhaustion?",
+      "how_to_get": "Add performance regression test with 1000+ candidate recruitment in Application.FunctionalTests. Document query plan analysis. Consider adding endpoint rate limiting if aggregation query is expensive."
+    }
+  ],
+  "candidate_actions": [
+    {
+      "id": "SEC-001",
+      "title": "Add GetRecruitmentOverview cross-recruitment test to TenantIsolationTests",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "TenantIsolationTests.cs provides defense-in-depth verification for all query endpoints except GetRecruitmentOverview. While handler implementation is correct and unit test exists, functional test gap leaves cross-recruitment access vector unverified at integration level. Low risk given consistent pattern, but test suite should be comprehensive.",
+      "evidence_refs": [
+        "TenantIsolationTests.cs missing GetRecruitmentOverviewQuery test case",
+        "GetRecruitmentOverviewQueryHandler authorization at lines 43-46 (untested at functional level for cross-recruitment scenario)"
+      ],
+      "acceptance_criteria": [
+        "TenantIsolationTests.cs contains GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden test",
+        "Test follows same pattern as GetCandidates_ForOtherRecruitment_ThrowsForbidden (lines 66-77)",
+        "Test verifies User B cannot query overview for Recruitment A using GetRecruitmentOverviewQuery",
+        "Test asserts ForbiddenAccessException is thrown"
+      ]
+    },
+    {
+      "id": "SEC-002",
+      "title": "Add structured logging for authorization denials in query handlers",
+      "type": "security_hardening",
+      "priority": "P1",
+      "rationale": "No visibility into failed authorization attempts across any query endpoints (GetCandidates, GetRecruitmentOverview, etc.). Security monitoring requires audit trail for attempted cross-recruitment access to detect enumeration attacks or privilege escalation attempts. A-007 (Epic 4) addressed exception key redaction but not authorization failure logging.",
+      "evidence_refs": [
+        "GetRecruitmentOverviewQueryHandler.cs line 46 — throws ForbiddenAccessException with no logging",
+        "GetCandidatesQueryHandler.cs line 32 — throws ForbiddenAccessException with no logging",
+        "context.md Section 1b Previous Retro A-007 — exception redaction applied, but no authorization logging added"
+      ],
+      "acceptance_criteria": [
+        "All query handlers log structured event before throwing ForbiddenAccessException",
+        "Log includes: userId (hashed or last 4 chars), recruitmentId, handler name, timestamp, correlation ID",
+        "Log level: Warning (authorization failure is abnormal behavior)",
+        "Zero PII in log message (no email, full Guids acceptable)",
+        "Centralized in middleware or base handler to avoid repetition across 10+ handlers"
+      ]
+    },
+    {
+      "id": "SEC-003",
+      "title": "Add unit tests for ITenantContext.UserGuid null scenario",
+      "type": "test_gap",
+      "priority": "P2",
+      "rationale": "All authorization-aware handlers guard against null UserGuid (e.g., GetRecruitmentOverviewQueryHandler line 44 'if (userId is null || ...)'). However, no tests verify this null-guard behavior. If authentication middleware can be bypassed or misconfigured (e.g., dev environment, middleware ordering bug), null UserGuid is possible. Defensive programming requires testing defensive code paths.",
+      "evidence_refs": [
+        "GetRecruitmentOverviewQueryHandler.cs line 44 — null guard present but untested",
+        "GetRecruitmentOverviewQueryHandlerTests.cs — no null UserGuid test case",
+        "GetCandidatesQueryHandler.cs line 30-32 — same pattern, same test gap"
+      ],
+      "acceptance_criteria": [
+        "GetRecruitmentOverviewQueryHandlerTests includes Handle_NullUserGuid_ThrowsForbiddenAccessException test",
+        "Test mocks ITenantContext.UserGuid to return null",
+        "Test asserts ForbiddenAccessException is thrown",
+        "Pattern applied to at least 1 other handler test suite (e.g., GetCandidatesQueryHandlerTests) to establish precedent"
+      ]
+    },
+    {
+      "id": "SEC-004",
+      "title": "Add OverviewSettings.StaleDays boundary value validation and tests",
+      "type": "test_gap",
+      "priority": "P2",
+      "rationale": "StaleDays setting affects business logic in GetRecruitmentOverviewQueryHandler (line 49) and GetCandidatesQueryHandler (line 81) via DateTimeOffset.AddDays(-_settings.StaleDays). No evidence of validation preventing negative, zero, or pathologically large values. Missing: what happens if StaleDays = -1 (future date)? StaleDays = 0 (all candidates stale)? StaleDays = Int32.MaxValue (overflow risk)?",
+      "evidence_refs": [
+        "OverviewSettings.cs line 6 — default value 5, no range constraints",
+        "appsettings.json line 18 — StaleDays: 5, no schema validation",
+        "GetRecruitmentOverviewQueryHandlerTests.cs line 291 — tests StaleDays=7, no edge cases"
+      ],
+      "acceptance_criteria": [
+        "OverviewSettings.cs adds [Range(1, 365)] attribute on StaleDays property",
+        "GetRecruitmentOverviewQueryHandlerTests includes test cases for StaleDays edge values: 0, -1, 366, 1",
+        "Application startup validation fails with clear error if StaleDays < 1 or > 365",
+        "Document expected behavior in OverviewSettings.cs XML comments"
+      ]
+    },
+    {
+      "id": "SEC-005",
+      "title": "Add performance regression test for overview aggregation query",
+      "type": "test_gap",
+      "priority": "P2",
+      "rationale": "Story 5.1 AC-2 specifies 'response within 500ms' using GROUP BY aggregation. No evidence of performance tests to verify this requirement or prevent query performance regression. Aggregation queries on large datasets can become DoS vectors if users can trigger expensive queries repeatedly. Missing: stress test with 1000+ candidates, query plan analysis, rate limiting consideration.",
+      "evidence_refs": [
+        "context.md Section 1: Story 5.1 AC-2 — 'Data aggregated via GROUP BY, response within 500ms'",
+        "GetRecruitmentOverviewQueryHandler.cs lines 51-75 — aggregation query on Candidates",
+        "context.md Section 10: Missing Evidence — no performance tests mentioned"
+      ],
+      "acceptance_criteria": [
+        "Application.FunctionalTests includes GetRecruitmentOverview_LargeRecruitment_ReturnsWithin500ms test",
+        "Test creates recruitment with 1000 candidates distributed across 5 steps",
+        "Test measures query execution time, asserts < 500ms (with generous CI margin, e.g., < 1000ms)",
+        "Document query plan in test comments (e.g., 'Expected: Index seek on CurrentWorkflowStepId, no table scans')",
+        "Consider rate limiting or caching for overview endpoint if performance is marginal"
+      ]
+    }
+  ]
+}

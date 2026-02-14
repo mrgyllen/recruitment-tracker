@@ -1,0 +1,261 @@
+{
+  "persona": "Architecture Lens",
+  "wins": [
+    {
+      "id": "ARCH-W-001",
+      "title": "Aggregate root pattern correctly enforced in command handlers",
+      "description": "Command handlers consistently modify child entities through aggregate root methods (e.g., AddWorkflowStepCommandHandler calls recruitment.AddStep(), RecordOutcomeCommandHandler calls candidate.RecordOutcome()). No direct DbContext.Add() bypasses observed.",
+      "evidence_refs": [
+        "context.md#92 — AddWorkflowStepCommandHandler.cs in changed files",
+        "context.md#106 — RecordOutcomeCommandHandler.cs in changed files",
+        "AddWorkflowStepCommandHandler.cs:30 — recruitment.AddStep(request.Name, request.Order)",
+        "RecordOutcomeCommandHandler.cs:39 — candidate.RecordOutcome(...)"
+      ],
+      "impact": "Protects domain invariants by ensuring all state changes flow through aggregate logic. Eliminates entire class of consistency bugs."
+    },
+    {
+      "id": "ARCH-W-002",
+      "title": "Clean separation: read-path optimization via SQL GROUP BY without write-path coupling",
+      "description": "GetRecruitmentOverviewQueryHandler uses database-level aggregation (GROUP BY on Candidates table, lines 51-75) to compute overview metrics. No materialized counters, no write-path updates. Architecture principle of read-path optimization without write-path complexity achieved.",
+      "evidence_refs": [
+        "context.md#103 — GetRecruitmentOverviewQueryHandler.cs in changed files",
+        "GetRecruitmentOverviewQueryHandler.cs:51-75 — GROUP BY query computing TotalCandidates, PendingCount, StaleCount, Pass/Fail/Hold counts",
+        "architecture.md:261 — 'Overview data strategy: Computed on read via GROUP BY query for MVP'"
+      ],
+      "impact": "Simple write path (outcome recording just saves), fast read path (sub-100ms aggregation), no cache invalidation complexity. Validates architectural decision."
+    },
+    {
+      "id": "ARCH-W-003",
+      "title": "Authorization defense-in-depth consistently applied",
+      "description": "Both new handlers (GetRecruitmentOverviewQueryHandler, GetCandidatesQueryHandler with StaleOnly filter) verify recruitment membership at endpoint level before data access. Pattern established in Epic 4 continues with no regression.",
+      "evidence_refs": [
+        "context.md#102 — GetRecruitmentOverviewQueryHandler.cs in changed files",
+        "context.md#99 — GetCandidatesQueryHandler.cs in changed files",
+        "GetRecruitmentOverviewQueryHandler.cs:43-46 — userId membership check + ForbiddenAccessException",
+        "GetCandidatesQueryHandler.cs:30-34 — userId membership check + ForbiddenAccessException",
+        "architecture.md:283 — 'Authorization (defense in depth): Endpoint level + Data level'"
+      ],
+      "impact": "Security-by-design maintained. Zero security findings in Epic 5 reviews."
+    },
+    {
+      "id": "ARCH-W-004",
+      "title": "TanStack Query cache invalidation correctly scoped to affected resources",
+      "description": "useRecordOutcome invalidates exactly 3 query keys: screening history (single candidate), candidates list (recruitment-scoped), and overview (recruitment-scoped). No broad invalidation, no cascade re-fetches.",
+      "evidence_refs": [
+        "context.md#134 — useRecordOutcome.ts in changed files",
+        "useRecordOutcome.ts:19-27 — Three invalidateQueries calls with precise queryKey arrays"
+      ],
+      "impact": "Efficient cache updates. Overview dashboard re-fetches after outcome recording (AC 5.2-8 fulfilled) without invalidating unrelated data."
+    },
+    {
+      "id": "ARCH-W-005",
+      "title": "Configuration-driven stale threshold with DI best practices",
+      "description": "OverviewSettings registered via IOptions<T> pattern. StaleDays configurable in appsettings.json, default value in code (StaleDays = 5). Consumed via constructor injection in both handlers. No magic numbers in logic.",
+      "evidence_refs": [
+        "context.md#98 — OverviewSettings.cs in changed files",
+        "context.md#108 — appsettings.json in changed files",
+        "OverviewSettings.cs:6 — public int StaleDays { get; set; } = 5;",
+        "GetRecruitmentOverviewQueryHandler.cs:21-25 — IOptions<OverviewSettings> injected",
+        "GetCandidatesQueryHandler.cs:15 — IOptions<OverviewSettings> injected",
+        "architecture.md:272 — 'Configurable deployment values: Stale step threshold (default: 5 calendar days)'"
+      ],
+      "impact": "Deployment flexibility without code changes. Testability via test-specific config."
+    }
+  ],
+  "problems": [
+    {
+      "id": "ARCH-P-001",
+      "title": "In-memory filtering breaks query translation and hides SQL performance characteristics",
+      "severity": "Important",
+      "description": "GetCandidatesQueryHandler pulls all candidates into memory (line 56-58: ToListAsync after basic Where), then filters by stepId, outcomeStatus, and staleOnly in-memory (lines 61-86). Comment justifies this as 'current step is derived from outcome history' and acceptable at 150 candidates. However: (1) Query translation IS possible via JOIN + window functions to compute current step in SQL; (2) In-memory filtering means no SQL indexes, no EXPLAIN ANALYZE visibility; (3) Performance degrades non-linearly if candidate count grows or network latency increases; (4) Pattern violates EF Core best practices (translate as much as possible to SQL).",
+      "evidence_refs": [
+        "context.md#99 — GetCandidatesQueryHandler.cs modified (+StaleOnly filter)",
+        "GetCandidatesQueryHandler.cs:54-86 — ToListAsync before filtering, in-memory LINQ Where clauses",
+        "GetCandidatesQueryHandler.cs:54 comment — 'In-memory filtering: current step is derived... Acceptable at current scale'"
+      ],
+      "impact": "Hidden technical debt. If recruitments exceed 150 candidates OR network latency increases OR pagination is bypassed, response time degrades unpredictably. No SQL execution plan to profile.",
+      "recommendations": [
+        {
+          "action_type": "architecture_alignment",
+          "action_id": "ARCH-001",
+          "priority": "P1",
+          "title": "Refactor GetCandidatesQueryHandler to SQL-translated current-step computation",
+          "description": "Replace in-memory filtering with SQL translation. Use LEFT JOIN to Outcomes with ROW_NUMBER() window function partitioned by CandidateId to identify latest outcome per step. Compute current step and stale threshold in SQL. This allows SQL Server to use indexes, exposes execution plan for profiling, and eliminates memory allocation for full candidate list.",
+          "effort_estimate": "3-5 hours",
+          "validation_criteria": "EXPLAIN ANALYZE shows index usage; response time remains <1s at 500 candidates; memory allocation drops (profiler evidence)."
+        }
+      ]
+    },
+    {
+      "id": "ARCH-P-002",
+      "title": "GetRecruitmentOverviewQueryHandler duplicates stale-candidate logic from GetCandidatesQueryHandler",
+      "severity": "Minor",
+      "description": "Stale threshold computation appears in both handlers: GetRecruitmentOverviewQueryHandler (line 49: staleCutoff = DateTimeOffset.UtcNow.AddDays(-_settings.StaleDays), line 62-63: stale count via c.CreatedAt < staleCutoff) and GetCandidatesQueryHandler (line 81: same pattern). Domain logic (what makes a candidate stale) is duplicated across Application layer query handlers instead of being encapsulated in the Candidate entity or a shared specification.",
+      "evidence_refs": [
+        "GetRecruitmentOverviewQueryHandler.cs:49, 62-63 — staleCutoff computation + stale count logic",
+        "GetCandidatesQueryHandler.cs:81 — identical staleCutoff logic",
+        "architecture.md:202-203 — Candidate aggregate owns business rules and invariants"
+      ],
+      "impact": "Future changes to stale definition (e.g., 'stale = no outcome for N days at current step' vs 'stale = CreatedAt older than N days') require updates in multiple locations. Risk of divergent implementations.",
+      "recommendations": [
+        {
+          "action_type": "refactor",
+          "action_id": "ARCH-002",
+          "priority": "P2",
+          "title": "Extract stale-candidate detection to Candidate domain method or specification",
+          "description": "Add public bool IsStale(int staleDays) method to Candidate entity OR create ISpecification<Candidate> for stale detection. Both handlers call the shared logic. This centralizes the 'what is stale' rule in the domain layer where it belongs.",
+          "effort_estimate": "1-2 hours",
+          "validation_criteria": "Stale logic exists in exactly one location (Candidate.cs or specification class); both handlers reference it; existing tests still pass."
+        }
+      ]
+    },
+    {
+      "id": "ARCH-P-003",
+      "title": "No architectural tests enforcing aggregate boundary rules",
+      "severity": "Important",
+      "description": "Architecture document mandates 'modify child entities only through aggregate root methods' (architecture.md:218). Epic 4 added FluentValidation architectural test (evidence: context.md:49 A-001 APPLIED, E-007 PASS). No equivalent test enforces aggregate root boundaries. Code review is the only enforcement mechanism. If a developer writes dbContext.WorkflowSteps.Add(newStep) instead of recruitment.AddStep(newStep), no automated check catches it.",
+      "evidence_refs": [
+        "context.md#49 — A-001 FluentValidation architectural test applied",
+        "context.md#271 — E-007 PASS: FluentValidation test eliminated validator gaps",
+        "architecture.md:218 — 'All state changes to owned entities go through aggregate root methods'",
+        "architecture.md:310 — Enforcement guideline: Modify child entities only through aggregate root methods"
+      ],
+      "impact": "Aggregate boundary violations possible without detection. If introduced, would bypass invariants and break domain model integrity.",
+      "recommendations": [
+        {
+          "action_type": "architecture_alignment",
+          "action_id": "ARCH-003",
+          "priority": "P1",
+          "title": "Add architectural test enforcing aggregate root modification pattern",
+          "description": "Write ArchUnit-style test (via NetArchTest.Rules or similar) that fails if Application layer code directly calls DbContext.Add/Update/Remove on owned entity types (WorkflowStep, RecruitmentMember, CandidateOutcome, CandidateDocument, ImportDocument). Test should allow DbSet access for queries but block direct modification. Reference FluentValidation test as pattern.",
+          "effort_estimate": "2-3 hours",
+          "validation_criteria": "Test fails if WorkflowStep is added via dbContext.WorkflowSteps.Add(); test passes for current codebase; CI enforces it."
+        }
+      ]
+    },
+    {
+      "id": "ARCH-P-004",
+      "title": "OverviewDashboard component exceeds recommended component size (124 lines)",
+      "severity": "Minor",
+      "description": "OverviewDashboard.tsx is 124 lines with collapsed state logic, localStorage persistence, loading state, and KPI rendering. Not yet a critical problem (< 200 lines), but trending toward extraction opportunity. Compare to CandidateList.tsx at 474 lines (context.md:196 MINOR-1 acknowledged as tech debt).",
+      "evidence_refs": [
+        "context.md#124 — OverviewDashboard.tsx in changed files",
+        "OverviewDashboard.tsx:1-124 — Full component code",
+        "context.md#196 — MINOR-1: CandidateList.tsx exceeds 300 lines (pre-existing debt)"
+      ],
+      "impact": "Slightly harder to test and reason about. Not blocking, but could benefit from extracting CollapsedSummary subcomponent (lines 78-83) or KPI grid layout (lines 92-103).",
+      "recommendations": [
+        {
+          "action_type": "refactor",
+          "action_id": "ARCH-004",
+          "priority": "P3",
+          "title": "Extract CollapsedOverviewSummary subcomponent from OverviewDashboard",
+          "description": "Move lines 78-83 (collapsed state paragraph) into CollapsedOverviewSummary.tsx. Receives totalCandidates, screenedCount, totalStale as props. Reduces OverviewDashboard complexity, improves testability of collapsed state rendering.",
+          "effort_estimate": "30 minutes",
+          "validation_criteria": "OverviewDashboard.tsx < 100 lines; CollapsedOverviewSummary has isolated unit test."
+        }
+      ]
+    },
+    {
+      "id": "ARCH-P-005",
+      "title": "TypeScript errors carried from Epic 4 suggest incomplete cleanup",
+      "severity": "Minor",
+      "description": "Epic 5 introduced zero new TypeScript errors (context.md:154-159), but 3 pre-existing errors remain in screening feature: unused variables focusOutcomePanel, recruitmentId, queryClient. These are not Epic 5's fault, but their persistence suggests no systematic cleanup process between epics. If left unaddressed, error count will accumulate.",
+      "evidence_refs": [
+        "context.md#154-159 — 3 tsc errors ALL PRE-EXISTING from Epic 4 (screening feature)",
+        "context.md#204 — MINOR-4: Pre-existing tsc errors in screening feature"
+      ],
+      "impact": "Low immediate risk (unused variables don't break runtime). Higher risk of normalization-of-deviance: 'tsc has errors but we ship anyway'. Eventual erosion of type safety discipline.",
+      "recommendations": [
+        {
+          "action_type": "guideline_gap",
+          "action_id": "ARCH-005",
+          "priority": "P2",
+          "title": "Add pre-epic cleanup gate for pre-existing TypeScript/ESLint errors",
+          "description": "Extend Getting Started pre-epic checklist to include 'tsc --noEmit returns zero errors' and 'eslint returns zero errors'. If errors exist, they must be fixed OR explicitly documented with // @ts-expect-error with justification before starting new epic. This prevents error accumulation across epics.",
+          "effort_estimate": "1 hour (guideline update + fix 3 existing errors)",
+          "validation_criteria": "Team workflow documentation updated; Epic 6 Getting Started includes tsc/eslint zero-error verification; pre-existing 3 errors fixed."
+        }
+      ]
+    }
+  ],
+  "missing_evidence": [
+    {
+      "category": "EF Core Query Performance",
+      "description": "No SQL execution plans captured for GetRecruitmentOverviewQueryHandler GROUP BY query or GetCandidatesQueryHandler in-memory filtering. Cannot validate <500ms NFR2 budget or identify missing indexes.",
+      "proposed_instrumentation": "Add SQL query logging in tests with .EnableSensitiveDataLogging() + .LogTo(). Capture EF Core-generated SQL for overview query. Run EXPLAIN ANALYZE on representative dataset (100-150 candidates)."
+    },
+    {
+      "category": "Code Coverage Impact",
+      "description": "Context shows 26 new tests added (285 → 311), but no coverage percentage. Cannot determine if new StaleOnly filter branches, GROUP BY aggregation paths, or error cases are fully covered.",
+      "proposed_instrumentation": "Run dotnet test with /p:CollectCoverage=true and capture Application.UnitTests coverage report. Verify GetRecruitmentOverviewQueryHandler > 90% line coverage."
+    },
+    {
+      "category": "Cross-Aggregate Transaction Boundary",
+      "description": "Architecture doc (architecture.md:223) documents import pipeline exception: 'AssignDocumentCommandHandler modifies both ImportSession and Candidate aggregates in single transaction'. No evidence in Epic 5 diff that this exception was extended or that new handlers respected one-aggregate-per-transaction rule. Implicit compliance assumed.",
+      "proposed_instrumentation": "Add architectural test verifying command handlers modify at most one aggregate root per transaction (except explicitly allowed import commands). Document allowed exceptions in test code."
+    }
+  ],
+  "candidate_actions": [
+    {
+      "action_type": "architecture_alignment",
+      "action_id": "ARCH-001",
+      "priority": "P1",
+      "title": "Refactor GetCandidatesQueryHandler to SQL-translated current-step computation",
+      "description": "Replace in-memory filtering with SQL translation. Use LEFT JOIN to Outcomes with ROW_NUMBER() window function partitioned by CandidateId to identify latest outcome per step. Compute current step and stale threshold in SQL. This allows SQL Server to use indexes, exposes execution plan for profiling, and eliminates memory allocation for full candidate list.",
+      "effort_estimate": "3-5 hours",
+      "validation_criteria": "EXPLAIN ANALYZE shows index usage; response time remains <1s at 500 candidates; memory allocation drops (profiler evidence).",
+      "evidence_refs": [
+        "ARCH-P-001"
+      ]
+    },
+    {
+      "action_type": "refactor",
+      "action_id": "ARCH-002",
+      "priority": "P2",
+      "title": "Extract stale-candidate detection to Candidate domain method or specification",
+      "description": "Add public bool IsStale(int staleDays) method to Candidate entity OR create ISpecification<Candidate> for stale detection. Both handlers call the shared logic. This centralizes the 'what is stale' rule in the domain layer where it belongs.",
+      "effort_estimate": "1-2 hours",
+      "validation_criteria": "Stale logic exists in exactly one location (Candidate.cs or specification class); both handlers reference it; existing tests still pass.",
+      "evidence_refs": [
+        "ARCH-P-002"
+      ]
+    },
+    {
+      "action_type": "architecture_alignment",
+      "action_id": "ARCH-003",
+      "priority": "P1",
+      "title": "Add architectural test enforcing aggregate root modification pattern",
+      "description": "Write ArchUnit-style test (via NetArchTest.Rules or similar) that fails if Application layer code directly calls DbContext.Add/Update/Remove on owned entity types (WorkflowStep, RecruitmentMember, CandidateOutcome, CandidateDocument, ImportDocument). Test should allow DbSet access for queries but block direct modification. Reference FluentValidation test as pattern.",
+      "effort_estimate": "2-3 hours",
+      "validation_criteria": "Test fails if WorkflowStep is added via dbContext.WorkflowSteps.Add(); test passes for current codebase; CI enforces it.",
+      "evidence_refs": [
+        "ARCH-P-003"
+      ]
+    },
+    {
+      "action_type": "refactor",
+      "action_id": "ARCH-004",
+      "priority": "P3",
+      "title": "Extract CollapsedOverviewSummary subcomponent from OverviewDashboard",
+      "description": "Move lines 78-83 (collapsed state paragraph) into CollapsedOverviewSummary.tsx. Receives totalCandidates, screenedCount, totalStale as props. Reduces OverviewDashboard complexity, improves testability of collapsed state rendering.",
+      "effort_estimate": "30 minutes",
+      "validation_criteria": "OverviewDashboard.tsx < 100 lines; CollapsedOverviewSummary has isolated unit test.",
+      "evidence_refs": [
+        "ARCH-P-004"
+      ]
+    },
+    {
+      "action_type": "guideline_gap",
+      "action_id": "ARCH-005",
+      "priority": "P2",
+      "title": "Add pre-epic cleanup gate for pre-existing TypeScript/ESLint errors",
+      "description": "Extend Getting Started pre-epic checklist to include 'tsc --noEmit returns zero errors' and 'eslint returns zero errors'. If errors exist, they must be fixed OR explicitly documented with // @ts-expect-error with justification before starting new epic. This prevents error accumulation across epics.",
+      "effort_estimate": "1 hour (guideline update + fix 3 existing errors)",
+      "validation_criteria": "Team workflow documentation updated; Epic 6 Getting Started includes tsc/eslint zero-error verification; pre-existing 3 errors fixed.",
+      "evidence_refs": [
+        "ARCH-P-005"
+      ]
+    }
+  ]
+}

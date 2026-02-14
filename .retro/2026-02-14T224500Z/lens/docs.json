@@ -1,0 +1,255 @@
+{
+  "persona": "Docs/Enablement Lens",
+  "wins": [
+    {
+      "title": "100% pre-epic action item application rate",
+      "evidence_refs": [
+        "Section 1b: All 10 actions from Epic 4 retro were APPLIED before Epic 5 stories began",
+        "Section 9: E-009 experiment validation — Zero P1 actions carried forward"
+      ],
+      "impact": "Strong process adherence demonstrated. Getting Started pre-epic gate successfully enforced all 4 P0 and 6 P1 actions, preventing technical debt carry-over. This validates the P0/P1 blocking mechanism documented in team-workflow.md."
+    },
+    {
+      "title": "Zero new anti-patterns discovered across all stories",
+      "evidence_refs": [
+        "Section 5: anti-patterns-pending.txt shows comment-only entries for Stories 5.1 and 5.2",
+        "Section 4: Story 5.2 had zero Critical or Important findings"
+      ],
+      "impact": "Clean implementation with no repetitive defects requiring guideline updates. Combined with previous epics (Epic 4 also had zero new anti-patterns), this suggests guideline coverage is stabilizing."
+    },
+    {
+      "title": "FluentValidation architectural test prevents validator gaps",
+      "evidence_refs": [
+        "Section 9: E-007 validation — Zero validator-related Critical/Important findings in Epic 5",
+        "Section 1b: A-001 FluentValidation architectural test applied from Epic 4"
+      ],
+      "impact": "Automated guideline enforcement via architecture test eliminates entire class of defects. Story 5.1 had 1 query handler with matching validator — test would have caught any missing validator scenario."
+    },
+    {
+      "title": "Comprehensive implementation plan artifacts created",
+      "evidence_refs": [
+        "Section 2: Changed files include docs/plans/2026-02-14-overview-api-data.md",
+        "Section 2: Changed files include docs/plans/2026-02-14-overview-dashboard-ui.md",
+        "Section 2: Changed files include _bmad-output/implementation-artifacts/5-1-overview-api-data.md and 5-2-overview-dashboard-ui.md"
+      ],
+      "impact": "Both stories followed established planning artifact pattern. Plans exist in docs/plans/ and implementation artifacts in _bmad-output/implementation-artifacts/. Discoverability through consistent file naming convention."
+    },
+    {
+      "title": "Guideline references section documents architectural touchpoints",
+      "evidence_refs": [
+        "Section 6: Lists 6 guideline documents referenced during Epic 5",
+        "Section 6: References include architecture.md, patterns-backend.md, patterns-frontend.md, testing-standards.md"
+      ],
+      "impact": "Evidence bundle explicitly tracks which guidelines were consulted. Enables measurement of guideline utilization and identification of under-documented areas."
+    }
+  ],
+  "problems": [
+    {
+      "title": "Demo verification blocked by missing runtime environment documentation",
+      "evidence_refs": [
+        "Section 10: Demo blocked — .NET 10 runtime not installed on host",
+        "Section 10: Docker Compose exists but was not exercised during demo"
+      ],
+      "severity": "Important",
+      "impact": "0 of 16 ACs verified in demo walkthrough. While epic-4-deferred-dev-environment story resolved Docker Compose setup, no documentation guides developers to use Docker for demo/dev scenarios. README or getting-started documentation gap.",
+      "recommendations": [
+        "Add runtime setup section to README or docs/getting-started.md",
+        "Document two runtime modes: native (.NET 10 + Node) vs Docker Compose",
+        "Add demo walkthrough checklist that checks runtime availability before AC verification"
+      ]
+    },
+    {
+      "title": "ESLint execution not captured in quality signals",
+      "evidence_refs": [
+        "Section 3: ESLint — Not captured",
+        "Section 1b: A-006 ESLint exhaustive-deps enforcement applied from Epic 4"
+      ],
+      "severity": "Minor",
+      "impact": "A-006 configured exhaustive-deps as error, but retro evidence bundle doesn't capture ESLint execution results. E-008 validation relies on manual review findings rather than automated metrics. Incomplete quality signal visibility.",
+      "recommendations": [
+        "Add ESLint to CI or pre-commit workflow with captured output",
+        "Include ESLint pass/fail + warning count in Section 3 Quality Signals",
+        "Document ESLint execution command in team-workflow.md or testing-standards.md"
+      ]
+    },
+    {
+      "title": "Code coverage measurement not implemented despite Epic 4 action item",
+      "evidence_refs": [
+        "Section 3: Code Coverage — Not measured (see previous retro action items)",
+        "Section 1b: A-002 Code coverage CI with thresholds — marked APPLIED"
+      ],
+      "severity": "Important",
+      "impact": "A-002 status conflict. Marked APPLIED but Section 3 shows 'Not measured'. Either application was incomplete or evidence collection is insufficient. Coverage gaps invisible without measurement.",
+      "recommendations": [
+        "Verify if coverage thresholds exist in CI pipeline configuration",
+        "If thresholds exist, ensure retro evidence collection includes coverage report",
+        "If thresholds missing, mark A-002 as partially applied and create new action item"
+      ]
+    },
+    {
+      "title": "Pre-existing TypeScript errors carried across epics without remediation plan",
+      "evidence_refs": [
+        "Section 3: 3 TypeScript errors — ALL PRE-EXISTING from Epic 4 screening feature",
+        "Section 4: MINOR-4 identifies same 3 unused variables in ScreeningLayout.tsx and useScreeningSession.ts"
+      ],
+      "severity": "Minor",
+      "impact": "tsc errors (unused variables) tolerated across multiple epics. No documented tech debt cleanup process or acceptance criteria for temporary `// @ts-ignore` usage. Sets precedent for accumulating warnings.",
+      "recommendations": [
+        "Add tech-debt tracking section to sprint-status.yaml or separate tech-debt.md",
+        "Document policy: fix-on-touch for unused variables in modified files",
+        "Consider stricter tsconfig.json or ESLint no-unused-vars rule"
+      ]
+    },
+    {
+      "title": "Backend test execution blocked without documented mitigation",
+      "evidence_refs": [
+        "Section 3: Backend Tests — Not executed (requires .NET 10 runtime not installed on host)",
+        "Section 3: Application.UnitTests — 17 new tests added but not verified"
+      ],
+      "severity": "Important",
+      "impact": "17 backend tests added but not executed during retro. No documented process for verifying untested code before merge. Same root cause as Problem #1 (missing runtime), but affects quality gates not just demo.",
+      "recommendations": [
+        "Establish CI requirement: all tests must pass before story marked done",
+        "Document fallback: use Docker for local test execution when native runtime unavailable",
+        "Add test execution verification to story completion checklist in team-workflow.md"
+      ]
+    },
+    {
+      "title": "Guideline routing table effectiveness not measurable",
+      "evidence_refs": [
+        "Section 6: Lists 6 guideline references",
+        "CLAUDE.md: 'see the routing table in architecture.md or architecture/index.md for which shards to load'"
+      ],
+      "severity": "Minor",
+      "impact": "Section 6 lists guidelines consulted but doesn't indicate whether routing table was used or if shard system guided selection. Cannot measure if routing table reduces guideline discovery friction.",
+      "recommendations": [
+        "Add implementation plan section: 'Guidelines consulted via routing table: [Y/N]'",
+        "Track shard load count in Dev Agent Record or plan metadata",
+        "Survey: Did routing table reduce time-to-find-guideline vs full-doc search?"
+      ]
+    }
+  ],
+  "missing_evidence": [
+    {
+      "type": "quality_metric",
+      "description": "ESLint execution results (pass/fail, warning count, rules violated)",
+      "impact": "Cannot validate E-008 (exhaustive-deps) experiment or measure linting compliance trends",
+      "proposed_instrumentation": "Add `npm run lint` output to retro evidence bundle Section 3 Quality Signals"
+    },
+    {
+      "type": "quality_metric",
+      "description": "Code coverage percentage (frontend and backend) with threshold pass/fail status",
+      "impact": "A-002 application status unclear; coverage regression risk invisible",
+      "proposed_instrumentation": "Capture coverage report summary in CI, include in retro evidence bundle Section 3"
+    },
+    {
+      "type": "process_metric",
+      "description": "Time spent resolving environment setup issues or runtime dependency problems",
+      "impact": "Cannot quantify cost of missing dev environment documentation or measure improvement after fixes",
+      "proposed_instrumentation": "Add 'Dev Environment Issues' section to retro template tracking blockers and resolution time"
+    },
+    {
+      "type": "guideline_usage",
+      "description": "Which architecture shards were loaded via routing table vs manual search",
+      "impact": "Cannot assess routing table effectiveness or identify under-documented areas",
+      "proposed_instrumentation": "Add 'Guideline Discovery Method' field to implementation plan template (routing_table | search | prior_knowledge)"
+    }
+  ],
+  "candidate_actions": [
+    {
+      "id": "DOCS-001",
+      "type": "docs_update",
+      "title": "Create runtime environment setup guide in README or docs/",
+      "priority": "P0",
+      "rationale": "Demo verification blocked (0/16 ACs verified) and backend tests unexecuted due to missing .NET 10 runtime. Docker Compose exists but no documentation guides developers to use it.",
+      "evidence_refs": [
+        "Section 10: Demo blocked — .NET 10 runtime not installed",
+        "Section 3: Backend tests not executed — runtime not installed"
+      ],
+      "acceptance_criteria": [
+        "README.md or docs/getting-started.md documents two runtime modes: native vs Docker",
+        "Native mode: lists required versions (.NET 10, Node 22+)",
+        "Docker mode: documents `docker-compose up` command and validates test execution",
+        "Demo walkthrough checklist updated to verify runtime before AC verification"
+      ],
+      "estimated_effort": "30 minutes",
+      "experiment": "E-010: Runtime documentation reduces demo/test setup time from >15min to <5min in Epic 6 retro"
+    },
+    {
+      "id": "DOCS-002",
+      "type": "process_change",
+      "title": "Add ESLint execution to quality signals capture",
+      "priority": "P1",
+      "rationale": "ESLint marked as 'Not captured' despite A-006 configuring exhaustive-deps enforcement. E-008 validation relies on manual review rather than automated metrics.",
+      "evidence_refs": [
+        "Section 3: ESLint — Not captured",
+        "Section 1b: A-006 applied from Epic 4",
+        "Section 9: E-008 limited sample size comment"
+      ],
+      "acceptance_criteria": [
+        "Retro evidence template includes ESLint section: pass/fail, warning count, errors",
+        "ESLint execution added to pre-commit or CI workflow",
+        "team-workflow.md documents ESLint execution command and failure policy"
+      ],
+      "estimated_effort": "20 minutes",
+      "experiment": "E-011: ESLint automation catches 100% of missing dependency violations before review in Epic 6"
+    },
+    {
+      "id": "DOCS-003",
+      "type": "process_change",
+      "title": "Verify A-002 code coverage CI implementation or mark partially applied",
+      "priority": "P0",
+      "rationale": "A-002 marked APPLIED but Section 3 shows 'Not measured'. Status conflict prevents accurate tracking of coverage gaps and regression risk.",
+      "evidence_refs": [
+        "Section 1b: A-002 marked APPLIED",
+        "Section 3: Code Coverage — Not measured (see previous retro action items)"
+      ],
+      "acceptance_criteria": [
+        "CI pipeline configuration reviewed — coverage thresholds present or absent documented",
+        "If thresholds exist, retro template updated to include coverage report in Section 3",
+        "If thresholds missing, A-002 status changed to 'Partial' and new action created",
+        "Epic 6 retro evidence includes coverage metrics (frontend + backend)"
+      ],
+      "estimated_effort": "45 minutes (investigation + fix)",
+      "experiment": null
+    },
+    {
+      "id": "DOCS-004",
+      "type": "guideline_gap",
+      "title": "Document tech debt tracking and fix-on-touch policy",
+      "priority": "P1",
+      "rationale": "3 TypeScript errors carried from Epic 4 to Epic 5 with no remediation plan. No documented process for acceptable temporary warnings or cleanup triggers.",
+      "evidence_refs": [
+        "Section 3: 3 TypeScript errors — ALL PRE-EXISTING from Epic 4",
+        "Section 4: MINOR-4 identifies same 3 unused variables"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md or new tech-debt.md documents tech debt acceptance criteria",
+        "Policy documented: fix-on-touch for trivial issues (unused vars) in modified files",
+        "sprint-status.yaml or tech-debt.md includes known-issues section with EOL dates",
+        "tsconfig.json or ESLint config tightened to prevent new unused variable warnings"
+      ],
+      "estimated_effort": "40 minutes",
+      "experiment": "E-012: Fix-on-touch policy reduces pre-existing warning count by 50% in Epic 6"
+    },
+    {
+      "id": "DOCS-005",
+      "type": "process_change",
+      "title": "Add test execution verification to story completion checklist",
+      "priority": "P0",
+      "rationale": "17 backend tests written but not executed before story marked done. No documented requirement ensures all tests pass before merge.",
+      "evidence_refs": [
+        "Section 3: Backend Tests — Not executed",
+        "Section 3: Application.UnitTests — 17 new tests added"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md story completion checklist includes 'All tests passing (npm test + dotnet test)'",
+        "Checklist includes fallback: 'Use docker-compose for test execution if native runtime unavailable'",
+        "CI pipeline enforces test execution before merge (if not already present)",
+        "Epic 6 retro evidence shows 100% test execution rate"
+      ],
+      "estimated_effort": "30 minutes",
+      "experiment": null
+    }
+  ]
+}
