@@ -25,6 +25,7 @@ export const mockCandidates: CandidateResponse[] = [
     location: 'New York, NY',
     dateApplied: '2026-02-10T00:00:00Z',
     createdAt: '2026-02-10T12:00:00Z',
+    document: mockCandidateDocument,
   },
   {
     id: mockCandidateId2,
@@ -35,5 +36,6 @@ export const mockCandidates: CandidateResponse[] = [
     location: 'San Francisco, CA',
     dateApplied: '2026-02-12T00:00:00Z',
     createdAt: '2026-02-12T09:00:00Z',
+    document: null,
   },
 ]

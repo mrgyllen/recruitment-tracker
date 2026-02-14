@@ -58,7 +58,7 @@ export function CandidateDetail() {
         <DocumentUpload
           recruitmentId={recruitmentId}
           candidateId={candidateId}
-          existingDocument={null}
+          existingDocument={candidate.document}
           isClosed={isClosed}
         />
       </div>

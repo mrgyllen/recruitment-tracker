@@ -26,6 +26,7 @@ public class GetCandidatesQueryHandler(
         }
 
         var query = dbContext.Candidates
+            .Include(c => c.Documents)
             .Where(c => c.RecruitmentId == request.RecruitmentId)
             .AsNoTracking()
             .OrderByDescending(c => c.CreatedAt);

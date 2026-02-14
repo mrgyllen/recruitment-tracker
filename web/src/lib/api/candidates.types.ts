@@ -7,6 +7,7 @@ export interface CandidateResponse {
   location: string | null
   dateApplied: string
   createdAt: string
+  document: CandidateDocumentDto | null
 }
 
 export interface CreateCandidateRequest {
