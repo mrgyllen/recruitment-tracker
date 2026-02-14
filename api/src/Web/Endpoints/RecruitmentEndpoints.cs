@@ -65,7 +65,7 @@ public class RecruitmentEndpoints : EndpointGroupBase
         AddWorkflowStepCommand command)
     {
         var result = await sender.Send(command with { RecruitmentId = id });
-        return Results.Ok(result);
+        return Results.Created($"/api/recruitments/{id}/steps/{result.Id}", result);
     }
 
     private static async Task<IResult> RemoveWorkflowStep(

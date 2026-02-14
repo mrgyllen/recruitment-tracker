@@ -5,6 +5,7 @@ using FluentAssertions;
 using MockQueryable.NSubstitute;
 using NSubstitute;
 using NUnit.Framework;
+using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
 namespace api.Application.UnitTests.Features.Recruitments.Commands.ReorderWorkflowSteps;
@@ -13,17 +14,22 @@ namespace api.Application.UnitTests.Features.Recruitments.Commands.ReorderWorkfl
 public class ReorderWorkflowStepsCommandHandlerTests
 {
     private IApplicationDbContext _dbContext = null!;
+    private ITenantContext _tenantContext = null!;
 
     [SetUp]
     public void SetUp()
     {
         _dbContext = Substitute.For<IApplicationDbContext>();
+        _tenantContext = Substitute.For<ITenantContext>();
     }
 
     [Test]
     public async Task Handle_ValidReorder_UpdatesStepOrders()
     {
-        var recruitment = Recruitment.Create("Test", null, Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(userId);
+
+        var recruitment = Recruitment.Create("Test", null, userId);
         recruitment.AddStep("Screening", 1);
         recruitment.AddStep("Interview", 2);
         var step1 = recruitment.Steps.First(s => s.Name == "Screening");
@@ -32,7 +38,7 @@ public class ReorderWorkflowStepsCommandHandlerTests
         var mockSet = new List<Recruitment> { recruitment }.AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new ReorderWorkflowStepsCommandHandler(_dbContext);
+        var handler = new ReorderWorkflowStepsCommandHandler(_dbContext, _tenantContext);
         var command = new ReorderWorkflowStepsCommand
         {
             RecruitmentId = recruitment.Id,
@@ -53,10 +59,12 @@ public class ReorderWorkflowStepsCommandHandlerTests
     [Test]
     public async Task Handle_RecruitmentNotFound_ThrowsNotFoundException()
     {
+        _tenantContext.UserGuid.Returns(Guid.NewGuid());
+
         var mockSet = new List<Recruitment>().AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new ReorderWorkflowStepsCommandHandler(_dbContext);
+        var handler = new ReorderWorkflowStepsCommandHandler(_dbContext, _tenantContext);
         var command = new ReorderWorkflowStepsCommand
         {
             RecruitmentId = Guid.NewGuid(),
@@ -69,5 +77,32 @@ public class ReorderWorkflowStepsCommandHandlerTests
         var act = () => handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Test]
+    public async Task Handle_NonMember_ThrowsForbiddenAccessException()
+    {
+        var creatorId = Guid.NewGuid();
+        var nonMemberId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(nonMemberId);
+
+        var recruitment = Recruitment.Create("Test", null, creatorId);
+        recruitment.AddStep("Screening", 1);
+        var mockSet = new List<Recruitment> { recruitment }.AsQueryable().BuildMockDbSet();
+        _dbContext.Recruitments.Returns(mockSet);
+
+        var handler = new ReorderWorkflowStepsCommandHandler(_dbContext, _tenantContext);
+        var command = new ReorderWorkflowStepsCommand
+        {
+            RecruitmentId = recruitment.Id,
+            Steps =
+            [
+                new StepOrderDto { StepId = recruitment.Steps.First().Id, Order = 1 },
+            ],
+        };
+
+        var act = () => handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenAccessException>();
     }
 }

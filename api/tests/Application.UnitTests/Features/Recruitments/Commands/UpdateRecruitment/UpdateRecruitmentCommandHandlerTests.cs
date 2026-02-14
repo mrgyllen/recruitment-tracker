@@ -5,6 +5,7 @@ using FluentAssertions;
 using MockQueryable.NSubstitute;
 using NSubstitute;
 using NUnit.Framework;
+using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
 namespace api.Application.UnitTests.Features.Recruitments.Commands.UpdateRecruitment;
@@ -13,21 +14,26 @@ namespace api.Application.UnitTests.Features.Recruitments.Commands.UpdateRecruit
 public class UpdateRecruitmentCommandHandlerTests
 {
     private IApplicationDbContext _dbContext = null!;
+    private ITenantContext _tenantContext = null!;
 
     [SetUp]
     public void SetUp()
     {
         _dbContext = Substitute.For<IApplicationDbContext>();
+        _tenantContext = Substitute.For<ITenantContext>();
     }
 
     [Test]
     public async Task Handle_ValidCommand_UpdatesRecruitment()
     {
-        var recruitment = Recruitment.Create("Old Title", "Old Desc", Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(userId);
+
+        var recruitment = Recruitment.Create("Old Title", "Old Desc", userId);
         var mockSet = new List<Recruitment> { recruitment }.AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new UpdateRecruitmentCommandHandler(_dbContext);
+        var handler = new UpdateRecruitmentCommandHandler(_dbContext, _tenantContext);
         var command = new UpdateRecruitmentCommand
         {
             Id = recruitment.Id,
@@ -47,10 +53,12 @@ public class UpdateRecruitmentCommandHandlerTests
     [Test]
     public async Task Handle_RecruitmentNotFound_ThrowsNotFoundException()
     {
+        _tenantContext.UserGuid.Returns(Guid.NewGuid());
+
         var mockSet = new List<Recruitment>().AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new UpdateRecruitmentCommandHandler(_dbContext);
+        var handler = new UpdateRecruitmentCommandHandler(_dbContext, _tenantContext);
         var command = new UpdateRecruitmentCommand
         {
             Id = Guid.NewGuid(),
@@ -60,5 +68,28 @@ public class UpdateRecruitmentCommandHandlerTests
         var act = () => handler.Handle(command, CancellationToken.None);
 
         await act.Should().ThrowAsync<NotFoundException>();
+    }
+
+    [Test]
+    public async Task Handle_NonMember_ThrowsForbiddenAccessException()
+    {
+        var creatorId = Guid.NewGuid();
+        var nonMemberId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(nonMemberId);
+
+        var recruitment = Recruitment.Create("Title", null, creatorId);
+        var mockSet = new List<Recruitment> { recruitment }.AsQueryable().BuildMockDbSet();
+        _dbContext.Recruitments.Returns(mockSet);
+
+        var handler = new UpdateRecruitmentCommandHandler(_dbContext, _tenantContext);
+        var command = new UpdateRecruitmentCommand
+        {
+            Id = recruitment.Id,
+            Title = "New Title",
+        };
+
+        var act = () => handler.Handle(command, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenAccessException>();
     }
 }

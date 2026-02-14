@@ -1,12 +1,14 @@
 using api.Application.Common.Interfaces;
 using api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
 namespace api.Application.Features.Recruitments.Commands.RemoveWorkflowStep;
 
 public class RemoveWorkflowStepCommandHandler(
-    IApplicationDbContext dbContext)
+    IApplicationDbContext dbContext,
+    ITenantContext tenantContext)
     : IRequestHandler<RemoveWorkflowStepCommand>
 {
     public async Task Handle(
@@ -14,14 +16,23 @@ public class RemoveWorkflowStepCommandHandler(
     {
         var recruitment = await dbContext.Recruitments
             .Include(r => r.Steps)
+            .Include(r => r.Members)
             .FirstOrDefaultAsync(r => r.Id == request.RecruitmentId, cancellationToken)
             ?? throw new NotFoundException(nameof(Recruitment), request.RecruitmentId);
+
+        var userId = tenantContext.UserGuid;
+        if (userId is null || !recruitment.Members.Any(m => m.UserId == userId))
+        {
+            throw new ForbiddenAccessException();
+        }
 
         var hasOutcomes = await dbContext.Candidates
             .AnyAsync(c => c.Outcomes.Any(o => o.WorkflowStepId == request.StepId), cancellationToken);
 
         if (hasOutcomes)
+        {
             recruitment.MarkStepHasOutcomes(request.StepId);
+        }
 
         recruitment.RemoveStep(request.StepId);
         await dbContext.SaveChangesAsync(cancellationToken);
