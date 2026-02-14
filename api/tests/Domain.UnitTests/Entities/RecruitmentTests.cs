@@ -132,7 +132,7 @@ public class RecruitmentTests
     }
 
     [Test]
-    public void RemoveMember_LastLeader_ThrowsInvalidOperationException()
+    public void RemoveMember_LastLeader_ThrowsDomainRuleViolationException()
     {
         // Creator is always a leader and always protected by the creator guard.
         // The last-leader guard is defense-in-depth; creator guard fires first here.
@@ -140,7 +140,7 @@ public class RecruitmentTests
 
         var act = () => recruitment.RemoveMember(recruitment.Members.First().Id);
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<DomainRuleViolationException>()
             .WithMessage("*creator*");
     }
 
@@ -192,7 +192,7 @@ public class RecruitmentTests
     }
 
     [Test]
-    public void RemoveMember_Creator_ThrowsInvalidOperationException()
+    public void RemoveMember_Creator_ThrowsDomainRuleViolationException()
     {
         var creatorId = Guid.NewGuid();
         var recruitment = Recruitment.Create("Test", null, creatorId);
@@ -203,7 +203,7 @@ public class RecruitmentTests
 
         var act = () => recruitment.RemoveMember(creatorMemberId);
 
-        act.Should().Throw<InvalidOperationException>()
+        act.Should().Throw<DomainRuleViolationException>()
             .WithMessage("*creator*");
     }
 

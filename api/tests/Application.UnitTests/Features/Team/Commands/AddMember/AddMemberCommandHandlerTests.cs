@@ -1,6 +1,7 @@
 using api.Application.Common.Interfaces;
 using api.Application.Features.Team.Commands.AddMember;
 using api.Domain.Entities;
+using api.Domain.Exceptions;
 using FluentAssertions;
 using MockQueryable.NSubstitute;
 using NSubstitute;
@@ -52,7 +53,7 @@ public class AddMemberCommandHandlerTests
     }
 
     [Test]
-    public async Task Handle_DuplicateUser_ThrowsInvalidOperationException()
+    public async Task Handle_DuplicateUser_ThrowsDomainRuleViolationException()
     {
         var creatorId = Guid.NewGuid();
         var recruitment = Recruitment.Create("Test", null, creatorId);
@@ -72,7 +73,7 @@ public class AddMemberCommandHandlerTests
             },
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<DomainRuleViolationException>()
             .WithMessage("*already a member*");
     }
 

@@ -1,6 +1,7 @@
 using api.Application.Common.Interfaces;
 using api.Application.Features.Team.Commands.RemoveMember;
 using api.Domain.Entities;
+using api.Domain.Exceptions;
 using FluentAssertions;
 using MockQueryable.NSubstitute;
 using NSubstitute;
@@ -47,7 +48,7 @@ public class RemoveMemberCommandHandlerTests
     }
 
     [Test]
-    public async Task Handle_RemoveCreator_ThrowsInvalidOperationException()
+    public async Task Handle_RemoveCreator_ThrowsDomainRuleViolationException()
     {
         var creatorId = Guid.NewGuid();
         var recruitment = Recruitment.Create("Test", null, creatorId);
@@ -65,7 +66,7 @@ public class RemoveMemberCommandHandlerTests
             new RemoveMemberCommand { RecruitmentId = recruitment.Id, MemberId = creatorMemberId },
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<DomainRuleViolationException>()
             .WithMessage("*creator*");
     }
 

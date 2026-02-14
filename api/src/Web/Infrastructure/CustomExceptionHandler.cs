@@ -23,6 +23,7 @@ public class CustomExceptionHandler : IExceptionHandler
                 { typeof(RecruitmentClosedException), HandleRecruitmentClosedException },
                 { typeof(StepHasOutcomesException), HandleStepHasOutcomesException },
                 { typeof(DuplicateStepNameException), HandleDuplicateStepNameException },
+                { typeof(DomainRuleViolationException), HandleDomainRuleViolationException },
             };
     }
 
@@ -127,6 +128,19 @@ public class CustomExceptionHandler : IExceptionHandler
             Title = "Duplicate step name",
             Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
+        });
+    }
+
+    private async Task HandleDomainRuleViolationException(HttpContext httpContext, Exception ex)
+    {
+        httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+
+        await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Domain rule violation",
+            Detail = ex.Message,
+            Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
 }

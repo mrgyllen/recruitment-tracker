@@ -83,7 +83,7 @@ public class Recruitment : GuidEntity
 
         if (_members.Any(m => m.UserId == userId))
         {
-            throw new InvalidOperationException($"User {userId} is already a member.");
+            throw new DomainRuleViolationException($"User {userId} is already a member.");
         }
 
         var member = RecruitmentMember.Create(Id, userId, role, displayName);
@@ -96,19 +96,19 @@ public class Recruitment : GuidEntity
         EnsureNotClosed();
 
         var member = _members.FirstOrDefault(m => m.Id == memberId)
-            ?? throw new InvalidOperationException($"Member {memberId} not found.");
+            ?? throw new DomainRuleViolationException($"Member {memberId} not found.");
 
         // Cannot remove the creator
         if (member.UserId == CreatedByUserId)
         {
-            throw new InvalidOperationException("Cannot remove the creator of the recruitment.");
+            throw new DomainRuleViolationException("Cannot remove the creator of the recruitment.");
         }
 
         // Cannot remove the last Recruiting Leader
         if (member.Role == "Recruiting Leader" &&
             _members.Count(m => m.Role == "Recruiting Leader") <= 1)
         {
-            throw new InvalidOperationException("Cannot remove the last member \u2014 at least one Recruiting Leader must exist.");
+            throw new DomainRuleViolationException("Cannot remove the last member \u2014 at least one Recruiting Leader must exist.");
         }
 
         _members.Remove(member);
