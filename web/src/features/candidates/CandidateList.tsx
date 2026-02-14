@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { CreateCandidateForm } from './CreateCandidateForm'
 import { ImportWizard } from './ImportFlow/ImportWizard'
 import { useCandidates } from './hooks/useCandidates'
@@ -110,7 +111,12 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
               className="flex items-center justify-between px-4 py-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="font-medium">{candidate.fullName}</p>
+                <Link
+                  to={`/recruitments/${recruitmentId}/candidates/${candidate.id}`}
+                  className="font-medium hover:underline"
+                >
+                  {candidate.fullName}
+                </Link>
                 <p className="text-muted-foreground text-sm">
                   {candidate.email}
                   {candidate.location && ` -- ${candidate.location}`}

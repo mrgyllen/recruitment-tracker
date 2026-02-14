@@ -1,6 +1,7 @@
 import { createBrowserRouter } from 'react-router'
 import { RootLayout } from './RootLayout'
 import { ProtectedRoute } from '@/features/auth/ProtectedRoute'
+import { CandidateDetail } from '@/features/candidates/CandidateDetail'
 import { CreateRecruitmentPage } from '@/features/recruitments/pages/CreateRecruitmentPage'
 import { HomePage } from '@/features/recruitments/pages/HomePage'
 import { RecruitmentPage } from '@/features/recruitments/pages/RecruitmentPage'
@@ -15,6 +16,7 @@ export const routeConfig = [
           { path: '/', element: <HomePage /> },
           { path: '/recruitments/new', element: <CreateRecruitmentPage /> },
           { path: '/recruitments/:recruitmentId', element: <RecruitmentPage /> },
+          { path: '/recruitments/:recruitmentId/candidates/:candidateId', element: <CandidateDetail /> },
         ],
       },
     ],
