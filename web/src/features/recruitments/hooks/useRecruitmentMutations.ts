@@ -1,10 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { recruitmentApi } from '@/lib/api/recruitments'
 import type {
   AddWorkflowStepRequest,
   ReorderStepsRequest,
   UpdateRecruitmentRequest,
 } from '@/lib/api/recruitments.types'
+import { recruitmentApi } from '@/lib/api/recruitments'
 
 export function useUpdateRecruitment(id: string) {
   const queryClient = useQueryClient()

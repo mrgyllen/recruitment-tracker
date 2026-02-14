@@ -3,8 +3,8 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { DEFAULT_WORKFLOW_STEPS } from './workflowDefaults'
 import { WorkflowStepEditor, type WorkflowStep } from './WorkflowStepEditor'
-import { render, waitFor } from '@/test-utils'
 import { mockRecruitmentId } from '@/mocks/recruitmentHandlers'
+import { render, waitFor } from '@/test-utils'
 
 function createSteps(names: string[]): WorkflowStep[] {
   return names.map((name, i) => ({

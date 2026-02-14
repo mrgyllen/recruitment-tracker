@@ -1,8 +1,8 @@
+import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { EditRecruitmentForm } from './EditRecruitmentForm'
 import type { RecruitmentDetail } from '@/lib/api/recruitments.types'
 import { render, screen, waitFor } from '@/test-utils'
-import userEvent from '@testing-library/user-event'
 
 const activeRecruitment: RecruitmentDetail = {
   id: '550e8400-e29b-41d4-a716-446655440000',

@@ -3,13 +3,13 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod/v4'
 import { useUpdateRecruitment } from './hooks/useRecruitmentMutations'
+import type { RecruitmentDetail } from '@/lib/api/recruitments.types'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { useAppToast } from '@/hooks/useAppToast'
 import { ApiError } from '@/lib/api/httpClient'
-import type { RecruitmentDetail } from '@/lib/api/recruitments.types'
 
 const editRecruitmentSchema = z.object({
   title: z.string().min(1, 'Title is required').max(200),
