@@ -72,7 +72,7 @@ development_status:
   3-1-manual-candidate-management: done
   3-2-xlsx-import-pipeline: done
   3-3-import-wizard-summary-ui: done
-  3-4-pdf-bundle-upload-splitting: ready-for-dev
+  3-4-pdf-bundle-upload-splitting: done
   3-5-cv-auto-match-manual-assignment-individual-upload: ready-for-dev
   epic-3-retrospective: optional
 
