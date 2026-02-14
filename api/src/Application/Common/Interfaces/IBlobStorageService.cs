@@ -23,4 +23,10 @@ public interface IBlobStorageService
         string containerName,
         string blobName,
         TimeSpan validity);
+
+    /// <summary>
+    /// Verifies that a blob URL belongs to the specified recruitment by checking
+    /// the normalized path starts with "{recruitmentId}/". Prevents path traversal attacks.
+    /// </summary>
+    bool VerifyBlobOwnership(string containerName, string blobUrl, Guid recruitmentId);
 }

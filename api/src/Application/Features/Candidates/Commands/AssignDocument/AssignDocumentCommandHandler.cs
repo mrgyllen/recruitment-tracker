@@ -31,6 +31,9 @@ public class AssignDocumentCommandHandler(
         if (recruitment.Status == RecruitmentStatus.Closed)
             throw new RecruitmentClosedException(recruitment.Id);
 
+        if (!blobStorage.VerifyBlobOwnership(ContainerName, request.DocumentBlobUrl, request.RecruitmentId))
+            throw new ForbiddenAccessException();
+
         var candidate = await dbContext.Candidates
             .Include(c => c.Documents)
             .FirstOrDefaultAsync(c => c.Id == request.CandidateId

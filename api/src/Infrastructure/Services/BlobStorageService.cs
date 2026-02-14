@@ -46,6 +46,31 @@ public class BlobStorageService(BlobServiceClient blobServiceClient) : IBlobStor
 
     private static readonly TimeSpan MaxSasValidity = TimeSpan.FromMinutes(15);
 
+    public bool VerifyBlobOwnership(string containerName, string blobUrl, Guid recruitmentId)
+    {
+        // Normalize the path: resolve any ../ segments
+        var normalized = Path.GetFullPath(blobUrl).Replace('\\', '/');
+
+        // Also normalize without filesystem context — strip ../ segments directly
+        var segments = blobUrl.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries);
+        var stack = new Stack<string>();
+        foreach (var segment in segments)
+        {
+            if (segment == "..")
+            {
+                if (stack.Count > 0) stack.Pop();
+            }
+            else if (segment != ".")
+            {
+                stack.Push(segment);
+            }
+        }
+        var cleanPath = string.Join("/", stack.Reverse());
+
+        var expectedPrefix = recruitmentId.ToString() + "/";
+        return cleanPath.StartsWith(expectedPrefix, StringComparison.OrdinalIgnoreCase);
+    }
+
     public Uri GenerateSasUri(
         string containerName,
         string blobName,
