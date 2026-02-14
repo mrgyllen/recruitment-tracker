@@ -3,6 +3,8 @@ using api.Application.Common.Interfaces;
 using api.Application.Common.Models;
 using api.Domain.Entities;
 using api.Domain.Enums;
+using api.Domain.Models;
+using api.Domain.Services;
 using api.Domain.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -154,6 +156,51 @@ public class ImportPipelineHostedService(
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogError(ex, "PDF bundle processing failed for session {ImportSessionId}", request.ImportSessionId);
+            }
+        }
+
+        // Auto-match documents to candidates (Story 3.5)
+        // Reload session with ImportDocuments after PDF processing may have added them
+        var sessionForMatching = await db.ImportSessions
+            .Include(s => s.ImportDocuments)
+            .FirstOrDefaultAsync(s => s.Id == request.ImportSessionId, ct);
+
+        if (sessionForMatching?.ImportDocuments.Any(d => d.MatchStatus == ImportDocumentMatchStatus.Pending) == true)
+        {
+            try
+            {
+                var documentMatcher = new DocumentMatchingEngine();
+
+                var splitDocs = sessionForMatching.ImportDocuments
+                    .Where(d => d.MatchStatus == ImportDocumentMatchStatus.Pending)
+                    .Select(d => new SplitDocument(d.CandidateName, d.BlobStorageUrl, d.WorkdayCandidateId))
+                    .ToList();
+
+                var candidates = await db.Candidates
+                    .Include(c => c.Documents)
+                    .Where(c => c.RecruitmentId == request.RecruitmentId)
+                    .ToListAsync(ct);
+
+                var matchResults = documentMatcher.MatchDocumentsToCandidates(splitDocs, candidates);
+
+                foreach (var result in matchResults)
+                {
+                    var importDoc = sessionForMatching.ImportDocuments
+                        .First(d => d.BlobStorageUrl == result.Document.BlobStorageUrl);
+
+                    sessionForMatching.UpdateImportDocumentMatch(importDoc.Id, result.MatchedCandidateId, result.Status);
+
+                    if (result.Status == ImportDocumentMatchStatus.AutoMatched && result.MatchedCandidateId.HasValue)
+                    {
+                        var candidate = candidates.First(c => c.Id == result.MatchedCandidateId.Value);
+                        candidate.ReplaceDocument("CV", result.Document.BlobStorageUrl,
+                            result.Document.WorkdayCandidateId, DocumentSource.BundleSplit);
+                    }
+                }
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger.LogError(ex, "Auto-matching failed for session {ImportSessionId}", request.ImportSessionId);
             }
         }
 

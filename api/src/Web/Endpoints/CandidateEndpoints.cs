@@ -1,5 +1,7 @@
+using api.Application.Features.Candidates.Commands.AssignDocument;
 using api.Application.Features.Candidates.Commands.CreateCandidate;
 using api.Application.Features.Candidates.Commands.RemoveCandidate;
+using api.Application.Features.Candidates.Commands.UploadDocument;
 using api.Application.Features.Candidates.Queries.GetCandidates;
 using api.Web.Infrastructure;
 using MediatR;
@@ -15,6 +17,9 @@ public class CandidateEndpoints : EndpointGroupBase
         group.MapPost("/", CreateCandidate);
         group.MapDelete("/{candidateId:guid}", RemoveCandidate);
         group.MapGet("/", GetCandidates);
+        group.MapPost("/{candidateId:guid}/document", UploadDocument)
+            .DisableAntiforgery();
+        group.MapPost("/{candidateId:guid}/document/assign", AssignDocument);
     }
 
     private static async Task<IResult> CreateCandidate(
@@ -52,6 +57,32 @@ public class CandidateEndpoints : EndpointGroupBase
             RecruitmentId = recruitmentId,
             Page = page,
             PageSize = pageSize
+        });
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> UploadDocument(
+        ISender sender,
+        Guid recruitmentId,
+        Guid candidateId,
+        IFormFile file)
+    {
+        using var stream = file.OpenReadStream();
+        var result = await sender.Send(new UploadDocumentCommand(
+            recruitmentId, candidateId, stream, file.FileName, file.Length));
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> AssignDocument(
+        ISender sender,
+        Guid recruitmentId,
+        Guid candidateId,
+        AssignDocumentCommand command)
+    {
+        var result = await sender.Send(command with
+        {
+            RecruitmentId = recruitmentId,
+            CandidateId = candidateId
         });
         return Results.Ok(result);
     }
