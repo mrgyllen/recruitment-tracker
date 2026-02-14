@@ -11,9 +11,14 @@ interface PendingOutcome {
   toastId: string | number
 }
 
+interface UseScreeningSessionOptions {
+  onAutoAdvance?: () => void
+}
+
 export function useScreeningSession(
   recruitmentId: string,
   candidates: CandidateResponse[],
+  options?: UseScreeningSessionOptions,
 ) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null)
   const [sessionScreenedCount, setSessionScreenedCount] = useState(0)
@@ -101,6 +106,7 @@ export function useScreeningSession(
           setSelectedCandidateId(nextId)
         }
         autoAdvanceRef.current = null
+        options?.onAutoAdvance?.()
       }, AUTO_ADVANCE_DELAY_MS)
     },
     [candidates, findNextUnscreened, undoOutcome],

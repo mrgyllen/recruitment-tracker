@@ -292,6 +292,33 @@ describe('useScreeningSession', () => {
     expect(result.current.selectedCandidateId).toBe('cand-1')
   })
 
+  it('should call onAutoAdvance callback when auto-advance fires', () => {
+    const onAutoAdvance = vi.fn()
+    const { wrapper } = createWrapper()
+    const candidates = [
+      makeCandidate('cand-1', 'Alice'),
+      makeCandidate('cand-2', 'Bob'),
+    ]
+    const { result } = renderHook(
+      () => useScreeningSession(recruitmentId, candidates, { onAutoAdvance }),
+      { wrapper },
+    )
+
+    act(() => {
+      result.current.selectCandidate('cand-1')
+    })
+
+    act(() => {
+      result.current.handleOutcomeRecorded(makeOutcomeResult('cand-1'))
+    })
+
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+
+    expect(onAutoAdvance).toHaveBeenCalled()
+  })
+
   it('should stay on current candidate when all are screened', () => {
     const { wrapper } = createWrapper()
     const candidates = [
