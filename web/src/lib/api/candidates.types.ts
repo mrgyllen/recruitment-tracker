@@ -8,6 +8,9 @@ export interface CandidateResponse {
   dateApplied: string
   createdAt: string
   document: CandidateDocumentDto | null
+  currentWorkflowStepId: string | null
+  currentWorkflowStepName: string | null
+  currentOutcomeStatus: string | null
 }
 
 export interface CreateCandidateRequest {
@@ -37,4 +40,36 @@ export interface AssignDocumentRequest {
   documentBlobUrl: string
   documentName: string
   importSessionId?: string
+}
+
+export interface CandidateDetailResponse {
+  id: string
+  recruitmentId: string
+  fullName: string
+  email: string
+  phoneNumber: string | null
+  location: string | null
+  dateApplied: string
+  createdAt: string
+  currentWorkflowStepId: string | null
+  currentWorkflowStepName: string | null
+  currentOutcomeStatus: string | null
+  documents: DocumentDetailDto[]
+  outcomeHistory: OutcomeHistoryEntry[]
+}
+
+export interface DocumentDetailDto {
+  id: string
+  documentType: string
+  sasUrl: string
+  uploadedAt: string
+}
+
+export interface OutcomeHistoryEntry {
+  workflowStepId: string
+  workflowStepName: string
+  stepOrder: number
+  status: string
+  recordedAt: string
+  recordedByUserId: string
 }

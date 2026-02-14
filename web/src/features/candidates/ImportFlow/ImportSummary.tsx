@@ -240,7 +240,7 @@ function UnmatchedDocumentRow({
 }) {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('')
   const [isAssigned, setIsAssigned] = useState(false)
-  const { data: candidateData } = useCandidates(recruitmentId)
+  const { data: candidateData } = useCandidates({ recruitmentId })
   const queryClient = useQueryClient()
 
   const assignMutation = useMutation({
