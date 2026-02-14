@@ -103,7 +103,11 @@ export function RecruitmentPage() {
 
       <MemberList recruitmentId={data.id} disabled={isClosed} />
 
-      <CandidateList recruitmentId={data.id} isClosed={isClosed} />
+      <CandidateList
+        recruitmentId={data.id}
+        isClosed={isClosed}
+        workflowSteps={data.steps}
+      />
 
       <CloseRecruitmentDialog
         recruitmentId={data.id}

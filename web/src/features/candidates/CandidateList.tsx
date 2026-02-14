@@ -1,11 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router'
+import { Virtuoso } from 'react-virtuoso'
+import { X } from 'lucide-react'
 import { CreateCandidateForm } from './CreateCandidateForm'
 import { ImportWizard } from './ImportFlow/ImportWizard'
 import { useCandidates } from './hooks/useCandidates'
 import { useRemoveCandidate } from './hooks/useCandidateMutations'
 import { EmptyState } from '@/components/EmptyState'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
+import { StatusBadge } from '@/components/StatusBadge'
+import type { StatusVariant } from '@/components/StatusBadge.types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,18 +20,64 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useAppToast } from '@/hooks/useAppToast'
+import { useDebounce } from '@/hooks/useDebounce'
 import { ApiError } from '@/lib/api/httpClient'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
+import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
 
 interface CandidateListProps {
   recruitmentId: string
   isClosed: boolean
+  workflowSteps?: WorkflowStepDto[]
 }
 
-export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
-  const { data, isPending } = useCandidates(recruitmentId)
+const OUTCOME_OPTIONS = ['NotStarted', 'Pass', 'Fail', 'Hold'] as const
+
+function toStatusVariant(status: string | null): StatusVariant {
+  switch (status) {
+    case 'Pass':
+      return 'pass'
+    case 'Fail':
+      return 'fail'
+    case 'Hold':
+      return 'hold'
+    case 'NotStarted':
+    default:
+      return 'not-started'
+  }
+}
+
+export function CandidateList({
+  recruitmentId,
+  isClosed,
+  workflowSteps = [],
+}: CandidateListProps) {
+  const [searchInput, setSearchInput] = useState('')
+  const [stepFilter, setStepFilter] = useState<string | undefined>()
+  const [outcomeFilter, setOutcomeFilter] = useState<string | undefined>()
+  const [page, setPage] = useState(1)
+
+  const debouncedSearch = useDebounce(searchInput, 300)
+  const search = debouncedSearch || undefined
+
+  const { data, isPending } = useCandidates({
+    recruitmentId,
+    page,
+    search,
+    stepId: stepFilter,
+    outcomeStatus: outcomeFilter,
+  })
   const removeMutation = useRemoveCandidate(recruitmentId)
   const toast = useAppToast()
   const [candidateToRemove, setCandidateToRemove] =
@@ -53,6 +103,33 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
     })
   }
 
+  function handleSearchChange(value: string) {
+    setSearchInput(value)
+    setPage(1)
+  }
+
+  function handleStepFilterChange(value: string) {
+    setStepFilter(value === 'all' ? undefined : value)
+    setPage(1)
+  }
+
+  function handleOutcomeFilterChange(value: string) {
+    setOutcomeFilter(value === 'all' ? undefined : value)
+    setPage(1)
+  }
+
+  function clearStepFilter() {
+    setStepFilter(undefined)
+    setPage(1)
+  }
+
+  function clearOutcomeFilter() {
+    setOutcomeFilter(undefined)
+    setPage(1)
+  }
+
+  const hasActiveFilters = !!search || !!stepFilter || !!outcomeFilter
+
   if (isPending) {
     return (
       <section>
@@ -63,6 +140,9 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
   }
 
   const candidates = data?.items ?? []
+  const totalCount = data?.totalCount ?? 0
+  const pageSize = data?.pageSize ?? 50
+  const totalPages = Math.ceil(totalCount / pageSize)
 
   return (
     <section>
@@ -70,7 +150,10 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
         <h2 className="text-lg font-semibold">Candidates</h2>
         {!isClosed && candidates.length > 0 && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setImportWizardOpen(true)}>
+            <Button
+              variant="outline"
+              onClick={() => setImportWizardOpen(true)}
+            >
               Import Candidates
             </Button>
             <CreateCandidateForm recruitmentId={recruitmentId} />
@@ -78,7 +161,88 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
         )}
       </div>
 
-      {candidates.length === 0 ? (
+      {/* Search and filter controls */}
+      <div className="mb-4 flex flex-wrap items-center gap-3">
+        <Input
+          placeholder="Search by name or email..."
+          value={searchInput}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          className="max-w-xs"
+          aria-label="Search candidates"
+        />
+        <Select
+          value={stepFilter ?? 'all'}
+          onValueChange={handleStepFilterChange}
+        >
+          <SelectTrigger className="w-[180px]" aria-label="Filter by step">
+            <SelectValue placeholder="All steps" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All steps</SelectItem>
+            {workflowSteps.map((step) => (
+              <SelectItem key={step.id} value={step.id}>
+                {step.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={outcomeFilter ?? 'all'}
+          onValueChange={handleOutcomeFilterChange}
+        >
+          <SelectTrigger
+            className="w-[180px]"
+            aria-label="Filter by outcome"
+          >
+            <SelectValue placeholder="All outcomes" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All outcomes</SelectItem>
+            {OUTCOME_OPTIONS.map((status) => (
+              <SelectItem key={status} value={status}>
+                {status === 'NotStarted' ? 'Not Started' : status}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Active filter badges */}
+      {hasActiveFilters && (
+        <div className="mb-4 flex flex-wrap items-center gap-2">
+          {stepFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Step:{' '}
+              {workflowSteps.find((s) => s.id === stepFilter)?.name ??
+                'Unknown'}
+              <button
+                onClick={clearStepFilter}
+                className="ml-1"
+                aria-label="Clear step filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          {outcomeFilter && (
+            <Badge variant="secondary" className="gap-1">
+              Status:{' '}
+              {outcomeFilter === 'NotStarted'
+                ? 'Not Started'
+                : outcomeFilter}
+              <button
+                onClick={clearOutcomeFilter}
+                className="ml-1"
+                aria-label="Clear outcome filter"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+        </div>
+      )}
+
+      {candidates.length === 0 && !hasActiveFilters ? (
         <>
           <EmptyState
             heading="No candidates yet"
@@ -103,42 +267,77 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
             </>
           )}
         </>
+      ) : candidates.length === 0 && hasActiveFilters ? (
+        <EmptyState
+          heading="No matching candidates"
+          description="Try adjusting your search or filters."
+        />
       ) : (
-        <div className="divide-y rounded-md border">
-          {candidates.map((candidate) => (
-            <div
-              key={candidate.id}
-              className="flex items-center justify-between px-4 py-3"
-            >
-              <div className="min-w-0 flex-1">
-                <Link
-                  to={`/recruitments/${recruitmentId}/candidates/${candidate.id}`}
-                  className="font-medium hover:underline"
-                >
-                  {candidate.fullName}
-                </Link>
-                <p className="text-muted-foreground text-sm">
-                  {candidate.email}
-                  {candidate.location && ` -- ${candidate.location}`}
-                </p>
-                <p className="text-muted-foreground text-xs">
-                  Applied:{' '}
-                  {new Date(candidate.dateApplied).toLocaleDateString()}
-                </p>
+        <>
+          <div className="rounded-md border">
+            {totalCount > 50 ? (
+              <Virtuoso
+                style={{ height: '600px' }}
+                totalCount={candidates.length}
+                itemContent={(index) => {
+                  const candidate = candidates[index]
+                  return (
+                    <CandidateRow
+                      key={candidate.id}
+                      candidate={candidate}
+                      recruitmentId={recruitmentId}
+                      isClosed={isClosed}
+                      onRemove={setCandidateToRemove}
+                    />
+                  )
+                }}
+              />
+            ) : (
+              <div className="divide-y">
+                {candidates.map((candidate) => (
+                  <CandidateRow
+                    key={candidate.id}
+                    candidate={candidate}
+                    recruitmentId={recruitmentId}
+                    isClosed={isClosed}
+                    onRemove={setCandidateToRemove}
+                  />
+                ))}
               </div>
-              {!isClosed && (
+            )}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-4 flex items-center justify-between">
+              <p className="text-muted-foreground text-sm">
+                Showing {(page - 1) * pageSize + 1}--
+                {Math.min(page * pageSize, totalCount)} of {totalCount}
+              </p>
+              <div className="flex items-center gap-2">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => setCandidateToRemove(candidate)}
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
                 >
-                  Remove
+                  Previous
                 </Button>
-              )}
+                <span className="text-muted-foreground text-sm">
+                  Page {page} of {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                </Button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
 
       <AlertDialog
@@ -174,5 +373,59 @@ export function CandidateList({ recruitmentId, isClosed }: CandidateListProps) {
         onOpenChange={setImportWizardOpen}
       />
     </section>
+  )
+}
+
+function CandidateRow({
+  candidate,
+  recruitmentId,
+  isClosed,
+  onRemove,
+}: {
+  candidate: CandidateResponse
+  recruitmentId: string
+  isClosed: boolean
+  onRemove: (c: CandidateResponse) => void
+}) {
+  return (
+    <div className="flex items-center justify-between px-4 py-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/recruitments/${recruitmentId}/candidates/${candidate.id}`}
+            className="font-medium hover:underline"
+          >
+            {candidate.fullName}
+          </Link>
+          {candidate.currentOutcomeStatus && (
+            <StatusBadge
+              status={toStatusVariant(candidate.currentOutcomeStatus)}
+            />
+          )}
+        </div>
+        <p className="text-muted-foreground text-sm">
+          {candidate.email}
+          {candidate.location && ` -- ${candidate.location}`}
+        </p>
+        <p className="text-muted-foreground text-xs">
+          {candidate.currentWorkflowStepName && (
+            <span className="mr-2">
+              Step: {candidate.currentWorkflowStepName}
+            </span>
+          )}
+          Applied: {new Date(candidate.dateApplied).toLocaleDateString()}
+        </p>
+      </div>
+      {!isClosed && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="text-destructive hover:text-destructive"
+          onClick={() => onRemove(candidate)}
+        >
+          Remove
+        </Button>
+      )}
+    </div>
   )
 }
