@@ -106,6 +106,55 @@ public record RecruitmentOverviewDto
 }
 ```
 
+## Handler Authorization
+
+**Rule: ALL command and query handlers that access a recruitment MUST verify the current user is a member.** This is a security-critical pattern — without it, any authenticated user can read or modify any recruitment.
+
+### The Pattern
+
+Every handler that loads a Recruitment (or data scoped to a Recruitment) must:
+
+1. Load the recruitment with its members
+2. Check if the current user is a member via `ITenantContext.UserGuid`
+3. Throw `ForbiddenAccessException` if not a member
+
+```csharp
+// Canonical example — use this pattern in every recruitment-scoped handler
+public class AddWorkflowStepCommandHandler : IRequestHandler<AddWorkflowStepCommand, WorkflowStepDto>
+{
+    private readonly IApplicationDbContext _context;
+    private readonly ITenantContext _tenantContext;
+
+    public async Task<WorkflowStepDto> Handle(AddWorkflowStepCommand request, CancellationToken ct)
+    {
+        var recruitment = await _context.Recruitments
+            .Include(r => r.Members)     // Must include members for check
+            .Include(r => r.Steps)
+            .FirstOrDefaultAsync(r => r.Id == request.RecruitmentId, ct)
+            ?? throw new NotFoundException(nameof(Recruitment), request.RecruitmentId);
+
+        // MANDATORY: Verify current user is a member
+        if (!recruitment.Members.Any(m => m.UserId == _tenantContext.UserGuid))
+        {
+            throw new ForbiddenAccessException();
+        }
+
+        // ... proceed with business logic
+    }
+}
+```
+
+### When Is This Required?
+
+| Scenario | Authorization Check Required? |
+|----------|-------------------------------|
+| Command that modifies a recruitment | Yes — always |
+| Query that returns recruitment data | Yes — always |
+| Query that returns cross-recruitment list (e.g., GetRecruitments) | No — filtered by ITenantContext via global query filter |
+| SearchDirectory (global, not recruitment-scoped) | No — searches organizational directory |
+
+> **Evidence:** Story 2.3 had ALL 4 command handlers (UpdateRecruitment, AddWorkflowStep, RemoveWorkflowStep, ReorderWorkflowSteps) initially missing this check. Caught by review as C1 security finding, fixed in commit f1dee45.
+
 ## Error Handling
 
 | Layer | Pattern |
@@ -225,6 +274,28 @@ public class RecruitmentConfiguration : IEntityTypeConfiguration<Recruitment>
 - [ ] SAS tokens used for document access (no direct Blob URLs)
 - [ ] FluentValidation on all command/query inputs
 - [ ] Problem Details (RFC 9457) for all error responses
+
+### Transient Domain State
+
+Some domain state is not persisted but must be populated by the application handler before domain operations:
+
+- **`Recruitment._stepsWithOutcomes`** — A transient `HashSet<Guid>` that tracks which workflow steps have recorded outcomes. The handler MUST call `MarkStepHasOutcomes(stepId)` for each step with outcomes BEFORE calling `RemoveStep()`. Without this, step deletion will succeed even when outcomes exist.
+
+```csharp
+// Handler protocol for RemoveWorkflowStep:
+// 1. Query the database for outcomes at this step
+var hasOutcomes = await _context.Outcomes
+    .AnyAsync(o => o.WorkflowStepId == request.StepId, ct);
+
+// 2. Inform the domain aggregate
+if (hasOutcomes)
+    recruitment.MarkStepHasOutcomes(request.StepId);
+
+// 3. Now the domain can enforce the business rule
+recruitment.RemoveStep(request.StepId); // Throws StepHasOutcomesException if marked
+```
+
+> **Why transient?** Outcome data lives in the Candidate aggregate, not the Recruitment aggregate. Loading outcomes through Recruitment would violate aggregate boundaries. The handler bridges this gap.
 
 ### Template Cleanup
 

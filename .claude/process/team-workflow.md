@@ -59,6 +59,7 @@ Repeat this cycle for each story in the sprint:
    - Architecture compliance (see Verification Checkpoints in patterns-backend.md)
    - Test coverage and quality
    - Security patterns (ITenantContext, global query filters)
+   - **All command/query handlers verify ITenantContext membership before data access** (see patterns-backend.md Handler Authorization section)
    - Naming conventions and file placement
    - DDD aggregate rules
    - **Dev Agent Record section is non-empty** (must contain: testing mode rationale, key decisions, file list)

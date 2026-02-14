@@ -17,6 +17,49 @@ RESTful via Minimal API endpoints. Organized by feature in the Web project.
 
 Import upload returns 202 Accepted immediately. Client polls the import session endpoint for progress. Import processing runs in-process via `IHostedService` + `Channel<T>`.
 
+## Endpoint Registration
+
+**Rule: All endpoint classes MUST inherit from `EndpointGroupBase`.** This enables automatic discovery and registration via `app.MapEndpoints()` in Program.cs. Do not use static extension methods for endpoint registration.
+
+```csharp
+// Canonical pattern — inherit from EndpointGroupBase
+public class RecruitmentEndpoints : EndpointGroupBase
+{
+    public override string? GroupName => "recruitments";  // maps to /api/recruitments
+
+    public override void Map(RouteGroupBuilder group)
+    {
+        group.MapPost("/", CreateRecruitment);
+        group.MapGet("/{id:guid}", GetRecruitmentById);
+        group.MapGet("/", GetRecruitments);
+        // ... more endpoints
+    }
+}
+```
+
+**How it works:**
+- `EndpointGroupBase` defines a base class with `GroupName` and `Map()` abstract/virtual methods
+- `app.MapEndpoints()` in Program.cs discovers all `EndpointGroupBase` subclasses via reflection
+- Each group is automatically registered under `/api/{GroupName}` with `RequireAuthorization()`
+
+**For nested resources** (e.g., team members under a recruitment), create a separate endpoint class with an appropriate group path:
+
+```csharp
+public class TeamEndpoints : EndpointGroupBase
+{
+    public override string? GroupName => "recruitments/{recruitmentId:guid}/members";
+
+    public override void Map(RouteGroupBuilder group)
+    {
+        group.MapGet("/", GetMembers);
+        group.MapPost("/", AddMember);
+        // ...
+    }
+}
+```
+
+> **Evidence:** Story 2.4 used a static `MapTeamEndpoints()` extension method instead of EndpointGroupBase, creating an inconsistency with RecruitmentEndpoints. This is tracked as a refactoring item.
+
 ## Error Responses
 
 RFC 9457 Problem Details. Validation errors include field-level detail. Import errors include row-level detail. No PII in error responses.

@@ -93,6 +93,6 @@ public class RecruitmentEndpoints : EndpointGroupBase
         Guid id)
     {
         await sender.Send(new CloseRecruitmentCommand { RecruitmentId = id });
-        return Results.Ok();
+        return Results.NoContent();
     }
 }

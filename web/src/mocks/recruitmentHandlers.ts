@@ -208,7 +208,7 @@ export const recruitmentHandlers = [
     }
     recruitment.status = 'Closed'
     recruitment.closedAt = new Date().toISOString()
-    return HttpResponse.json(null, { status: 200 })
+    return new HttpResponse(null, { status: 204 })
   }),
 
   http.put('/api/recruitments/:id/steps/reorder', async ({ params, request }) => {

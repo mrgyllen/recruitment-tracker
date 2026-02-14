@@ -67,6 +67,8 @@ web/src/
 
 **Rule: Never show a full-page spinner.** Skeletons for initial loads, inline indicators for mutations, silent for background refreshes.
 
+**Rule: Use the shared `SkeletonLoader` component for all loading states.** Do not use plain text like `"Loading..."` or `"Loading data..."`. The `SkeletonLoader` component (built in Epic 1, Story 1.4) provides card, list-row, and text-block variants that match the final layout shape.
+
 ## Empty State Pattern
 
 **Rule: Every list component has an empty state variant.** Empty states show:

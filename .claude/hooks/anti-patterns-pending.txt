@@ -1,2 +1,3 @@
 # Pending anti-patterns — added by mini-retro during sprint
 # Will be promoted to permanent or removed by autonomous retro
+Loading\.\.\.|web/src/features/**/*.tsx|Use SkeletonLoader component instead of plain 'Loading...' text — see patterns-frontend.md Loading States
