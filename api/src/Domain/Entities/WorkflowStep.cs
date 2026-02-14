@@ -21,4 +21,9 @@ public class WorkflowStep : GuidEntity
             CreatedAt = DateTimeOffset.UtcNow,
         };
     }
+
+    internal void UpdateOrder(int newOrder)
+    {
+        Order = newOrder;
+    }
 }

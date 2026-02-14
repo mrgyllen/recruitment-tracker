@@ -115,6 +115,32 @@ public class Recruitment : GuidEntity
         AddDomainEvent(new MembershipChangedEvent(Id, member.UserId, "Removed"));
     }
 
+    public void UpdateDetails(string title, string? description, string? jobRequisitionId)
+    {
+        EnsureNotClosed();
+        Title = title;
+        Description = description;
+        JobRequisitionId = jobRequisitionId;
+    }
+
+    public void ReorderSteps(List<(Guid StepId, int NewOrder)> reordering)
+    {
+        EnsureNotClosed();
+
+        var orders = reordering.Select(r => r.NewOrder).OrderBy(o => o).ToList();
+        if (!orders.SequenceEqual(Enumerable.Range(1, reordering.Count)))
+        {
+            throw new ArgumentException("Step orders must be contiguous starting from 1.");
+        }
+
+        foreach (var (stepId, newOrder) in reordering)
+        {
+            var step = _steps.FirstOrDefault(s => s.Id == stepId)
+                ?? throw new InvalidOperationException($"Step {stepId} not found.");
+            step.UpdateOrder(newOrder);
+        }
+    }
+
     public void Close()
     {
         EnsureNotClosed();

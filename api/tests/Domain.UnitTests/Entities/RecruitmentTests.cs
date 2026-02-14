@@ -243,4 +243,95 @@ public class RecruitmentTests
 
         act.Should().Throw<RecruitmentClosedException>();
     }
+
+    [Test]
+    public void UpdateDetails_ValidInput_UpdatesProperties()
+    {
+        var recruitment = CreateRecruitment();
+
+        recruitment.UpdateDetails("New Title", "New Desc", "REQ-001");
+
+        recruitment.Title.Should().Be("New Title");
+        recruitment.Description.Should().Be("New Desc");
+        recruitment.JobRequisitionId.Should().Be("REQ-001");
+    }
+
+    [Test]
+    public void UpdateDetails_WhenClosed_ThrowsRecruitmentClosedException()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.Close();
+
+        var act = () => recruitment.UpdateDetails("New Title", null, null);
+
+        act.Should().Throw<RecruitmentClosedException>();
+    }
+
+    [Test]
+    public void ReorderSteps_ValidReorder_UpdatesStepOrders()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.AddStep("Screening", 1);
+        recruitment.AddStep("Interview", 2);
+        var step1 = recruitment.Steps.First(s => s.Name == "Screening");
+        var step2 = recruitment.Steps.First(s => s.Name == "Interview");
+
+        recruitment.ReorderSteps(new List<(Guid StepId, int NewOrder)>
+        {
+            (step2.Id, 1),
+            (step1.Id, 2),
+        });
+
+        recruitment.Steps.First(s => s.Name == "Interview").Order.Should().Be(1);
+        recruitment.Steps.First(s => s.Name == "Screening").Order.Should().Be(2);
+    }
+
+    [Test]
+    public void ReorderSteps_UnknownStepId_ThrowsInvalidOperationException()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.AddStep("Screening", 1);
+
+        var act = () => recruitment.ReorderSteps(new List<(Guid StepId, int NewOrder)>
+        {
+            (Guid.NewGuid(), 1),
+        });
+
+        act.Should().Throw<InvalidOperationException>()
+            .WithMessage("*not found*");
+    }
+
+    [Test]
+    public void ReorderSteps_NonContiguousOrders_ThrowsArgumentException()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.AddStep("Screening", 1);
+        recruitment.AddStep("Interview", 2);
+        var step1 = recruitment.Steps.First(s => s.Name == "Screening");
+        var step2 = recruitment.Steps.First(s => s.Name == "Interview");
+
+        var act = () => recruitment.ReorderSteps(new List<(Guid StepId, int NewOrder)>
+        {
+            (step1.Id, 1),
+            (step2.Id, 5),
+        });
+
+        act.Should().Throw<ArgumentException>()
+            .WithMessage("*contiguous*");
+    }
+
+    [Test]
+    public void ReorderSteps_WhenClosed_ThrowsRecruitmentClosedException()
+    {
+        var recruitment = CreateRecruitment();
+        recruitment.AddStep("Screening", 1);
+        recruitment.Close();
+
+        var act = () => recruitment.ReorderSteps(new List<(Guid StepId, int NewOrder)>
+        {
+            (recruitment.Steps.First().Id, 1),
+        });
+
+        act.Should().Throw<RecruitmentClosedException>();
+    }
 }
