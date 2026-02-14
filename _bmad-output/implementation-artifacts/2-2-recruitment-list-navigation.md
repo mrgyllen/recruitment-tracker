@@ -578,10 +578,55 @@ web/src/mocks/handlers.ts  -- Add MSW handlers for GET /api/recruitments and GET
 
 ### Agent Model Used
 
-(to be filled by dev agent)
+Claude Opus 4.6 (claude-opus-4-6)
+
+### Testing Mode Rationale
+
+- **Test-first** for backend query handlers: membership filtering is security-critical, 403 for non-members must be verified
+- **Test-first** for RecruitmentList, RecruitmentPage, RecruitmentSelector: user-facing components with conditional rendering and error states
+- **Characterization** for route config and HomePage refactor: config glue tested via component integration tests
+
+### Key Decisions
+
+1. **Membership filtering added to both query handlers**: GetRecruitmentsQueryHandler now filters by `Members.Any(m => m.UserId == userId)` via ITenantContext; GetRecruitmentByIdQueryHandler checks membership and throws ForbiddenAccessException for non-members
+2. **RecruitmentList uses `<Link>` from react-router** for accessible navigation (not onClick + navigate)
+3. **RecruitmentSelector uses shadcn DropdownMenu** -- renders plain text for single recruitment, dropdown for multiple
+4. **HomePage delegates to RecruitmentList** -- header with "Create Recruitment" button shown only when recruitments exist
+5. **Badge component** used for status display in list and detail views (Active/Closed)
+6. **MSW handlers updated** with two mock recruitments and forbidden ID constant for 403 testing
 
 ### Debug Log References
 
+- AppHeader tests broke because RecruitmentSelector uses useNavigate() -- fixed by wrapping tests in MemoryRouter + QueryClientProvider
+
 ### Completion Notes List
 
+- 117 frontend tests passing (21 test files)
+- 41 domain unit tests passing
+- ESLint: 0 errors, 0 warnings
+- TypeScript: no type errors
+- Backend build: 0 errors, 0 warnings
+
 ### File List
+
+**Backend -- Modified:**
+- `api/src/Application/Features/Recruitments/Queries/GetRecruitments/GetRecruitmentsQueryHandler.cs` (added ITenantContext + membership filter)
+- `api/src/Application/Features/Recruitments/Queries/GetRecruitmentById/GetRecruitmentByIdQueryHandler.cs` (added ITenantContext + membership check + 403)
+- `api/tests/Application.UnitTests/Features/Recruitments/Queries/GetRecruitmentsQueryTests.cs` (updated with ITenantContext mock + membership tests)
+- `api/tests/Application.UnitTests/Features/Recruitments/Queries/GetRecruitmentByIdQueryTests.cs` (updated with ITenantContext mock + 403 test)
+
+**Frontend -- Created:**
+- `web/src/features/recruitments/RecruitmentList.tsx`
+- `web/src/features/recruitments/RecruitmentList.test.tsx`
+- `web/src/features/recruitments/RecruitmentSelector.tsx`
+- `web/src/features/recruitments/RecruitmentSelector.test.tsx`
+- `web/src/features/recruitments/pages/RecruitmentPage.tsx`
+- `web/src/features/recruitments/pages/RecruitmentPage.test.tsx`
+
+**Frontend -- Modified:**
+- `web/src/features/recruitments/pages/HomePage.tsx` (delegates to RecruitmentList)
+- `web/src/features/recruitments/pages/HomePage.test.tsx` (updated for new component structure)
+- `web/src/components/AppHeader.tsx` (added RecruitmentSelector breadcrumb)
+- `web/src/components/AppHeader.test.tsx` (wrapped in MemoryRouter + QueryClientProvider)
+- `web/src/routes/index.tsx` (added /recruitments/:recruitmentId route)
+- `web/src/mocks/recruitmentHandlers.ts` (added second mock recruitment + 403 handler)

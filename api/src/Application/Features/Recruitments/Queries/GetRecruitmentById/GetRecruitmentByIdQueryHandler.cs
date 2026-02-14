@@ -1,6 +1,7 @@
 using api.Application.Common.Interfaces;
 using api.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
+using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
 namespace api.Application.Features.Recruitments.Queries.GetRecruitmentById;
@@ -8,10 +9,12 @@ namespace api.Application.Features.Recruitments.Queries.GetRecruitmentById;
 public class GetRecruitmentByIdQueryHandler : IRequestHandler<GetRecruitmentByIdQuery, RecruitmentDetailDto>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly ITenantContext _tenantContext;
 
-    public GetRecruitmentByIdQueryHandler(IApplicationDbContext dbContext)
+    public GetRecruitmentByIdQueryHandler(IApplicationDbContext dbContext, ITenantContext tenantContext)
     {
         _dbContext = dbContext;
+        _tenantContext = tenantContext;
     }
 
     public async Task<RecruitmentDetailDto> Handle(GetRecruitmentByIdQuery request, CancellationToken cancellationToken)
@@ -25,6 +28,12 @@ public class GetRecruitmentByIdQueryHandler : IRequestHandler<GetRecruitmentById
         if (recruitment is null)
         {
             throw new NotFoundException(nameof(Recruitment), request.Id);
+        }
+
+        var userId = _tenantContext.UserGuid;
+        if (userId is null || !recruitment.Members.Any(m => m.UserId == userId))
+        {
+            throw new ForbiddenAccessException();
         }
 
         return RecruitmentDetailDto.From(recruitment);

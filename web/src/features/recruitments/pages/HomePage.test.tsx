@@ -29,33 +29,25 @@ describe('HomePage', () => {
   })
 
   it('should render recruitment list when recruitments exist', async () => {
-    server.use(
-      http.get('/api/recruitments', () => {
-        return HttpResponse.json({
-          items: [
-            {
-              id: 'test-id',
-              title: 'Senior Developer',
-              description: 'A test recruitment',
-              status: 'Active',
-              createdAt: new Date().toISOString(),
-              closedAt: null,
-              stepCount: 3,
-              memberCount: 1,
-            },
-          ],
-          totalCount: 1,
-          page: 1,
-          pageSize: 50,
-        })
-      }),
-    )
-
     render(<HomePage />)
 
     await waitFor(() => {
-      expect(screen.getByText('Senior Developer')).toBeInTheDocument()
+      expect(screen.getByText('Senior .NET Developer')).toBeInTheDocument()
     })
+    expect(screen.getByText('Frontend Engineer')).toBeInTheDocument()
+  })
+
+  it('should render header with Create Recruitment button when recruitments exist', async () => {
+    render(<HomePage />)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /recruitments/i }),
+      ).toBeInTheDocument()
+    })
+    expect(
+      screen.getByRole('button', { name: /create recruitment/i }),
+    ).toBeInTheDocument()
   })
 
   it('should render "Create Recruitment" CTA in empty state', async () => {

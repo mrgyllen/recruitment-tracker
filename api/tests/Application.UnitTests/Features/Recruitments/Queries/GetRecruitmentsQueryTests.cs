@@ -12,40 +12,53 @@ namespace api.Application.UnitTests.Features.Recruitments.Queries;
 public class GetRecruitmentsQueryTests
 {
     private IApplicationDbContext _dbContext = null!;
+    private ITenantContext _tenantContext = null!;
 
     [SetUp]
     public void Setup()
     {
         _dbContext = Substitute.For<IApplicationDbContext>();
+        _tenantContext = Substitute.For<ITenantContext>();
     }
 
     [Test]
-    public async Task Handle_WithRecruitments_ReturnsPaginatedList()
+    public async Task Handle_ReturnsOnlyRecruitmentsWhereUserIsMember()
     {
-        var r1 = Recruitment.Create("Role A", null, Guid.NewGuid());
-        var r2 = Recruitment.Create("Role B", null, Guid.NewGuid());
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(userId);
 
-        var mockSet = new List<Recruitment> { r1, r2 }.AsQueryable().BuildMockDbSet();
+        var myRecruitment = Recruitment.Create("My Role", null, userId);
+        var otherRecruitment = Recruitment.Create("Other Role", null, otherUserId);
+
+        var mockSet = new List<Recruitment> { myRecruitment, otherRecruitment }
+            .AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new GetRecruitmentsQueryHandler(_dbContext);
+        var handler = new GetRecruitmentsQueryHandler(_dbContext, _tenantContext);
         var query = new GetRecruitmentsQuery { Page = 1, PageSize = 50 };
 
         var result = await handler.Handle(query, CancellationToken.None);
 
-        result.Items.Should().HaveCount(2);
-        result.TotalCount.Should().Be(2);
-        result.Page.Should().Be(1);
-        result.PageSize.Should().Be(50);
+        result.Items.Should().HaveCount(1);
+        result.Items.First().Title.Should().Be("My Role");
+        result.TotalCount.Should().Be(1);
     }
 
     [Test]
-    public async Task Handle_NoRecruitments_ReturnsEmptyList()
+    public async Task Handle_NoMemberships_ReturnsEmptyList()
     {
-        var mockSet = new List<Recruitment>().AsQueryable().BuildMockDbSet();
+        var userId = Guid.NewGuid();
+        var otherUserId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(userId);
+
+        var otherRecruitment = Recruitment.Create("Other Role", null, otherUserId);
+
+        var mockSet = new List<Recruitment> { otherRecruitment }
+            .AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new GetRecruitmentsQueryHandler(_dbContext);
+        var handler = new GetRecruitmentsQueryHandler(_dbContext, _tenantContext);
         var query = new GetRecruitmentsQuery { Page = 1, PageSize = 50 };
 
         var result = await handler.Handle(query, CancellationToken.None);
@@ -57,14 +70,17 @@ public class GetRecruitmentsQueryTests
     [Test]
     public async Task Handle_Pagination_RespectsPageSize()
     {
+        var userId = Guid.NewGuid();
+        _tenantContext.UserGuid.Returns(userId);
+
         var recruitments = Enumerable.Range(1, 5)
-            .Select(i => Recruitment.Create($"Role {i}", null, Guid.NewGuid()))
+            .Select(i => Recruitment.Create($"Role {i}", null, userId))
             .ToList();
 
         var mockSet = recruitments.AsQueryable().BuildMockDbSet();
         _dbContext.Recruitments.Returns(mockSet);
 
-        var handler = new GetRecruitmentsQueryHandler(_dbContext);
+        var handler = new GetRecruitmentsQueryHandler(_dbContext, _tenantContext);
         var query = new GetRecruitmentsQuery { Page = 1, PageSize = 2 };
 
         var result = await handler.Handle(query, CancellationToken.None);

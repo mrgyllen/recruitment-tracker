@@ -6,17 +6,22 @@ namespace api.Application.Features.Recruitments.Queries.GetRecruitments;
 public class GetRecruitmentsQueryHandler : IRequestHandler<GetRecruitmentsQuery, PaginatedRecruitmentListDto>
 {
     private readonly IApplicationDbContext _dbContext;
+    private readonly ITenantContext _tenantContext;
 
-    public GetRecruitmentsQueryHandler(IApplicationDbContext dbContext)
+    public GetRecruitmentsQueryHandler(IApplicationDbContext dbContext, ITenantContext tenantContext)
     {
         _dbContext = dbContext;
+        _tenantContext = tenantContext;
     }
 
     public async Task<PaginatedRecruitmentListDto> Handle(GetRecruitmentsQuery request, CancellationToken cancellationToken)
     {
+        var userId = _tenantContext.UserGuid;
+
         var query = _dbContext.Recruitments
             .Include(r => r.Steps)
             .Include(r => r.Members)
+            .Where(r => userId != null && r.Members.Any(m => m.UserId == userId))
             .AsNoTracking()
             .OrderByDescending(r => r.CreatedAt);
 

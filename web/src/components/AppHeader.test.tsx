@@ -1,5 +1,7 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { describe, expect, it, vi } from 'vitest'
 import { AppHeader } from './AppHeader'
 import { useAuth } from '@/features/auth/AuthContext'
@@ -9,6 +11,19 @@ vi.mock('@/features/auth/AuthContext', () => ({
 }))
 
 const mockUseAuth = vi.mocked(useAuth)
+
+function renderAppHeader() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <AppHeader />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  )
+}
 
 describe('AppHeader', () => {
   const mockSignOut = vi.fn()
@@ -24,26 +39,26 @@ describe('AppHeader', () => {
   })
 
   it('renders app name "Recruitment Tracker"', () => {
-    render(<AppHeader />)
+    renderAppHeader()
 
     expect(screen.getByText('Recruitment Tracker')).toBeInTheDocument()
   })
 
   it('renders user display name', () => {
-    render(<AppHeader />)
+    renderAppHeader()
 
     expect(screen.getByText('Alice Dev')).toBeInTheDocument()
   })
 
   it('renders "Sign out" button', () => {
-    render(<AppHeader />)
+    renderAppHeader()
 
     expect(screen.getByRole('button', { name: /sign out/i })).toBeInTheDocument()
   })
 
   it('calls signOut when sign out button is clicked', async () => {
     const user = userEvent.setup()
-    render(<AppHeader />)
+    renderAppHeader()
 
     await user.click(screen.getByRole('button', { name: /sign out/i }))
 
@@ -51,7 +66,7 @@ describe('AppHeader', () => {
   })
 
   it('uses semantic <header> element', () => {
-    render(<AppHeader />)
+    renderAppHeader()
 
     expect(screen.getByRole('banner')).toBeInTheDocument()
   })
@@ -64,7 +79,7 @@ describe('AppHeader', () => {
       signOut: mockSignOut,
     })
 
-    render(<AppHeader />)
+    renderAppHeader()
 
     expect(screen.getByText('Recruitment Tracker')).toBeInTheDocument()
     expect(screen.queryByText('Alice Dev')).not.toBeInTheDocument()
