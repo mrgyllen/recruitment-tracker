@@ -1,5 +1,7 @@
 import { Link, useParams } from 'react-router'
+import { EditRecruitmentForm } from '../EditRecruitmentForm'
 import { useRecruitment } from '../hooks/useRecruitment'
+import { WorkflowStepEditor } from '../WorkflowStepEditor'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -64,38 +66,25 @@ export function RecruitmentPage() {
 
   if (!data) return null
 
+  const isClosed = data.status === 'Closed'
+
   return (
-    <div className="mx-auto max-w-4xl p-6">
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{data.title}</h1>
-          {data.description && (
-            <p className="text-muted-foreground mt-1">{data.description}</p>
-          )}
-        </div>
+    <div className="mx-auto max-w-4xl space-y-6 p-6">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">{data.title}</h1>
         <Badge variant={data.status === 'Active' ? 'default' : 'secondary'}>
           {data.status}
         </Badge>
       </div>
 
-      {data.steps.length > 0 && (
-        <div>
-          <h2 className="mb-3 text-lg font-medium">Workflow Steps</h2>
-          <ol className="space-y-2">
-            {data.steps.map((step) => (
-              <li
-                key={step.id}
-                className="flex items-center gap-3 rounded-md border p-3"
-              >
-                <span className="text-muted-foreground text-sm font-medium">
-                  {step.order}
-                </span>
-                <span>{step.name}</span>
-              </li>
-            ))}
-          </ol>
-        </div>
-      )}
+      <EditRecruitmentForm recruitment={data} />
+
+      <WorkflowStepEditor
+        mode="edit"
+        steps={data.steps}
+        recruitmentId={data.id}
+        disabled={isClosed}
+      />
     </div>
   )
 }

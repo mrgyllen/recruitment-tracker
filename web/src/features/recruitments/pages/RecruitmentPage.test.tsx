@@ -7,6 +7,7 @@ import { RecruitmentPage } from './RecruitmentPage'
 import {
   forbiddenRecruitmentId,
   mockRecruitmentId,
+  mockRecruitmentId2,
 } from '@/mocks/recruitmentHandlers'
 import { server } from '@/mocks/server'
 
@@ -41,10 +42,10 @@ describe('RecruitmentPage', () => {
     renderWithRoute(mockRecruitmentId)
 
     await waitFor(() => {
-      expect(screen.getByText('Screening')).toBeInTheDocument()
+      expect(screen.getByDisplayValue('Screening')).toBeInTheDocument()
     })
-    expect(screen.getByText('Technical Test')).toBeInTheDocument()
-    expect(screen.getByText('Technical Interview')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Technical Test')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Technical Interview')).toBeInTheDocument()
   })
 
   it('shows access denied on 403 response', async () => {
@@ -81,5 +82,33 @@ describe('RecruitmentPage', () => {
     renderWithRoute(mockRecruitmentId)
 
     expect(screen.getByTestId('skeleton-text-block')).toBeInTheDocument()
+  })
+
+  it('renders edit form with pre-populated values for active recruitment', async () => {
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Senior .NET Developer')).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText(/title/i)).toBeEnabled()
+  })
+
+  it('renders edit form with disabled fields for closed recruitment', async () => {
+    renderWithRoute(mockRecruitmentId2)
+
+    await waitFor(() => {
+      expect(screen.getByDisplayValue('Frontend Engineer')).toBeInTheDocument()
+    })
+    expect(screen.getByLabelText(/title/i)).toBeDisabled()
+    expect(screen.queryByRole('button', { name: /save/i })).not.toBeInTheDocument()
+  })
+
+  it('renders workflow step editor in edit mode', async () => {
+    renderWithRoute(mockRecruitmentId)
+
+    await waitFor(() => {
+      expect(screen.getByText('Add Step')).toBeInTheDocument()
+    })
+    expect(screen.getByDisplayValue('Screening')).toBeInTheDocument()
   })
 })
