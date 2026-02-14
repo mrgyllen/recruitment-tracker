@@ -11,7 +11,13 @@ Before creating the team or assigning any work:
 3. **Determine scope:** If the prompt specifies stories (e.g., "stories 1.4 and 1.5"), implement only those. If the prompt says "Continue" or "Implement Epic X" without specific stories, implement all remaining stories that are `ready-for-dev`
 4. **Check `.retro/`** for previous retro runs — note any deferred items that should be addressed
 5. **Apply experiments from previous retros:** If the most recent `retro.json` contains an `experiments` array, apply each experiment NOW before starting stories. Experiments are process/doc changes (updating skill templates, adding checklist items, modifying workflow steps) — they are small and must be applied before the work they're designed to improve. Commit experiment applications with message: `process: apply experiment E-00X from <run_id>`
-6. **Create the team** and begin the Story Cycle with the first in-scope story
+6. **Infrastructure readiness check:** Before starting the first story, verify the application can actually run — not just compile:
+   - **Build check:** Run `dotnet build` (API) and `npm run build` (frontend) — both must succeed
+   - **Runtime check:** Attempt to start the API and frontend dev servers. If either fails, identify what's missing (database, runtime, services)
+   - **If the app cannot run:** Create a deferred item in `sprint-status.yaml` with key `epic-N-deferred-dev-environment` describing what's needed (e.g., Docker Compose, database setup, MSW browser mode). This becomes a P0 blocker for the Epic Demo Walkthrough step — the demo cannot fall back to code-level verification silently
+   - **If the app runs:** Record the startup commands in `demo.md` for use during the Epic Demo Walkthrough
+   - This check is best-effort — if the dev environment lacks infrastructure (no Docker, no SQL Server), note the gap and proceed with stories. The demo step will handle the consequence.
+7. **Create the team** and begin the Story Cycle with the first in-scope story
 
 ## Team Structure
 
@@ -152,7 +158,14 @@ Run after the **last story in the current prompt scope** is completed but **befo
 
 ### Setup
 
-1. **Start the application** — run both API and frontend dev servers
+1. **Viability check:** Attempt to start both API and frontend dev servers
+   - **If both start:** Proceed with live walkthrough (preferred)
+   - **If either fails:** Record the failure reason in `demo.md` under a `## Infrastructure Blockers` section, then:
+     - Mark the demo as **BLOCKED** — do NOT silently fall back to code-level verification
+     - Create or update the deferred item `epic-N-deferred-dev-environment` in `sprint-status.yaml` if one doesn't already exist
+     - Skip to the Summary section of `demo.md` with: `Demo method: BLOCKED — [reason]`
+     - The retro will pick this up as a finding via evidence item 10
+   - **Code-level verification is NOT a valid fallback.** It provides no additional value beyond the code review already performed. A blocked demo is an honest signal; a code-verified demo is a false one.
 2. **Read the epic file** to identify user journeys and acceptance criteria across all stories
 3. **Create `demo.md`** at `_bmad-output/implementation-artifacts/epic-N-demo-YYYY-MM-DD.md`
 
@@ -203,7 +216,7 @@ The `demo.md` file must contain:
 ### Rules
 
 - **If any AC fails**, document it clearly but do NOT fix it — the retro will pick it up as a finding
-- **If the app cannot start**, document the error, skip the walkthrough, and note "Demo blocked: [reason]" — the retro will create an action item
+- **If the app cannot start**, document the error under `## Infrastructure Blockers`, mark `Demo method: BLOCKED`, and ensure `epic-N-deferred-dev-environment` exists in sprint-status.yaml — the retro will pick this up as a finding. Do NOT fall back to code-level verification
 - The demo file is included in the retro's Phase 1 evidence bundle (see evidence item 10 below)
 - **Do not block the retro on demo failures** — the retro evaluates them
 
@@ -318,8 +331,8 @@ Team Lead acts as Retro Lead and synthesizes lens outputs:
    - Recurring (2+ stories, check trailing `# Story X.Y` comments) → promote to `.claude/hooks/anti-patterns.txt` (permanent)
    - One-off → remove from pending
    - Architecture-level → action item with type `docs_update`
-   - After processing, leave ONLY the header comments and any `# Story X.Y: no new anti-patterns identified` lines — no pattern entries remain. Use `retro.md` for history, not working files.
-   - **Verification:** After processing, confirm that `anti-patterns-pending.txt` contains zero `REGEX|GLOB|MESSAGE` lines. If any remain, the retro is not complete.
+   - After processing, **reset the file to header-only state** (the first 2 lines: `# Pending anti-patterns...` and `# Will be promoted...`). Remove ALL entries AND all story comment lines. Use `retro.md` for processing history, not the working file.
+   - **Verification:** After processing, confirm that `anti-patterns-pending.txt` contains exactly 2 lines (the header comments) and zero `REGEX|GLOB|MESSAGE` lines. If anything else remains, the retro is not complete.
 
 7. **Save** `retro.json` and `retro.md` to `.retro/<run_id>/`
 
