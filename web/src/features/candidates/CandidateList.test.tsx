@@ -2,11 +2,21 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { CandidateList } from './CandidateList'
-import { mockCandidates } from '@/mocks/fixtures/candidates'
+import {
+  mockCandidates,
+  mockStepId1,
+  mockStepId2,
+} from '@/mocks/fixtures/candidates'
 import { server } from '@/mocks/server'
 import { render, screen, waitFor } from '@/test-utils'
+import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
 
 const recruitmentId = '550e8400-e29b-41d4-a716-446655440000'
+
+const mockWorkflowSteps: WorkflowStepDto[] = [
+  { id: mockStepId1, name: 'Screening', order: 1 },
+  { id: mockStepId2, name: 'Interview', order: 2 },
+]
 
 describe('CandidateList', () => {
   it('should render candidate data in list', async () => {
@@ -178,5 +188,133 @@ describe('CandidateList', () => {
     expect(
       screen.queryByRole('button', { name: /import candidates/i }),
     ).not.toBeInTheDocument()
+  })
+
+  it('should display search input and filter dropdowns', async () => {
+    render(
+      <CandidateList
+        recruitmentId={recruitmentId}
+        isClosed={false}
+        workflowSteps={mockWorkflowSteps}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByLabelText('Search candidates'),
+    ).toBeInTheDocument()
+    expect(screen.getByLabelText('Filter by step')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Filter by outcome'),
+    ).toBeInTheDocument()
+  })
+
+  it('should display current step and outcome status for each candidate', async () => {
+    render(
+      <CandidateList
+        recruitmentId={recruitmentId}
+        isClosed={false}
+        workflowSteps={mockWorkflowSteps}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    expect(screen.getByText(/Step: Interview/)).toBeInTheDocument()
+    expect(screen.getByText(/Step: Screening/)).toBeInTheDocument()
+  })
+
+  it('should filter candidates when search term is entered after debounce', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <CandidateList recruitmentId={recruitmentId} isClosed={false} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByLabelText('Search candidates')
+    await user.type(searchInput, 'Alice')
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+      expect(screen.queryByText('Bob Smith')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should show empty state when no candidates match filters', async () => {
+    const user = userEvent.setup()
+
+    render(
+      <CandidateList recruitmentId={recruitmentId} isClosed={false} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    const searchInput = screen.getByLabelText('Search candidates')
+    await user.type(searchInput, 'zzzznoonehere')
+
+    await waitFor(() => {
+      expect(
+        screen.getByText('No matching candidates'),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it('should show Import from Workday button in empty state', async () => {
+    server.use(
+      http.get('/api/recruitments/:recruitmentId/candidates', () => {
+        return HttpResponse.json({
+          items: [],
+          totalCount: 0,
+          page: 1,
+          pageSize: 50,
+        })
+      }),
+    )
+
+    render(
+      <CandidateList recruitmentId={recruitmentId} isClosed={false} />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('No candidates yet')).toBeInTheDocument()
+    })
+
+    expect(
+      screen.getByRole('button', { name: /import from workday/i }),
+    ).toBeInTheDocument()
+  })
+
+  it('should show filter controls with correct labels', async () => {
+    render(
+      <CandidateList
+        recruitmentId={recruitmentId}
+        isClosed={false}
+        workflowSteps={mockWorkflowSteps}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Alice Johnson')).toBeInTheDocument()
+    })
+
+    // Verify filter controls are present with accessible labels
+    expect(screen.getByLabelText('Filter by step')).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Filter by outcome'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText('Search candidates'),
+    ).toBeInTheDocument()
   })
 })
