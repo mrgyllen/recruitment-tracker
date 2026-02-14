@@ -6,24 +6,11 @@ import { useSasUrl } from './hooks/useSasUrl'
 import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { StatusBadge } from '@/components/StatusBadge'
-import type { StatusVariant } from '@/components/StatusBadge.types'
+import { toStatusVariant } from '@/components/StatusBadge.types'
 import { Button } from '@/components/ui/button'
 import { ArrowLeft, Download } from 'lucide-react'
 import type { OutcomeHistoryEntry } from '@/lib/api/candidates.types'
 
-function toStatusVariant(status: string): StatusVariant {
-  switch (status) {
-    case 'Pass':
-      return 'pass'
-    case 'Fail':
-      return 'fail'
-    case 'Hold':
-      return 'hold'
-    case 'NotStarted':
-    default:
-      return 'not-started'
-  }
-}
 
 export function CandidateDetail() {
   const { recruitmentId, candidateId } = useParams<{

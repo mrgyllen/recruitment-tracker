@@ -9,7 +9,7 @@ import { useRemoveCandidate } from './hooks/useCandidateMutations'
 import { EmptyState } from '@/components/EmptyState'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { StatusBadge } from '@/components/StatusBadge'
-import type { StatusVariant } from '@/components/StatusBadge.types'
+import { toStatusVariant } from '@/components/StatusBadge.types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,19 +44,6 @@ interface CandidateListProps {
 
 const OUTCOME_OPTIONS = ['NotStarted', 'Pass', 'Fail', 'Hold'] as const
 
-function toStatusVariant(status: string | null): StatusVariant {
-  switch (status) {
-    case 'Pass':
-      return 'pass'
-    case 'Fail':
-      return 'fail'
-    case 'Hold':
-      return 'hold'
-    case 'NotStarted':
-    default:
-      return 'not-started'
-  }
-}
 
 export function CandidateList({
   recruitmentId,
