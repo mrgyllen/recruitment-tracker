@@ -2,7 +2,9 @@ using api.Application.Features.Candidates.Commands.AssignDocument;
 using api.Application.Features.Candidates.Commands.CreateCandidate;
 using api.Application.Features.Candidates.Commands.RemoveCandidate;
 using api.Application.Features.Candidates.Commands.UploadDocument;
+using api.Application.Features.Candidates.Queries.GetCandidateById;
 using api.Application.Features.Candidates.Queries.GetCandidates;
+using api.Domain.Enums;
 using api.Web.Infrastructure;
 using MediatR;
 
@@ -17,6 +19,7 @@ public class CandidateEndpoints : EndpointGroupBase
         group.MapPost("/", CreateCandidate);
         group.MapDelete("/{candidateId:guid}", RemoveCandidate);
         group.MapGet("/", GetCandidates);
+        group.MapGet("/{candidateId:guid}", GetCandidateById);
         group.MapPost("/{candidateId:guid}/document", UploadDocument)
             .DisableAntiforgery()
             .RequireRateLimiting(RateLimitPolicies.FileUpload);
@@ -51,13 +54,32 @@ public class CandidateEndpoints : EndpointGroupBase
         ISender sender,
         Guid recruitmentId,
         int page = 1,
-        int pageSize = 50)
+        int pageSize = 50,
+        string? search = null,
+        Guid? stepId = null,
+        OutcomeStatus? outcomeStatus = null)
     {
         var result = await sender.Send(new GetCandidatesQuery
         {
             RecruitmentId = recruitmentId,
             Page = page,
-            PageSize = pageSize
+            PageSize = pageSize,
+            Search = search,
+            StepId = stepId,
+            OutcomeStatus = outcomeStatus,
+        });
+        return Results.Ok(result);
+    }
+
+    private static async Task<IResult> GetCandidateById(
+        ISender sender,
+        Guid recruitmentId,
+        Guid candidateId)
+    {
+        var result = await sender.Send(new GetCandidateByIdQuery
+        {
+            RecruitmentId = recruitmentId,
+            CandidateId = candidateId,
         });
         return Results.Ok(result);
     }
