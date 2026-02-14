@@ -12,3 +12,8 @@
 # Story 4.4: M3 — panel min widths not enforced below certain thresholds (UX polish)
 # Story 4.4: M4 — no loading indicator during outcome recording (optimistic update masks latency)
 # Story 4.4: no new anti-patterns identified (I1/I2 fixed in-cycle, M1 keyboard deferred to 4.5, M2-M4 are design notes)
+# Story 4.5: I1 — stale closure from missing useCallback dependency (options not in dep array) — recurring React pattern
+# Story 4.5: M1 — missing role="listbox"/role="option" on candidate list (deferred accessibility refinement)
+# Story 4.5: M2 — no scroll-into-view on Arrow key navigation (UX polish)
+# Story 4.5: M3 — dead queryClient in useScreeningSession (carried from 4.4 M1, still not cleaned up)
+# Story 4.5: no new anti-patterns identified (I1 is recurring React hooks pattern worth noting)
