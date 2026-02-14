@@ -90,7 +90,7 @@ development_status:
   4-5-keyboard-navigation-screening-flow: done
   epic-4-retrospective: done
   # Deferred items from Epic 4
-  epic-4-deferred-dev-environment: backlog            # Dev environment bootstrap: Docker Compose (API + SQL Server), browser-mode MSW, single-command startup
+  epic-4-deferred-dev-environment: done              # Dev environment bootstrap: Docker Compose (API + SQL Server), browser-mode MSW, single-command startup
 
   # Epic 5: Recruitment Overview & Monitoring
   epic-5: in-progress

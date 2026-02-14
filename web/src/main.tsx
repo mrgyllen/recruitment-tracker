@@ -4,10 +4,19 @@ import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './features/auth/AuthContext'
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <AuthProvider>
-      <App />
-    </AuthProvider>
-  </StrictMode>,
-)
+async function bootstrap() {
+  if (import.meta.env.VITE_MSW_ENABLED === 'true') {
+    const { worker } = await import('./mocks/browser')
+    await worker.start({ onUnhandledRequest: 'bypass' })
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    <StrictMode>
+      <AuthProvider>
+        <App />
+      </AuthProvider>
+    </StrictMode>,
+  )
+}
+
+bootstrap()
