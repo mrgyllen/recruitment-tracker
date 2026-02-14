@@ -8,3 +8,7 @@
 # Story 4.2: no new anti-patterns identified (3 Minors are design notes, not recurring patterns)
 # Story 4.3: M3 — "who recorded it" not displayed in outcome history (needs user name resolution, not a pattern issue)
 # Story 4.3: no new anti-patterns identified (4 Minors are deferred features or design notes)
+# Story 4.4: M2 — immediate persist instead of delayed 3-second persist with undo (AC5/AC6 simplification, design choice)
+# Story 4.4: M3 — panel min widths not enforced below certain thresholds (UX polish)
+# Story 4.4: M4 — no loading indicator during outcome recording (optimistic update masks latency)
+# Story 4.4: no new anti-patterns identified (I1/I2 fixed in-cycle, M1 keyboard deferred to 4.5, M2-M4 are design notes)
