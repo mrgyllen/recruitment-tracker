@@ -129,3 +129,18 @@ export async function apiDelete(path: string): Promise<void> {
   })
   return handleResponse<void>(res)
 }
+
+export async function apiPostFormData<T>(
+  path: string,
+  formData: FormData,
+): Promise<T> {
+  const headers = await getAuthHeaders()
+  // Remove Content-Type — browser auto-sets multipart/form-data with boundary
+  delete (headers as Record<string, string>)['Content-Type']
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers,
+    body: formData,
+  })
+  return handleResponse<T>(res)
+}
