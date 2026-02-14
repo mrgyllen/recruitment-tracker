@@ -257,7 +257,7 @@ export function CandidateList({
                 className="mt-3"
                 onClick={() => setImportWizardOpen(true)}
               >
-                Import Candidates
+                Import from Workday
               </Button>
               <CreateCandidateForm
                 recruitmentId={recruitmentId}

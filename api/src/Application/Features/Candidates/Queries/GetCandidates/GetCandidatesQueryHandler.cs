@@ -47,8 +47,9 @@ public class GetCandidatesQueryHandler(
                 c.Email!.Contains(searchTerm));
         }
 
-        // Load candidates then apply in-memory filters for step/outcome
-        // (current step is computed from outcome history, not a DB column)
+        // In-memory filtering: current step is derived from outcome history
+        // (not a DB column), so step/outcome filters can't be translated to SQL.
+        // Acceptable at current scale (max ~150 candidates per recruitment).
         var allCandidates = await query
             .OrderByDescending(c => c.CreatedAt)
             .ToListAsync(cancellationToken);
