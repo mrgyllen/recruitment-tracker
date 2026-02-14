@@ -33,6 +33,7 @@ import {
 import { useAppToast } from '@/hooks/useAppToast'
 import { useDebounce } from '@/hooks/useDebounce'
 import { ApiError } from '@/lib/api/httpClient'
+import { cn } from '@/lib/utils'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
 import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
 
@@ -40,6 +41,8 @@ interface CandidateListProps {
   recruitmentId: string
   isClosed: boolean
   workflowSteps?: WorkflowStepDto[]
+  selectedId?: string | null
+  onSelect?: (id: string) => void
 }
 
 const OUTCOME_OPTIONS = ['NotStarted', 'Pass', 'Fail', 'Hold'] as const
@@ -49,6 +52,8 @@ export function CandidateList({
   recruitmentId,
   isClosed,
   workflowSteps = [],
+  selectedId,
+  onSelect,
 }: CandidateListProps) {
   const [searchInput, setSearchInput] = useState('')
   const [stepFilter, setStepFilter] = useState<string | undefined>()
@@ -275,6 +280,8 @@ export function CandidateList({
                       recruitmentId={recruitmentId}
                       isClosed={isClosed}
                       onRemove={setCandidateToRemove}
+                      isSelected={candidate.id === selectedId}
+                      onSelect={onSelect}
                     />
                   )
                 }}
@@ -288,6 +295,8 @@ export function CandidateList({
                     recruitmentId={recruitmentId}
                     isClosed={isClosed}
                     onRemove={setCandidateToRemove}
+                    isSelected={candidate.id === selectedId}
+                    onSelect={onSelect}
                   />
                 ))}
               </div>
@@ -368,14 +377,25 @@ function CandidateRow({
   recruitmentId,
   isClosed,
   onRemove,
+  isSelected,
+  onSelect,
 }: {
   candidate: CandidateResponse
   recruitmentId: string
   isClosed: boolean
   onRemove: (c: CandidateResponse) => void
+  isSelected?: boolean
+  onSelect?: (id: string) => void
 }) {
   return (
-    <div className="flex items-center justify-between px-4 py-3">
+    <div
+      className={cn(
+        'flex items-center justify-between px-4 py-3',
+        isSelected && 'bg-blue-50',
+        onSelect && 'cursor-pointer',
+      )}
+      onClick={onSelect ? () => onSelect(candidate.id) : undefined}
+    >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Link
