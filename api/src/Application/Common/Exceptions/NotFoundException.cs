@@ -18,7 +18,12 @@ public class NotFoundException : Exception
     }
 
     public NotFoundException(string name, object key)
-        : base($"Entity \"{name}\" ({key}) was not found.")
+        : base("The requested resource was not found.")
     {
+        EntityName = name;
+        EntityKey = key;
     }
+
+    public string? EntityName { get; }
+    public object? EntityKey { get; }
 }

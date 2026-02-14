@@ -59,7 +59,9 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleNotFoundException(HttpContext httpContext, Exception ex)
     {
-        _logger.LogWarning(ex, "Resource not found: {Message}", ex.Message);
+        var notFoundEx = (NotFoundException)ex;
+        _logger.LogWarning("Resource not found: {EntityName} ({EntityKey})",
+            notFoundEx.EntityName ?? "Unknown", notFoundEx.EntityKey ?? "N/A");
 
         httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
 
@@ -97,78 +99,78 @@ public class CustomExceptionHandler : IExceptionHandler
 
     private async Task HandleRecruitmentClosedException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Recruitment closed: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Recruitment is closed",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
 
     private async Task HandleStepHasOutcomesException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Step has outcomes: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status409Conflict,
             Title = "Cannot remove -- outcomes recorded at this step",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
         });
     }
 
     private async Task HandleDuplicateStepNameException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Duplicate step name: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status409Conflict,
             Title = "Duplicate step name",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
         });
     }
 
     private async Task HandleDomainRuleViolationException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Domain rule violation: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Domain rule violation",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
 
     private async Task HandleDuplicateCandidateException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Duplicate candidate: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "A candidate with this email already exists in this recruitment",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
 
     private async Task HandleInvalidWorkflowTransitionException(HttpContext httpContext, Exception ex)
     {
+        _logger.LogWarning(ex, "Invalid workflow transition: {Message}", ex.Message);
         httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
 
         await httpContext.Response.WriteAsJsonAsync(new ProblemDetails
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Invalid workflow transition",
-            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
