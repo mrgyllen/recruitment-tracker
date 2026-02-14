@@ -105,6 +105,38 @@ describe('useSasUrl', () => {
     expect(mockGetById).toHaveBeenCalledWith('rec-1', 'cand-1')
   })
 
+  it('should update URL when initialUrl prop changes', () => {
+    const wrapper = createWrapper()
+    const { result, rerender } = renderHook(
+      (props: { initialUrl: string | null }) =>
+        useSasUrl({
+          initialUrl: props.initialUrl,
+          recruitmentId: 'rec-1',
+          candidateId: 'cand-1',
+        }),
+      {
+        wrapper,
+        initialProps: {
+          initialUrl:
+            'https://storage.blob.core.windows.net/doc.pdf?sig=first',
+        },
+      },
+    )
+
+    expect(result.current.url).toBe(
+      'https://storage.blob.core.windows.net/doc.pdf?sig=first',
+    )
+
+    rerender({
+      initialUrl:
+        'https://storage.blob.core.windows.net/doc.pdf?sig=second',
+    })
+
+    expect(result.current.url).toBe(
+      'https://storage.blob.core.windows.net/doc.pdf?sig=second',
+    )
+  })
+
   it('should keep existing URL when refresh fails', async () => {
     const mockGetById = vi.mocked(candidateApi.getById)
     mockGetById.mockRejectedValue(new Error('Network error'))

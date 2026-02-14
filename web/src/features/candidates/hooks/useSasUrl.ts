@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { candidateApi } from '@/lib/api/candidates'
 
 interface UseSasUrlParams {
@@ -20,6 +20,10 @@ export function useSasUrl({
 }: UseSasUrlParams): UseSasUrlResult {
   const [url, setUrl] = useState<string | null>(initialUrl)
   const [isRefreshing, setIsRefreshing] = useState(false)
+
+  useEffect(() => {
+    setUrl(initialUrl)
+  }, [initialUrl])
 
   const refresh = useCallback(async () => {
     setIsRefreshing(true)
