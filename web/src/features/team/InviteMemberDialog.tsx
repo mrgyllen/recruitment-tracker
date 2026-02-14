@@ -4,6 +4,7 @@ import { useAddMember, useDirectorySearch } from './hooks/useTeamMembers'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
@@ -68,6 +69,9 @@ export function InviteMemberDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Invite Team Member</DialogTitle>
+          <DialogDescription>
+            Search for a person in the directory to add to this recruitment.
+          </DialogDescription>
         </DialogHeader>
 
         <Input
