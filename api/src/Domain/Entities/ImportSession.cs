@@ -65,12 +65,49 @@ public class ImportSession : GuidEntity
         CompletedAt = DateTimeOffset.UtcNow;
     }
 
+    public ImportRowResult ConfirmMatch(int rowIndex)
+    {
+        EnsureCompleted();
+        ValidateRowIndex(rowIndex);
+
+        var row = _rowResults[rowIndex];
+        row.Confirm();
+        return row;
+    }
+
+    public ImportRowResult RejectMatch(int rowIndex)
+    {
+        EnsureCompleted();
+        ValidateRowIndex(rowIndex);
+
+        var row = _rowResults[rowIndex];
+        row.Reject();
+        return row;
+    }
+
     private void EnsureProcessing()
     {
         if (Status != ImportSessionStatus.Processing)
         {
             throw new InvalidWorkflowTransitionException(
                 Status.ToString(), "target status");
+        }
+    }
+
+    private void EnsureCompleted()
+    {
+        if (Status != ImportSessionStatus.Completed)
+        {
+            throw new InvalidWorkflowTransitionException(
+                Status.ToString(), "match resolution requires Completed status");
+        }
+    }
+
+    private void ValidateRowIndex(int rowIndex)
+    {
+        if (rowIndex < 0 || rowIndex >= _rowResults.Count)
+        {
+            throw new ArgumentOutOfRangeException(nameof(rowIndex));
         }
     }
 }

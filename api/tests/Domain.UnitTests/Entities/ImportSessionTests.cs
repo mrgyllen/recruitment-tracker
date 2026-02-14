@@ -144,4 +144,75 @@ public class ImportSessionTests
 
         act.Should().Throw<InvalidWorkflowTransitionException>();
     }
+
+    [Test]
+    public void ConfirmMatch_FlaggedRow_SetsResolutionToConfirmed()
+    {
+        var session = CreateSession();
+        session.AddRowResult(new ImportRowResult(1, "a@test.com", ImportRowAction.Flagged, null));
+        session.MarkCompleted(0, 0, 0, 1);
+
+        var result = session.ConfirmMatch(0);
+
+        result.Resolution.Should().Be("Confirmed");
+    }
+
+    [Test]
+    public void RejectMatch_FlaggedRow_SetsResolutionToRejected()
+    {
+        var session = CreateSession();
+        session.AddRowResult(new ImportRowResult(1, "a@test.com", ImportRowAction.Flagged, null));
+        session.MarkCompleted(0, 0, 0, 1);
+
+        var result = session.RejectMatch(0);
+
+        result.Resolution.Should().Be("Rejected");
+    }
+
+    [Test]
+    public void ConfirmMatch_NonFlaggedRow_Throws()
+    {
+        var session = CreateSession();
+        session.AddRowResult(new ImportRowResult(1, "a@test.com", ImportRowAction.Created, null));
+        session.MarkCompleted(1, 0, 0, 0);
+
+        var act = () => session.ConfirmMatch(0);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void ConfirmMatch_AlreadyResolved_Throws()
+    {
+        var session = CreateSession();
+        session.AddRowResult(new ImportRowResult(1, "a@test.com", ImportRowAction.Flagged, null));
+        session.MarkCompleted(0, 0, 0, 1);
+        session.ConfirmMatch(0);
+
+        var act = () => session.ConfirmMatch(0);
+
+        act.Should().Throw<InvalidOperationException>();
+    }
+
+    [Test]
+    public void ConfirmMatch_ProcessingSession_Throws()
+    {
+        var session = CreateSession();
+        session.AddRowResult(new ImportRowResult(1, "a@test.com", ImportRowAction.Flagged, null));
+
+        var act = () => session.ConfirmMatch(0);
+
+        act.Should().Throw<InvalidWorkflowTransitionException>();
+    }
+
+    [Test]
+    public void ConfirmMatch_InvalidIndex_Throws()
+    {
+        var session = CreateSession();
+        session.MarkCompleted(0, 0, 0, 0);
+
+        var act = () => session.ConfirmMatch(0);
+
+        act.Should().Throw<ArgumentOutOfRangeException>();
+    }
 }
