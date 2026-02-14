@@ -78,6 +78,9 @@ export function RecruitmentPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">{data.title}</h1>
         <div className="flex items-center gap-2">
+          <Button asChild>
+            <Link to={`/recruitments/${data.id}/screening`}>Start Screening</Link>
+          </Button>
           {!isClosed && (
             <Button
               variant="destructive"
