@@ -98,6 +98,7 @@ export function ScreeningLayout() {
             </div>
             <div className="flex-1 p-4">
               <OutcomeForm
+                key={selectedCandidate.id}
                 recruitmentId={recruitmentId!}
                 candidateId={selectedCandidate.id}
                 currentStepId={selectedCandidate.currentWorkflowStepId ?? ''}

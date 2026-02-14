@@ -398,12 +398,16 @@ function CandidateRow({
     >
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <Link
-            to={`/recruitments/${recruitmentId}/candidates/${candidate.id}`}
-            className="font-medium hover:underline"
-          >
-            {candidate.fullName}
-          </Link>
+          {onSelect ? (
+            <span className="font-medium">{candidate.fullName}</span>
+          ) : (
+            <Link
+              to={`/recruitments/${recruitmentId}/candidates/${candidate.id}`}
+              className="font-medium hover:underline"
+            >
+              {candidate.fullName}
+            </Link>
+          )}
           {candidate.currentOutcomeStatus && (
             <StatusBadge
               status={toStatusVariant(candidate.currentOutcomeStatus)}
