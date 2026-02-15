@@ -53,16 +53,24 @@ public class ResolveMatchConflictCommandHandler(
         {
             row = session.RejectMatch(request.MatchIndex);
 
-            // AC8: Create new candidate from import data
-            var newCandidate = Candidate.Create(
-                session.RecruitmentId,
-                row.FullName ?? "Unknown",
-                row.CandidateEmail ?? "unknown@import.local",
-                row.PhoneNumber,
-                row.Location,
-                row.DateApplied ?? DateTimeOffset.UtcNow);
+            // AC8: Create new candidate from import data (skip if email already exists)
+            var email = row.CandidateEmail ?? "unknown@import.local";
+            var emailExists = await dbContext.Candidates
+                .AnyAsync(c => c.RecruitmentId == session.RecruitmentId
+                    && c.Email == email, cancellationToken);
 
-            dbContext.Candidates.Add(newCandidate);
+            if (!emailExists)
+            {
+                var newCandidate = Candidate.Create(
+                    session.RecruitmentId,
+                    row.FullName ?? "Unknown",
+                    email,
+                    row.PhoneNumber,
+                    row.Location,
+                    row.DateApplied ?? DateTimeOffset.UtcNow);
+
+                dbContext.Candidates.Add(newCandidate);
+            }
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);

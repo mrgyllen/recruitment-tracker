@@ -11,6 +11,7 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
         builder.ToTable("Candidates");
 
         builder.HasKey(c => c.Id);
+        builder.Property(c => c.Id).ValueGeneratedNever();
 
         builder.Property(c => c.FullName)
             .HasMaxLength(200);
@@ -24,7 +25,7 @@ public class CandidateConfiguration : IEntityTypeConfiguration<Candidate>
         builder.Property(c => c.Location)
             .HasMaxLength(200);
 
-        // Shadow navigation for global query filter (NOT on the domain entity)
+        // Relationship to Recruitment (no navigation property on Candidate — cross-aggregate reference uses ID only)
         builder.HasOne<Recruitment>()
             .WithMany()
             .HasForeignKey(c => c.RecruitmentId)

@@ -11,6 +11,7 @@ public class CandidateOutcomeConfiguration : IEntityTypeConfiguration<CandidateO
         builder.ToTable("CandidateOutcomes");
 
         builder.HasKey(o => o.Id);
+        builder.Property(o => o.Id).ValueGeneratedNever();
 
         builder.Property(o => o.Status)
             .IsRequired()

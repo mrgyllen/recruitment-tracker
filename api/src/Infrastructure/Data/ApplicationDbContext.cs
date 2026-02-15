@@ -34,16 +34,20 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
              r.Members.Any(m => m.UserId == _tenantContext.UserGuid))
         );
 
-        // Global query filter on ImportSession -- scoped via Recruitment membership
+        // Global query filter on ImportSession -- scoped via Recruitment membership.
+        // Uses Recruitments DbSet subquery because ImportSession has no navigation to Recruitment
+        // (cross-aggregate reference uses FK only, per DDD rules).
         builder.Entity<ImportSession>().HasQueryFilter(s =>
             _tenantContext.IsServiceContext ||
             (_tenantContext.RecruitmentId != null && s.RecruitmentId == _tenantContext.RecruitmentId) ||
             (_tenantContext.UserGuid != null &&
-             EF.Property<Recruitment>(s, "Recruitment").Members
-                .Any(m => m.UserId == _tenantContext.UserGuid))
+             Recruitments.Any(r => r.Id == s.RecruitmentId &&
+                r.Members.Any(m => m.UserId == _tenantContext.UserGuid)))
         );
 
-        // Global query filter on Candidate -- the security boundary
+        // Global query filter on Candidate -- the security boundary.
+        // Uses Recruitments DbSet subquery because Candidate has no navigation to Recruitment
+        // (cross-aggregate reference uses FK only, per DDD rules).
         builder.Entity<Candidate>().HasQueryFilter(c =>
             // Service context bypasses all filters (GDPR job)
             _tenantContext.IsServiceContext ||
@@ -51,8 +55,8 @@ public class ApplicationDbContext : DbContext, IApplicationDbContext
             (_tenantContext.RecruitmentId != null && c.RecruitmentId == _tenantContext.RecruitmentId) ||
             // Web user: only candidates in recruitments where user is a member
             (_tenantContext.UserGuid != null &&
-             EF.Property<Recruitment>(c, "Recruitment").Members
-                .Any(m => m.UserId == _tenantContext.UserGuid))
+             Recruitments.Any(r => r.Id == c.RecruitmentId &&
+                r.Members.Any(m => m.UserId == _tenantContext.UserGuid)))
         );
     }
 }

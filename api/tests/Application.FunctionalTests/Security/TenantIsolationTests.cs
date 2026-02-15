@@ -9,7 +9,6 @@ using api.Application.Features.Screening.Queries.GetCandidateOutcomeHistory;
 using api.Application.Features.Recruitments.Queries.GetRecruitmentById;
 using api.Application.Features.Recruitments.Queries.GetRecruitmentOverview;
 using api.Domain.Enums;
-using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 
 namespace api.Application.FunctionalTests.Security;
@@ -64,7 +63,7 @@ public class TenantIsolationTests : BaseTestFixture
     }
 
     [Test]
-    public async Task GetCandidates_ForOtherRecruitment_ThrowsForbidden()
+    public async Task GetCandidates_ForOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -74,11 +73,11 @@ public class TenantIsolationTests : BaseTestFixture
             RecruitmentId = _recruitmentA,
         });
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
-    public async Task GetCandidateById_ForOtherRecruitment_ThrowsForbidden()
+    public async Task GetCandidateById_ForOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -89,7 +88,7 @@ public class TenantIsolationTests : BaseTestFixture
             CandidateId = _candidateA,
         });
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
@@ -108,7 +107,7 @@ public class TenantIsolationTests : BaseTestFixture
     }
 
     [Test]
-    public async Task RecordOutcome_ForOtherRecruitment_ThrowsForbidden()
+    public async Task RecordOutcome_ForOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -121,11 +120,11 @@ public class TenantIsolationTests : BaseTestFixture
             Reason: "cross-tenant attack"
         ));
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
-    public async Task AssignDocument_ToOtherRecruitment_ThrowsForbidden()
+    public async Task AssignDocument_ToOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -138,11 +137,11 @@ public class TenantIsolationTests : BaseTestFixture
             ImportSessionId: null
         ));
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
-    public async Task GetOutcomeHistory_ForOtherRecruitment_ThrowsForbidden()
+    public async Task GetOutcomeHistory_ForOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -152,11 +151,11 @@ public class TenantIsolationTests : BaseTestFixture
             CandidateId: _candidateA
         ));
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]
-    public async Task GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden()
+    public async Task GetRecruitmentOverview_ForOtherRecruitment_ThrowsNotFound()
     {
         await SetUpTwoRecruitments();
 
@@ -166,6 +165,6 @@ public class TenantIsolationTests : BaseTestFixture
             RecruitmentId = _recruitmentA,
         });
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 }

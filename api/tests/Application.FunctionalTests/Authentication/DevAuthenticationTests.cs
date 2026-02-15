@@ -1,7 +1,10 @@
 using System.Net;
+using api.Web.Configuration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace api.Application.FunctionalTests.Authentication;
 
@@ -16,9 +19,20 @@ public class DevAuthenticationTests
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Development");
+                // Use "Testing" to skip InitialiseDatabaseAsync() which needs real SQL Server.
+                // Dev auth is re-added below since non-Development registers JWT bearer.
+                builder.UseEnvironment("Testing");
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True;MultipleActiveResultSets=true");
+                    "Server=localhost;Database=fakedb;User Id=sa;Password=FakePass123!;TrustServerCertificate=True");
+                builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+                builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
+                builder.UseSetting("AzureAd:ClientId", "fake-client-id");
+                builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                builder.UseSetting("Database:AutoMigrate", "false");
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddDevelopmentAuthentication();
+                });
             });
     }
 
@@ -80,7 +94,7 @@ public class DevAuthenticationTests
                 builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
                 builder.UseSetting("Database:AutoMigrate", "false");
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True;MultipleActiveResultSets=true");
+                    "Server=localhost,19876;Database=fakedb;User Id=sa;Password=FakePass123!;TrustServerCertificate=True;Connect Timeout=1");
             });
 
         var client = prodFactory.CreateClient(new WebApplicationFactoryClientOptions

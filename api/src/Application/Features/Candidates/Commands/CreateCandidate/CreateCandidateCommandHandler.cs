@@ -53,6 +53,7 @@ public class CreateCandidateCommandHandler(
         var firstStep = recruitment.Steps.OrderBy(s => s.Order).FirstOrDefault();
         if (firstStep is not null)
         {
+            candidate.AssignToWorkflowStep(firstStep.Id);
             candidate.RecordOutcome(firstStep.Id, OutcomeStatus.NotStarted, userId.Value);
         }
 

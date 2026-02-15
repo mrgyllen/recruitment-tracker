@@ -1,4 +1,5 @@
 using System.Net;
+using api.Web.Configuration;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -25,9 +26,20 @@ public class HealthCheckEndpointTests
         _factory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Development");
+                // Use "Testing" to skip InitialiseDatabaseAsync() which needs real SQL Server.
+                // Dev auth is re-added below since non-Development registers JWT bearer.
+                builder.UseEnvironment("Testing");
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True");
+                    "Server=localhost;Database=fakedb;User Id=sa;Password=FakePass123!;TrustServerCertificate=True");
+                builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+                builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
+                builder.UseSetting("AzureAd:ClientId", "fake-client-id");
+                builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                builder.UseSetting("Database:AutoMigrate", "false");
+                builder.ConfigureTestServices(services =>
+                {
+                    services.AddDevelopmentAuthentication();
+                });
             });
     }
 
@@ -97,9 +109,14 @@ public class HealthCheckEndpointTests
         using var unreachableFactory = new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment("Development");
+                builder.UseEnvironment("Testing");
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=localhost,19999;Database=nonexistent;User Id=sa;Password=fake;TrustServerCertificate=True;Connect Timeout=2");
+                    "Server=localhost,19999;Database=nonexistent;User Id=sa;Password=fake;TrustServerCertificate=True;Connect Timeout=1");
+                builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+                builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
+                builder.UseSetting("AzureAd:ClientId", "fake-client-id");
+                builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                builder.UseSetting("Database:AutoMigrate", "false");
             });
 
         var client = unreachableFactory.CreateClient(new WebApplicationFactoryClientOptions
@@ -125,7 +142,7 @@ public class HealthCheckEndpointTests
                 builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
                 builder.UseSetting("Database:AutoMigrate", "false");
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True");
+                    "Server=localhost,19876;Database=fakedb;User Id=sa;Password=FakePass123!;TrustServerCertificate=True;Connect Timeout=1");
             });
 
         var client = prodFactory.CreateClient(new WebApplicationFactoryClientOptions
@@ -167,24 +184,26 @@ public class HealthCheckEndpointTests
     /// </summary>
     private static WebApplicationFactory<Program> CreateFactoryWithHealthyDbCheck(string environment)
     {
+        // Use "Testing" instead of "Development" to skip InitialiseDatabaseAsync().
+        var effectiveEnvironment = environment == "Development" ? "Testing" : environment;
+
         return new WebApplicationFactory<Program>()
             .WithWebHostBuilder(builder =>
             {
-                builder.UseEnvironment(environment);
+                builder.UseEnvironment(effectiveEnvironment);
                 builder.UseSetting("ConnectionStrings:apiDb",
-                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True");
-
-                if (environment == "Production")
-                {
-                    builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
-                    builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
-                    builder.UseSetting("AzureAd:ClientId", "fake-client-id");
-                    builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
-                    builder.UseSetting("Database:AutoMigrate", "false");
-                }
+                    "Server=localhost;Database=fakedb;User Id=sa;Password=FakePass123!;TrustServerCertificate=True");
+                builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+                builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
+                builder.UseSetting("AzureAd:ClientId", "fake-client-id");
+                builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                builder.UseSetting("Database:AutoMigrate", "false");
 
                 builder.ConfigureTestServices(services =>
                 {
+                    if (environment == "Development")
+                        services.AddDevelopmentAuthentication();
+
                     // Replace the real DB health check with one that always returns Healthy
                     services.Configure<HealthCheckServiceOptions>(options =>
                     {

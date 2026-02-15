@@ -11,6 +11,7 @@ public class RecruitmentMemberConfiguration : IEntityTypeConfiguration<Recruitme
         builder.ToTable("RecruitmentMembers");
 
         builder.HasKey(m => m.Id);
+        builder.Property(m => m.Id).ValueGeneratedNever();
 
         builder.Property(m => m.Role)
             .IsRequired()

@@ -11,6 +11,7 @@ public class CandidateDocumentConfiguration : IEntityTypeConfiguration<Candidate
         builder.ToTable("CandidateDocuments");
 
         builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
 
         builder.Property(d => d.DocumentType)
             .IsRequired()

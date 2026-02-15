@@ -2,7 +2,6 @@ using api.Application.Features.Candidates.Commands.CreateCandidate;
 using api.Application.Features.Candidates.Queries.GetCandidateById;
 using api.Application.Features.Recruitments.Commands.AddWorkflowStep;
 using api.Application.Features.Recruitments.Commands.CreateRecruitment;
-using ForbiddenAccessException = api.Application.Common.Exceptions.ForbiddenAccessException;
 using NotFoundException = api.Application.Common.Exceptions.NotFoundException;
 using ValidationException = api.Application.Common.Exceptions.ValidationException;
 
@@ -70,7 +69,7 @@ public class GetCandidateByIdTests : BaseTestFixture
     }
 
     [Test]
-    public async Task GetCandidateById_NonMember_ThrowsForbiddenAccessException()
+    public async Task GetCandidateById_NonMember_ThrowsNotFoundException()
     {
         await RunAsDefaultUserAsync();
         var recruitmentId = await SendAsync(new CreateRecruitmentCommand
@@ -93,7 +92,7 @@ public class GetCandidateByIdTests : BaseTestFixture
             CandidateId = candidateId,
         });
 
-        await act.Should().ThrowAsync<ForbiddenAccessException>();
+        await act.Should().ThrowAsync<NotFoundException>();
     }
 
     [Test]

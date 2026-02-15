@@ -11,6 +11,7 @@ public class ImportDocumentConfiguration : IEntityTypeConfiguration<ImportDocume
         builder.ToTable("ImportDocuments");
 
         builder.HasKey(d => d.Id);
+        builder.Property(d => d.Id).ValueGeneratedNever();
 
         builder.Property(d => d.CandidateName)
             .IsRequired()

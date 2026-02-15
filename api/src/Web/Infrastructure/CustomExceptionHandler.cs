@@ -70,6 +70,7 @@ public class CustomExceptionHandler : IExceptionHandler
             Status = StatusCodes.Status404NotFound,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.4",
             Title = "The specified resource was not found.",
+            Detail = $"Entity \"{notFoundEx.EntityName}\" ({notFoundEx.EntityKey}) was not found.",
         });
     }
 
@@ -114,6 +115,7 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Recruitment is closed",
+            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }
@@ -127,6 +129,7 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status409Conflict,
             Title = "Cannot remove -- outcomes recorded at this step",
+            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
         });
     }
@@ -140,6 +143,7 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status409Conflict,
             Title = "Duplicate step name",
+            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.8"
         });
     }
@@ -153,6 +157,7 @@ public class CustomExceptionHandler : IExceptionHandler
         {
             Status = StatusCodes.Status400BadRequest,
             Title = "Domain rule violation",
+            Detail = ex.Message,
             Type = "https://tools.ietf.org/html/rfc7231#section-6.5.1"
         });
     }

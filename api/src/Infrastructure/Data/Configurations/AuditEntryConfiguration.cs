@@ -11,6 +11,7 @@ public class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEntry>
         builder.ToTable("AuditEntries");
 
         builder.HasKey(a => a.Id);
+        builder.Property(a => a.Id).ValueGeneratedNever();
 
         builder.Property(a => a.EntityType)
             .IsRequired()

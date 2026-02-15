@@ -11,6 +11,7 @@ public class ImportSessionConfiguration : IEntityTypeConfiguration<ImportSession
         builder.ToTable("ImportSessions");
 
         builder.HasKey(s => s.Id);
+        builder.Property(s => s.Id).ValueGeneratedNever();
 
         builder.Property(s => s.Status)
             .IsRequired()

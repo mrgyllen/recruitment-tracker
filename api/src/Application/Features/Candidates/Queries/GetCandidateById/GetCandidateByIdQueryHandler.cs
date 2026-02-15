@@ -65,6 +65,7 @@ public class GetCandidateByIdQueryHandler(
                 UploadedAt = d.UploadedAt,
             }).ToList(),
             OutcomeHistory = candidate.Outcomes
+                .Where(o => o.Status != Domain.Enums.OutcomeStatus.NotStarted)
                 .OrderBy(o => stepLookup.TryGetValue(o.WorkflowStepId, out var s) ? s.Order : 0)
                 .ThenBy(o => o.RecordedAt)
                 .Select(o =>

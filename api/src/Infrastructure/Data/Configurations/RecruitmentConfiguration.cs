@@ -11,6 +11,7 @@ public class RecruitmentConfiguration : IEntityTypeConfiguration<Recruitment>
         builder.ToTable("Recruitments");
 
         builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
 
         builder.Property(r => r.Title)
             .IsRequired()
