@@ -15,10 +15,11 @@ Before creating the team or assigning any work:
    - **Build check:** Run `dotnet build` (API) and `npm run build` (frontend) — both must succeed
    - **TypeScript zero-error check:** Run `cd web && npx tsc --noEmit` — must return zero errors. If pre-existing errors exist, fix them NOW before starting stories. Do not normalize non-zero error baselines.
    - **ESLint check:** Run `cd web && npx eslint src/ --max-warnings 0` — must return zero errors/warnings
-   - **Runtime check:** Attempt to start the API and frontend dev servers. If either fails, identify what's missing (database, runtime, services). See `docs/getting-started.md` for native vs Docker Compose setup.
-   - **If the app cannot run:** Create a deferred item in `sprint-status.yaml` with key `epic-N-deferred-dev-environment` describing what's needed (e.g., Docker Compose, database setup, MSW browser mode). This becomes a P0 blocker for the Epic Demo Walkthrough step — the demo cannot fall back to code-level verification silently
-   - **If the app runs:** Record the startup commands in `demo.md` for use during the Epic Demo Walkthrough
-   - This check is best-effort — if the dev environment lacks infrastructure (no Docker, no SQL Server), note the gap and proceed with stories. The demo step will handle the consequence.
+   - **Runtime check:** Attempt to start the API and frontend dev servers. See `docs/getting-started.md` for native vs Docker Compose setup. Try Docker Compose first (`docker compose up --build`), then native mode as fallback.
+   - **If the app cannot run due to missing code/config:** Fix it NOW before proceeding — this is a blocking gate, not advisory.
+   - **If the app cannot run due to missing infrastructure** (Docker not installed, SQL Server not available, runtime not installed): **STOP and escalate to the user** via `AskUserQuestion`. The agent cannot install system-level dependencies. List exactly what is missing and what the user needs to install. Do NOT proceed with stories until the user confirms the prerequisites are met or explicitly instructs you to proceed without them.
+   - **If the app runs:** Record the startup commands in `demo.md` for use during the Epic Demo Walkthrough.
+   - **This gate is BLOCKING.** Three consecutive blocked demos (Epics 4, 5, 7) proved that "note and proceed" does not work — the gap compounds silently while mocked tests create a false green signal.
 7. **Create the team** and begin the Story Cycle with the first in-scope story
 
 ## Team Structure
