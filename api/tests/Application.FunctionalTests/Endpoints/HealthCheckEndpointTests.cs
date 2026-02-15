@@ -60,16 +60,20 @@ public class HealthCheckEndpointTests
     }
 
     [Test]
-    public async Task ReadyEndpoint_DoesNotRequireAuthentication()
+    public async Task ReadyEndpoint_Returns200_WithoutAuthHeaders()
     {
-        var client = CreateAnonymousClient();
+        using var healthyFactory = CreateFactoryWithHealthyDbCheck("Development");
+
+        var client = healthyFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
 
         var response = await client.GetAsync("/ready");
 
-        // /ready checks DB — may return 503 if DB is unreachable,
-        // but should never return 401/403 since it uses AllowAnonymous
         response.StatusCode.Should().NotBe(HttpStatusCode.Unauthorized);
         response.StatusCode.Should().NotBe(HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Test]
