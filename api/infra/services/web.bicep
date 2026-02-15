@@ -6,6 +6,9 @@ param serviceName string = 'web'
 param applicationInsightsName string = ''
 param keyVaultName string = ''
 
+@description('App Service Plan SKU name')
+param skuName string = 'B1'
+
 module appServicePlan '../core/host/appserviceplan.bicep' = {
   name: 'appServicePlan'
   params: {
@@ -13,7 +16,7 @@ module appServicePlan '../core/host/appserviceplan.bicep' = {
     location: location
     tags: tags
     sku: {
-      name: 'B1'
+      name: skuName
     }
   }
 }
@@ -28,10 +31,10 @@ module appService '../core/host/appservice.bicep' = {
     applicationInsightsName: applicationInsightsName
     keyVaultName: keyVaultName
     runtimeName: 'dotnetcore'
-    runtimeVersion: '9.0'
+    runtimeVersion: '10.0'
     healthCheckPath: '/health'
     appSettings: {
-      ASPNETCORE_ENVIRONMENT: 'Development'
+      ASPNETCORE_ENVIRONMENT: 'Production'
     }
   }
 }

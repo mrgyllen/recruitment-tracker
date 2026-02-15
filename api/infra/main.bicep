@@ -32,6 +32,21 @@ param dbAdminPassword string
 @secure()
 param dbAppUserPassword string
 
+@description('App Service Plan SKU name (default: B1 for test deployment)')
+param appServiceSkuName string = 'B1'
+
+@description('Azure SQL Database SKU (default: Basic tier for test deployment)')
+param sqlDatabaseSku object = {
+  name: 'Basic'
+  tier: 'Basic'
+  capacity: 5
+}
+
+@description('Storage Account SKU (default: Standard_LRS for test deployment)')
+param storageSku string = 'Standard_LRS'
+
+param storageAccountName string = ''
+
 var abbrs = loadJsonContent('./abbreviations.json')
 
 // Tags that should be applied to all resources.
@@ -94,6 +109,7 @@ module web 'services/web.bicep' = {
     serviceName: webServiceName
     applicationInsightsName: monitoring.outputs.applicationInsightsName
     keyVaultName: keyVault.outputs.name
+    skuName: appServiceSkuName
   }
   scope: rg
 }
@@ -110,6 +126,33 @@ module database 'core/database/sqlserver/sqlserver.bicep' = {
     connectionStringKey: 'ConnectionStrings--apiDb'
     sqlAdminPassword: dbAdminPassword
     appUserPassword: dbAppUserPassword
+    databaseSku: sqlDatabaseSku
+  }
+  scope: rg
+}
+
+module storage 'core/storage/storage-account.bicep' = {
+  name: 'storage'
+  params: {
+    name: !empty(storageAccountName) ? storageAccountName : '${abbrs.storageStorageAccounts}${resourceToken}'
+    location: location
+    tags: tags
+    sku: { name: storageSku }
+    allowBlobPublicAccess: false
+    allowSharedKeyAccess: true
+    containers: [
+      { name: 'documents', publicAccess: 'None' }
+    ]
+  }
+  scope: rg
+}
+
+module storageSecret 'app/storage-secret.bicep' = {
+  name: 'storageSecret'
+  params: {
+    storageAccountName: storage.outputs.name
+    keyVaultName: keyVault.outputs.name
+    secretName: 'ConnectionStrings--BlobStorage'
   }
   scope: rg
 }
@@ -137,4 +180,6 @@ output AZURE_KEY_VAULT_NAME string = keyVault.outputs.name
 output AZURE_KEY_VAULT_ENDPOINT string = keyVault.outputs.endpoint
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = monitoring.outputs.applicationInsightsConnectionString
 output AZURE_SQL_CONNECTION_STRING_KEY string = database.outputs.connectionStringKey
+output AZURE_STORAGE_BLOB_ENDPOINT string = storage.outputs.primaryEndpoints.blob
+output AZURE_STORAGE_CONNECTION_STRING_KEY string = storageSecret.outputs.secretName
 output WEB_BASE_URI string = web.outputs.uri
