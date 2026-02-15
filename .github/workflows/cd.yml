@@ -21,7 +21,7 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.event.inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'staging' }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
@@ -72,16 +72,20 @@ jobs:
       - name: Verify deployment health
         working-directory: api
         run: |
-          APP_URL=$(azd env get-values --output json | jq -r '.WEB_BASE_URI')
-          echo "Checking health at $APP_URL/health..."
-          for i in {1..6}; do
-            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/health" || echo "000")
-            if [ "$STATUS" = "200" ]; then
-              echo "Health check passed"
-              exit 0
-            fi
-            echo "Attempt $i: status $STATUS, retrying in 10s..."
-            sleep 10
+          APP_URL=$(azd env get-values | grep '^WEB_BASE_URI=' | sed 's/^WEB_BASE_URI="//' | sed 's/"$//')
+          for ENDPOINT in health ready; do
+            echo "Checking $APP_URL/$ENDPOINT..."
+            for i in {1..6}; do
+              STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/$ENDPOINT" || echo "000")
+              if [ "$STATUS" = "200" ]; then
+                echo "$ENDPOINT check passed"
+                break
+              fi
+              echo "Attempt $i: status $STATUS, retrying in 10s..."
+              sleep 10
+              if [ "$i" = "6" ]; then
+                echo "$ENDPOINT check failed after 60 seconds"
+                exit 1
+              fi
+            done
           done
-          echo "Health check failed after 60 seconds"
-          exit 1
