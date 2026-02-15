@@ -2,6 +2,9 @@ using System.Net;
 using FluentAssertions;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 using NUnit.Framework;
 
 namespace api.Application.FunctionalTests.Endpoints;
@@ -70,14 +73,18 @@ public class HealthCheckEndpointTests
     }
 
     [Test]
-    public async Task ReadyEndpoint_Exists_AndReturnsHealthCheckResult()
+    public async Task ReadyEndpoint_Returns200_WhenDatabaseIsAvailable()
     {
-        var client = CreateAnonymousClient();
+        using var healthyFactory = CreateFactoryWithHealthyDbCheck("Development");
+
+        var client = healthyFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
 
         var response = await client.GetAsync("/ready");
 
-        // Should return a health check result (200 or 503), not 404
-        response.StatusCode.Should().NotBe(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Test]
@@ -126,11 +133,72 @@ public class HealthCheckEndpointTests
         response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    [Test]
+    public async Task ReadyEndpoint_Returns200_InProductionEnvironment()
+    {
+        using var prodFactory = CreateFactoryWithHealthyDbCheck("Production");
+
+        var client = prodFactory.CreateClient(new WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+        });
+
+        var response = await client.GetAsync("/ready");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private HttpClient CreateAnonymousClient()
     {
         return _factory.CreateClient(new WebApplicationFactoryClientOptions
         {
             AllowAutoRedirect = false,
         });
+    }
+
+    /// <summary>
+    /// Creates a factory that replaces the real DB health check with an always-healthy check.
+    /// This allows testing /ready endpoint behavior without a real database connection.
+    /// </summary>
+    private static WebApplicationFactory<Program> CreateFactoryWithHealthyDbCheck(string environment)
+    {
+        return new WebApplicationFactory<Program>()
+            .WithWebHostBuilder(builder =>
+            {
+                builder.UseEnvironment(environment);
+                builder.UseSetting("ConnectionStrings:apiDb",
+                    "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True");
+
+                if (environment == "Production")
+                {
+                    builder.UseSetting("AzureAd:Instance", "https://login.microsoftonline.com/");
+                    builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
+                    builder.UseSetting("AzureAd:ClientId", "fake-client-id");
+                    builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                }
+
+                builder.ConfigureTestServices(services =>
+                {
+                    // Replace the real DB health check with one that always returns Healthy
+                    services.Configure<HealthCheckServiceOptions>(options =>
+                    {
+                        options.Registrations.Clear();
+                        options.Registrations.Add(new HealthCheckRegistration(
+                            "ready-db",
+                            _ => new AlwaysHealthyCheck(),
+                            failureStatus: null,
+                            tags: new[] { "ready" }));
+                    });
+                });
+            });
+    }
+
+    private class AlwaysHealthyCheck : IHealthCheck
+    {
+        public Task<HealthCheckResult> CheckHealthAsync(
+            HealthCheckContext context, CancellationToken cancellationToken = default)
+        {
+            return Task.FromResult(HealthCheckResult.Healthy("Test: always healthy"));
+        }
     }
 }
