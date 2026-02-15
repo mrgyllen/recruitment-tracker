@@ -15,8 +15,12 @@ param sqlAdminPassword string
 @secure()
 param appUserPassword string
 
-@description('Optional database SKU. If empty, Azure uses the default tier.')
-param databaseSku object = {}
+@description('Database SKU configuration.')
+param databaseSku object = {
+  name: 'Basic'
+  tier: 'Basic'
+  capacity: 5
+}
 
 param utcNowString string = utcNow('yyyyMMddHHmm')
 
@@ -57,7 +61,7 @@ resource sqlDatabase 'Microsoft.Sql/servers/databases@2023-08-01-preview' = {
   parent: sqlServer
   name: databaseName
   location: location
-  sku: !empty(databaseSku) ? databaseSku : null
+  sku: databaseSku
 }
 
 resource sqlDatabaseDiagnosticSettings 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = if (!(empty(logAnalyticsWorkspaceId))) {
