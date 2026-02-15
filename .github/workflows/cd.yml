@@ -14,13 +14,42 @@ on:
           - staging
           - production
 
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   id-token: write
   contents: read
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          cache: 'npm'
+          cache-dependency-path: web/package-lock.json
+
+      # Build API and web (tests run in CI only — CD focuses on deployment)
+      - run: dotnet restore api/api.slnx
+      - run: dotnet build api/api.slnx --no-restore
+      - run: npm ci
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: vars.AZURE_CLIENT_ID != ''
     environment: ${{ inputs.environment || 'staging' }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
@@ -41,7 +70,6 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      # Build API and web (tests run in CI only — CD focuses on deployment)
       - run: dotnet restore api/api.slnx
       - run: dotnet build api/api.slnx --no-restore
       - run: npm ci
