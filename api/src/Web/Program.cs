@@ -1,5 +1,6 @@
 using api.Infrastructure.Data;
 using api.Web.Middleware;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,7 +23,6 @@ else
     app.UseHsts();
 }
 
-app.UseHealthChecks("/health");
 app.UseHttpsRedirection();
 app.UseExceptionHandler(options => { });
 
@@ -33,6 +33,16 @@ app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseMiddleware<NoindexMiddleware>();
 
 app.MapOpenApi();
+
+app.MapHealthChecks("/health", new HealthCheckOptions
+{
+    Predicate = _ => false // Liveness: no dependency checks
+}).AllowAnonymous();
+
+app.MapHealthChecks("/ready", new HealthCheckOptions
+{
+    Predicate = check => check.Tags.Contains("ready") // Readiness: DB check only
+}).AllowAnonymous();
 
 app.MapGet("/api/health-auth", () => Results.Ok(new { status = "authenticated" }))
     .RequireAuthorization();

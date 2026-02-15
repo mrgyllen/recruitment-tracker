@@ -27,7 +27,7 @@ public static class DependencyInjection
 
         builder.Services.AddHttpContextAccessor();
         builder.Services.AddHealthChecks()
-            .AddDbContextCheck<ApplicationDbContext>();
+            .AddDbContextCheck<ApplicationDbContext>(tags: new[] { "ready" });
 
         builder.Services.AddExceptionHandler<CustomExceptionHandler>();
 
