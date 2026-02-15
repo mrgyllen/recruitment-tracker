@@ -33,6 +33,9 @@ public class ValidatorArchitectureTests
 
         // Import pipeline command — match conflict resolution with minimal input
         "ResolveMatchConflictCommand",
+
+        // Import pipeline command — IDs from route, Stream from file upload; no user-provided body to validate
+        "ProcessPdfBundleCommand",
     };
 
     private static readonly Assembly ApplicationAssembly =

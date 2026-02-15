@@ -117,7 +117,7 @@ public class CreateCandidateCommandValidatorTests
         {
             RecruitmentId = Guid.NewGuid(),
             FullName = "Jane Doe",
-            Email = new string('a', 245) + "@test.com",
+            Email = new string('a', 246) + "@test.com",
         };
 
         var result = _validator.Validate(command);

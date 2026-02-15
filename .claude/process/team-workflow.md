@@ -73,7 +73,12 @@ Repeat this cycle for each story in the sprint:
      - [ ] Domain entity properties use private setters
      - [ ] FluentValidation on all command/query inputs
    - **AC completeness walkthrough (E-005):** Before declaring done, Dev Agent MUST create an AC Coverage Map listing each acceptance criterion from the story with pass/fail/partial status and evidence (test name, file:line, or manual verification). Any AC marked partial or fail must be resolved before handoff.
-5. Dev Agent commits work and sends message to Team Lead
+5. Dev Agent populates the Dev Agent Record section in the story implementation file:
+   - **Agent Model Used:** e.g., Claude Opus 4.6
+   - **Completion Notes List:** key decisions made, challenges encountered, deviations from plan
+   - **File List:** all files created or modified
+   This is mandatory — empty Dev Agent Records will be flagged as Important (blocking) during review.
+6. Dev Agent commits work and sends message to Team Lead
 
 ### Step 2: Review Agent Reviews
 
@@ -87,7 +92,7 @@ Repeat this cycle for each story in the sprint:
    - **All command/query handlers verify ITenantContext membership before data access** (see patterns-backend.md Handler Authorization section)
    - Naming conventions and file placement
    - DDD aggregate rules
-   - **Dev Agent Record section is non-empty** (must contain: testing mode rationale, key decisions, file list)
+   - **Dev Agent Record section is non-empty (IMPORTANT — blocking):** Must contain: testing mode rationale, key decisions, file list. If empty, categorize as Important finding (not Minor) — story cannot be approved with empty Dev Agent Record. This was elevated from Minor per Epic 7 retro A-007 (4 consecutive stories with empty records).
 5. Review Agent categorizes findings:
    - **Critical:** Must fix before proceeding (security holes, broken invariants, missing tests)
    - **Important:** Should fix in this story (pattern violations, naming errors)
@@ -252,6 +257,7 @@ The evidence bundle MUST include:
 
 1. **Scope:** Story identifiers, short titles, acceptance criteria
 1b. **Previous retros (if any):** If `.retro/` contains previous retro runs, include a summary of their action items and deferred items. Note which were applied and which are still outstanding.
+   - **IMPORTANT (A-009 from Epic 7 retro):** When checking action status, search the FULL branch history (`git log --all -- <file>`), not just the epic commit range (base..head). Retro self-healing commits may modify files BETWEEN the previous retro and the current epic start. Checking only the epic range causes false "NOT APPLIED" flags.
 2. **Git summary:** Commit range (base..head), diffstat, changed files list, commit subjects
    ```bash
    git log --oneline <base>..<head>
@@ -388,6 +394,7 @@ This is where the retro becomes self-healing. Team Lead works through the action
 - P2 `instrumentation_gap` follows the same rules as `observability` — fix now if config-level, defer only if it requires new infrastructure
 - **An instrumentation gap that appeared in a previous retro's missing_evidence is automatically P1** — recurring gaps are a process failure
 - **An item carried from a previous retro cannot be deferred again.** Fix it or explicitly close it with justification.
+- **Pre-existing test failures lasting 2+ epics auto-escalate to P1 retro action item** (A-010 from Epic 7 retro). Tests failing across multiple epics normalize failure and mask regressions. Evidence assembly must report pre-existing failure count as a mandatory quality signal.
 - The retro is NOT done until all P0, P1, and applicable P2 actions are applied or assigned
 - **Expected outcome: 0-2 deferred items per retro.** If more than 2 items are deferred, the retro is being too permissive.
 

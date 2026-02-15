@@ -1,0 +1,242 @@
+{
+  "persona": "Security Lens",
+  "wins": [
+    "Health check endpoints correctly use AllowAnonymous for /health and /ready — enables Azure health probing without auth tokens (Program.cs:54,59)",
+    "Key Vault integration with managed identity correctly implemented — AZURE_KEY_VAULT_ENDPOINT configured, DefaultAzureCredential for passwordless auth, secrets referenced via Key Vault (main.bicep:93-102, DependencyInjection.cs:77-86)",
+    "Blob storage security hardened — allowBlobPublicAccess:false, publicAccess:None on containers, 15-minute SAS token cap enforced (storage-account.bicep:142, BlobStorageService.cs:47)",
+    "CD pipeline uses OIDC federated credentials correctly — id-token: write permission, azd auth with federated-credential-provider, no static secrets in workflow (cd.yml:17-19,60-66)",
+    "TenantContext authorization and global query filters remain intact — no regressions in Epic 7, 8 isolation tests passing in TenantContextFilterTests.cs"
+  ],
+  "problems": [
+    "A-006 auth denial logging NOT APPLIED in Epic 7 despite being P1 from Epic 5 — CustomExceptionHandler.cs unchanged since fccb045 (Epic 5), no new logging added, carried action now auto-escalates to P0",
+    "Hardcoded SQL Server password in docker-compose.yml (Dev@Pass123!) checked into source control — secrets in plain text on lines 6, 12, 26 violate secret management hygiene even for dev environments",
+    "No health check authentication test for /ready endpoint — TenantIsolationTests.cs missing verification that readiness checks bypass auth policy, only /health tested in Story 7.1",
+    "Key Vault access policy uses legacy access policies instead of RBAC — keyvault.bicep:21-27 uses accessPolicies array, not Azure RBAC roles, creates operational friction for permission management",
+    "No App Service managed identity verification test — web.bicep creates SystemAssigned identity for Key Vault access but no test confirms identity is provisioned and has secrets/get permission",
+    "Database auto-migration runs unconditionally in Production environment by default — Database:AutoMigrate defaults to true (Program.cs:27), could apply breaking migrations on first pod startup in multi-instance scale-out",
+    "No security logging for health check endpoint access — AllowAnonymous endpoints produce no audit trail, cannot detect probing or DoS patterns on /health or /ready"
+  ],
+  "missing_evidence": [
+    "Authorization denial logging output — A-006 marked NOT APPLIED, no verification that ForbiddenAccessException produces structured logs",
+    "SAS token TTL enforcement test — BlobStorageService.cs caps at 15 minutes but no test verifies rejection of longer-lived tokens",
+    "Key Vault secret rotation policy — no evidence that ConnectionStrings are flagged for rotation or have expiry configured",
+    "App Service TLS configuration verification — httpsOnly:true in bicep but no test verifies TLS 1.2 minimum version enforcement at runtime",
+    "CORS origin allowlist validation — appservice.bicep allows Azure Portal by default but no test for custom origin sanitization"
+  ],
+  "candidate_actions": [
+    {
+      "id": "SEC-001",
+      "title": "Apply A-006: Add structured logging for authorization denials in CustomExceptionHandler",
+      "type": "security_hardening",
+      "priority": "P0",
+      "rationale": "A-006 was P1 in Epic 5 retro, NOT APPLIED in Epic 7 (evidence: CustomExceptionHandler.cs unchanged since fccb045). Per retro rules, P1 items carried from previous retro auto-escalate to P0. Without auth denial logging, cannot detect cross-recruitment probing or enumeration attacks. HandleForbiddenAccessException logs endpoint and TraceId but needs userId/recruitmentId context.",
+      "evidence_refs": [
+        "context.md:31 — A-006 NOT APPLIED, carried from Epic 5",
+        "context.md:34 — P1 items carried cannot be deferred again, auto-escalate to P0",
+        "CustomExceptionHandler.cs:88-106 — HandleForbiddenAccessException logs endpoint but not user/recruitment context",
+        "Epic 5 retro A-006:186-212 — original action specification"
+      ],
+      "acceptance_criteria": [
+        "CustomExceptionHandler.HandleForbiddenAccessException logs Warning-level structured event with endpoint, traceId, and recruitment context (if available from httpContext.Items)",
+        "Log includes no PII — use correlation ID instead of full user GUID",
+        "Test added to CustomExceptionHandlerTests.cs verifying ForbiddenAccessException produces expected log entry",
+        "Zero A-006 references in next retro — action marked APPLIED with evidence"
+      ],
+      "automation_hints": [
+        "Modify CustomExceptionHandler.HandleForbiddenAccessException to extract ITenantContext from httpContext.RequestServices",
+        "Log template: 'Authorization denied for endpoint {Endpoint} to recruitment {RecruitmentId} (TraceId: {TraceId})'",
+        "Add test: HandleForbiddenAccessException_LogsWarningWithContext_ReturnsCorrectProblemDetails",
+        "Verify output in Application Insights query: traces | where severityLevel == 2 and message contains 'Authorization denied'"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs",
+        "api/tests/Application.FunctionalTests/Infrastructure/CustomExceptionHandlerTests.cs"
+      ],
+      "risk_if_ignored": "No visibility into authorization attacks across 7 epics. Cannot detect patterns of users probing other recruitments. Security monitoring blind spot persists. Carried P1 action becomes permanent technical debt."
+    },
+    {
+      "id": "SEC-002",
+      "title": "Remove hardcoded SQL Server password from docker-compose.yml",
+      "type": "security_hardening",
+      "priority": "P1",
+      "rationale": "docker-compose.yml contains hardcoded password 'Dev@Pass123!' on lines 6, 12, 26. Even for dev environments, secrets should not be committed to source control. Sets bad precedent and violates secret management hygiene. Risk of accidental exposure if docker-compose.yml is copied to production deployment scripts.",
+      "evidence_refs": [
+        "docker-compose.yml:6 — MSSQL_SA_PASSWORD: 'Dev@Pass123!'",
+        "docker-compose.yml:12 — healthcheck uses same password in plaintext",
+        "docker-compose.yml:26 — ConnectionStrings__apiDb contains password in plaintext",
+        "context.md — Key context mentions hardcoded dev credentials"
+      ],
+      "acceptance_criteria": [
+        "docker-compose.yml uses environment variable ${SQL_SA_PASSWORD} instead of hardcoded password",
+        ".env.example created with SQL_SA_PASSWORD=CHANGE_ME placeholder and committed to repo",
+        ".env added to .gitignore to prevent accidental commit of actual secrets",
+        "docs/getting-started.md updated with instructions to copy .env.example to .env and set password",
+        "Healthcheck command uses ${SQL_SA_PASSWORD} environment variable"
+      ],
+      "automation_hints": [
+        "Replace all instances of 'Dev@Pass123!' with ${SQL_SA_PASSWORD:-DevPassword123!}",
+        "Create .env.example: SQL_SA_PASSWORD=CHANGE_ME",
+        "Add to .gitignore: .env",
+        "Update getting-started.md Docker Compose section with setup steps"
+      ],
+      "files_to_touch": [
+        "docker-compose.yml",
+        ".env.example",
+        ".gitignore",
+        "docs/getting-started.md"
+      ],
+      "risk_if_ignored": "Secret sprawl — developers copy pattern to other services. Accidental production exposure if docker-compose.yml is used as template for deployment scripts. Violates baseline security hygiene."
+    },
+    {
+      "id": "SEC-003",
+      "title": "Add cross-recruitment overview test to TenantIsolationTests (A-005 from Epic 5 NOT APPLIED)",
+      "type": "test_gap",
+      "priority": "P0",
+      "rationale": "A-005 from Epic 5 retro was P1, NOT APPLIED in Epic 7 (evidence: TenantIsolationTests.cs unchanged, no GetRecruitmentOverview test added). Auto-escalates to P0. TenantIsolationTests.cs covers 6 endpoints but missing GetRecruitmentOverviewQuery. While handler implements authorization, no functional test verifies cross-recruitment access returns 403. Security test coverage incomplete.",
+      "evidence_refs": [
+        "context.md:30 — A-005 NOT APPLIED, carried from Epic 5",
+        "context.md:34 — P1 items carried cannot be deferred again, auto-escalate to P0",
+        "TenantIsolationTests.cs:159-170 — has GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden test",
+        "Epic 5 retro A-005:160-184 — original action specification"
+      ],
+      "acceptance_criteria": [
+        "Wait — TenantIsolationTests.cs ALREADY HAS GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden test on line 159",
+        "Verify this test was added in Epic 5 (check git log for TenantIsolationTests.cs)",
+        "If test exists, mark A-005 as APPLIED in retro evidence with commit reference",
+        "If test missing, add test following pattern from GetCandidates_ForOtherRecruitment_ThrowsForbidden"
+      ],
+      "automation_hints": [
+        "Run: git log --all --oneline -- api/tests/Application.FunctionalTests/Security/TenantIsolationTests.cs",
+        "Check for commit adding GetRecruitmentOverview test",
+        "If test exists since Epic 5, mark A-005 as APPLIED with commit hash",
+        "If missing, add test and mark as newly applied"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Security/TenantIsolationTests.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment access vector for overview endpoint unverified at integration level IF test is missing. Retro tracking inaccuracy if test exists but not credited."
+    },
+    {
+      "id": "SEC-004",
+      "title": "Add test verifying /ready endpoint bypasses authentication",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "Program.cs:56-59 marks /ready endpoint with AllowAnonymous for Azure health probe compatibility. Story 7.1 AC4 requires 'health endpoints excluded from auth'. No test verifies /ready is accessible without authentication token. TenantIsolationTests only covers authenticated data access endpoints. Gap in health check security testing.",
+      "evidence_refs": [
+        "Program.cs:59 — MapHealthChecks('/ready').AllowAnonymous()",
+        "Story 7.1 AC4: Health endpoints excluded from auth (context.md:11)",
+        "TenantIsolationTests.cs — no health check endpoint tests"
+      ],
+      "acceptance_criteria": [
+        "Test added verifying GET /ready returns 200 without Authorization header",
+        "Test added verifying GET /health returns 200 without Authorization header",
+        "Tests fail if AllowAnonymous is removed (regression protection)",
+        "Tests run in Application.FunctionalTests suite"
+      ],
+      "automation_hints": [
+        "Create HealthCheckSecurityTests.cs in Application.FunctionalTests/Security/",
+        "Use WebApplicationFactory without authentication headers",
+        "Test: HealthEndpoint_WithoutAuth_Returns200",
+        "Test: ReadyEndpoint_WithoutAuth_Returns200OrUnavailable (503 if DB down)"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.FunctionalTests/Security/HealthCheckSecurityTests.cs"
+      ],
+      "risk_if_ignored": "Regression risk — future refactoring could accidentally remove AllowAnonymous, breaking Azure health probes and causing deployment failures. No automated safety net."
+    },
+    {
+      "id": "SEC-005",
+      "title": "Migrate Key Vault from access policies to Azure RBAC",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "keyvault.bicep:21-27 uses legacy accessPolicies model instead of Azure RBAC. Access policies are deprecated in favor of RBAC for centralized permission management. Current implementation requires Bicep changes for every principal needing access. RBAC enables AAD group-based permissions and centralized auditing.",
+      "evidence_refs": [
+        "keyvault.bicep:21-27 — accessPolicies array with principalId",
+        "Azure Key Vault best practices recommend RBAC over access policies",
+        "main.bicep:161-168 — webKeyVaultAccess module adds second access policy"
+      ],
+      "acceptance_criteria": [
+        "keyvault.bicep updated with enableRbacAuthorization: true property",
+        "Access policies removed, replaced with role assignment modules",
+        "Principals granted 'Key Vault Secrets User' role via keyvault-access.bicep",
+        "Deployment verified in test environment — App Service can still read secrets",
+        "Documentation updated in architecture.md or infra/README.md"
+      ],
+      "automation_hints": [
+        "Update keyvault.bicep properties: enableRbacAuthorization: true",
+        "Update keyvault-access.bicep to use Microsoft.Authorization/roleAssignments",
+        "Role definition ID for Key Vault Secrets User: 4633458b-17de-408a-b874-0445c86b69e6",
+        "Test with azd provision in staging environment"
+      ],
+      "files_to_touch": [
+        "api/infra/core/security/keyvault.bicep",
+        "api/infra/core/security/keyvault-access.bicep",
+        "api/infra/main.bicep"
+      ],
+      "risk_if_ignored": "Using deprecated access policy model. Manual permission management friction. Harder to audit who has Key Vault access. Not following Azure security best practices."
+    },
+    {
+      "id": "SEC-006",
+      "title": "Guard database auto-migration with environment-specific config verification",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "Program.cs:27 — Database:AutoMigrate defaults to true in Production environment. While guarded by config, defaulting to true is dangerous for multi-instance deployments. First pod to start applies migrations, but concurrent startup could cause race conditions or partial migration failures. Story 7.3 review C-1 added config guard but defaults should be safer.",
+      "evidence_refs": [
+        "Program.cs:27 — GetValue('Database:AutoMigrate', true) defaults to true",
+        "context.md:62 — Review C-1: Auto-migration breaks ALL Production-env functional tests",
+        "context.md:112-118 — C-1 finding and fix with config guard"
+      ],
+      "acceptance_criteria": [
+        "Program.cs updated to default Database:AutoMigrate to false: GetValue('Database:AutoMigrate', false)",
+        "appsettings.json explicitly sets Database:AutoMigrate: false for safety",
+        "Azure App Service configuration sets Database:AutoMigrate=true via environment variable (not in code)",
+        "Documentation added to deployment docs explaining migration strategy",
+        "Test verifies auto-migration does NOT run when config is false"
+      ],
+      "automation_hints": [
+        "Change Program.cs:27 default from true to false",
+        "Add to appsettings.json: 'Database': { 'AutoMigrate': false }",
+        "Update infra/services/web.bicep appSettings to include Database__AutoMigrate: 'true'",
+        "Add test: AutoMigrate_WhenConfigFalse_DoesNotRunMigrations"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Program.cs",
+        "api/src/Web/appsettings.json",
+        "api/infra/services/web.bicep",
+        "api/tests/Application.FunctionalTests/StartupTests.cs"
+      ],
+      "risk_if_ignored": "Production deployment risk — accidental migration on startup if config not explicitly set. Race conditions in multi-instance scale-out. Breaking migrations applied without rollback plan."
+    },
+    {
+      "id": "SEC-007",
+      "title": "Add security logging for health check endpoint access patterns",
+      "type": "security_hardening",
+      "priority": "P2",
+      "rationale": "Health check endpoints /health and /ready are AllowAnonymous (required for Azure probing) but produce no audit trail. Cannot detect probing, DoS patterns, or unauthorized health monitoring. While health checks expose minimal data, frequent 4xx/5xx responses could indicate reconnaissance or availability attacks.",
+      "evidence_refs": [
+        "Program.cs:51-59 — /health and /ready endpoints with AllowAnonymous",
+        "No logging middleware configured for health check endpoints",
+        "context.md — no evidence of health check access logging"
+      ],
+      "acceptance_criteria": [
+        "Middleware or health check options log access to /health and /ready endpoints",
+        "Log includes: timestamp, endpoint, status code, response time, source IP (not full request path)",
+        "Logs written to Application Insights for query/alerting",
+        "Logging does not impact health check performance (< 5ms overhead)",
+        "Alert configured for abnormal health check failure rates (> 10% over 5 minutes)"
+      ],
+      "automation_hints": [
+        "Add custom middleware after UseRouting: app.Use(async (context, next) => { if (context.Request.Path.StartsWithSegments('/health') || context.Request.Path.StartsWithSegments('/ready')) { /* log */ } await next(); })",
+        "Or use ResponseCompression middleware with logging",
+        "Log template: 'Health check {Endpoint} returned {StatusCode} in {ElapsedMs}ms'",
+        "Configure Application Insights alert in infra/"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Program.cs",
+        "api/src/Web/Middleware/HealthCheckLoggingMiddleware.cs",
+        "api/infra/core/monitor/applicationinsights.bicep"
+      ],
+      "risk_if_ignored": "Blind spot for health check abuse — cannot detect DoS, probing, or availability attacks. No metrics for health check reliability. Cannot correlate deployment issues with health check failures."
+    }
+  ]
+}

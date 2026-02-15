@@ -1,0 +1,228 @@
+{
+  "persona": "Docs/Enablement Lens",
+  "wins": [
+    "Comprehensive deployment guide created (context.md Section 10) — docs/getting-started.md exists with clear Native vs Docker Compose paths for Epic 7 infrastructure work",
+    "Team-workflow.md accurately enforced — all review findings categorized by severity (Critical/Important/Minor), fix cycle executed per process rules (context.md Section 4)",
+    "Architecture shard consistency maintained — Bicep parameterization, health check patterns, CD pipeline structure all align with declarative infrastructure principles (no drift noted in reviews)",
+    "Mini-retro process compliance — anti-patterns-pending.txt was modified in all 4 story completion commits (ea8c09e, 6f3be09, 90cd051, 4212a27) proving the mini-retro step ran",
+    "Previous retro action A-001, A-002, A-003, A-007 applied successfully — ESLint errors fixed, retro evidence includes ESLint execution, getting-started.md created, aggregate arch test added (context.md Section 1b)"
+  ],
+  "problems": [
+    "Dev Agent Record empty in ALL 4 stories (7.1-7.4) — review findings M-3 (7.1), M-2 (7.2, 7.3, 7.4) all cite empty Dev Agent Record sections. This is a systemic process gap recurring across 4 consecutive stories despite team-workflow.md line 90 requiring 'testing mode rationale, key decisions, file list'. Evidence: context.md lines 103, 110, 118, 126. All 4 story files show only header subsections with no content (_bmad-output/implementation-artifacts/7-1-health-check-endpoints.md:236-240 shows Agent Model Used, Debug Log, Completion Notes, File List are all empty). This is NOT being enforced by review process despite being a documented requirement.",
+    "3 of 7 previous retro actions NOT APPLIED before Epic 7 (A-004 code coverage, A-005 tenant isolation test, A-006 structured auth denial logging) — context.md Section 1b. Per process rules in team-workflow.md line 400, P1 items carried from previous retro cannot be deferred again. These auto-escalate to P0 blockers.",
+    "Docker Compose path in getting-started.md is unusable — E-010 experiment FAILED (context.md Section 1b line 40). Docs exist but Docker is not installed on dev machine. Demo was BLOCKED 0/25 ACs verified (context.md Section 10). The docs accurately describe a setup path that cannot be executed in the current environment.",
+    "Code coverage instrumentation gap persists for 6th consecutive epic — context.md Section 3 lines 91-94. A-004 from previous retro NOT APPLIED. Evidence bundle reports 'Not measured' for both frontend and backend coverage. This is the same gap reported in Epic 6, Epic 5, etc. Recurring instrumentation gaps violate team-workflow.md line 389 (auto-escalate to P1).",
+    "Experiment E-010 hypothesis was misaligned with epic scope — context.md Section 1b line 40 measures 'Epic 7 demo executes 50%+ ACs' but Epic 7 scope is CLOUD deployment (Azure Bicep, azd provision, GitHub Actions) not LOCAL runtime. The experiment conflated deployment infrastructure with development environment infrastructure. The hypothesis should have been scoped to azd deployment, not local demo execution.",
+    "10 pre-existing backend test failures not investigated for 7+ epics — context.md Section 11 lists same 10 failures since Epic 1. These are reported as 'pre-existing' in every retro but never escalated to a tracked action item. Blob storage mocking and stale candidate filter tests have been broken across multiple epics with no remediation plan.",
+    "Process compliance gap: Review Agent did NOT reject stories with empty Dev Agent Records — team-workflow.md line 90 explicitly lists 'Dev Agent Record section is non-empty' as a review checklist item. All 4 stories passed review with empty sections (context.md Section 4 shows only Minor findings for Dev Agent Record, not Critical). Review Agent is not enforcing documented checklist requirements."
+  ],
+  "missing_evidence": [
+    "Architecture shard read tracking — team-workflow.md line 466-475 documents gate-shard-reads hook enforcement. Evidence bundle does not report which shards were read before implementation or whether the gate triggered. Cannot verify compliance with shard routing table.",
+    "Dev Agent Record template location — grep results show references to 'dev-agent-records/' directory but implementation artifacts show Dev Agent Record as a section within story files. Previous retro (.retro/2026-02-13T220300Z/lens/delivery.json:16) noted this documentation drift but it persists.",
+    "AC Coverage Map evidence — E-005 from .retro/2026-02-14T073000Z/retro.json:289 requires Dev Agent Record to include AC Coverage Map listing each AC with pass/fail status. No evidence in bundle confirms this was created by Dev Agent or checked by Review Agent in Epic 7.",
+    "Anti-pattern regex effectiveness — team-workflow.md line 72 requires Dev Agent to check source files against anti-patterns.txt and anti-patterns-pending.txt. Evidence bundle does not report how many files were scanned, whether patterns matched, or false positive rate. Cannot evaluate anti-pattern file quality without scan metrics."
+  ],
+  "candidate_actions": [
+    {
+      "id": "DOCS-001",
+      "title": "Add pre-review hook to block story approval if Dev Agent Record is empty",
+      "type": "process_change",
+      "priority": "P0",
+      "rationale": "Dev Agent Record was empty in ALL 4 stories despite team-workflow.md line 90 requiring it. Review Agent approved stories with empty sections (marked as Minor findings only). This is a 4-story systemic failure of process enforcement. Manual checklist compliance is unreliable — automate the gate.",
+      "evidence_refs": [
+        "context.md lines 103, 110, 118, 126 (M-3/M-2 findings across all 4 stories)",
+        "_bmad-output/implementation-artifacts/7-1-health-check-endpoints.md:236-240 (empty Dev Agent Record)",
+        "team-workflow.md line 90 (documented requirement: non-empty with testing mode rationale, key decisions, file list)",
+        "context.md Section 4 review findings show Dev Agent Record cited as Minor severity only — not blocking"
+      ],
+      "acceptance_criteria": [
+        "Create .claude/hooks/pre-review-dev-agent-record.sh that checks story file for non-empty Dev Agent Record subsections (Agent Model Used, Completion Notes List, File List must have content beyond headers)",
+        "Hook exits 1 if any subsection is empty with error message citing team-workflow.md line 90",
+        "Update team-workflow.md Step 2 Review Agent checklist to reference this automated check",
+        "Test hook against 7-1-health-check-endpoints.md (should fail) and 5-1-overview-api-data.md (should pass)",
+        "Apply to Epic 8 stories — zero empty Dev Agent Records in next retro"
+      ],
+      "automation_hints": [
+        "Parse story file for '## Dev Agent Record' section",
+        "Check subsections '### Agent Model Used', '### Completion Notes List', '### File List' have non-header content",
+        "Use grep -A to capture lines after each subsection header",
+        "Exit 0 if all sections populated, exit 1 if any empty"
+      ],
+      "files_to_touch": [
+        ".claude/hooks/pre-review-dev-agent-record.sh (create)",
+        ".claude/process/team-workflow.md (reference hook in Step 2 review checklist)"
+      ],
+      "risk_if_ignored": "Dev Agent Records remain empty in Epic 8 and beyond. Knowledge transfer gap persists — future sessions cannot determine testing mode rationale, key decisions, or understand why certain implementation choices were made. This defeats the purpose of the implementation artifact and reduces retro effectiveness."
+    },
+    {
+      "id": "DOCS-002",
+      "title": "Update getting-started.md Prerequisites table to mark Docker Mode as BLOCKED when Docker not installed",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "E-010 experiment FAILED — Docker Compose docs exist but Docker is not installed, demo BLOCKED 0/25 ACs (context.md Section 1b line 40, Section 10). The doc accurately describes a setup path that is currently unusable. Add a runtime check or clear status indicator so users don't attempt Docker mode when it cannot succeed.",
+      "evidence_refs": [
+        "context.md Section 1b line 40 (E-010 experiment: FAIL — Demo BLOCKED, Docker Compose docs exist but Docker not installed)",
+        "context.md Section 10 demo walkthrough (BLOCKED — Docker is not installed on this machine)",
+        "docs/getting-started.md lines 1-11 (Prerequisites table shows Docker Mode as 'Required' but doesn't indicate current availability)"
+      ],
+      "acceptance_criteria": [
+        "Add a 'Current Environment Status' row or note to Prerequisites table indicating whether Docker is available",
+        "If Docker not installed, mark Docker Mode row with '⚠️ Not Available (Docker not installed)' or similar",
+        "Include a check command users can run to verify Docker availability: 'docker --version' or 'which docker'",
+        "Update the Docker Compose Mode section header with status indicator if not available"
+      ],
+      "automation_hints": [
+        "Consider adding a shell script check-environment.sh that tests for Node.js, .NET SDK, Docker, SQL Server and outputs a status table",
+        "Alternatively, use conditional rendering in markdown (though not natively supported — may require pre-commit hook to regenerate section)"
+      ],
+      "files_to_touch": [
+        "docs/getting-started.md (Prerequisites section lines 3-10)"
+      ],
+      "risk_if_ignored": "Users continue to attempt Docker Compose setup based on docs, encounter same BLOCKED demo outcome as Epic 7. Wastes time on non-viable setup paths. Experiment E-010 declared Docker Compose as a fallback but it's not operational."
+    },
+    {
+      "id": "DOCS-003",
+      "title": "Escalate A-004, A-005, A-006 to P0 and apply before next epic",
+      "type": "process_change",
+      "priority": "P0",
+      "rationale": "3 of 7 previous retro actions NOT APPLIED (A-004 code coverage CI, A-005 tenant isolation test, A-006 auth denial logging). Per team-workflow.md line 400: 'P1 items carried from previous retro cannot be deferred again — auto-escalate to P0.' A-004 is a recurring instrumentation gap (6th epic without coverage) which violates line 389 auto-escalation rule. These are now blocking gates per documented process.",
+      "evidence_refs": [
+        "context.md Section 1b lines 29-31 (A-004, A-005, A-006 NOT APPLIED status)",
+        "team-workflow.md line 400 (pre-epic gate rule: P1 carried forward auto-escalates to P0)",
+        "team-workflow.md line 389 (instrumentation gap from previous retro is automatically P1)",
+        "context.md Section 3 lines 91-94 (code coverage 'Not measured' — 6th consecutive epic)"
+      ],
+      "acceptance_criteria": [
+        "Mark A-004, A-005, A-006 as P0 in this retro's action items (or apply immediately)",
+        "A-004: Add --coverage flag to frontend CI and --collect:XPlat Code Coverage to backend CI in .github/workflows/ci.yml",
+        "A-005: Add cross-recruitment overview isolation test to api/tests/Application.FunctionalTests/TenantIsolationTests.cs",
+        "A-006: Update api/src/Web/Infrastructure/CustomExceptionHandler.cs to add structured logging on ForbiddenAccessException with userId, requestedResource, recruitmentId",
+        "Update team-workflow.md Phase 1 evidence assembly to include previous action item status check that enforces auto-escalation rules",
+        "Next retro (Epic 8) evidence bundle confirms A-004, A-005, A-006 APPLIED"
+      ],
+      "automation_hints": [
+        "A-004: Add 'npx vitest run --coverage' to CI, upload coverage reports to CI artifacts or code coverage service",
+        "A-005: Copy existing UserCannotAccessOtherRecruitments_GetCandidates test pattern, adapt for GetRecruitmentOverview endpoint",
+        "A-006: Add _logger.LogWarning in CustomExceptionHandler when handling ForbiddenAccessException, include context.Items or HttpContext metadata"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml (add coverage flags)",
+        "api/tests/Application.FunctionalTests/TenantIsolationTests.cs (add A-005 test)",
+        "api/src/Web/Infrastructure/CustomExceptionHandler.cs (add A-006 logging)",
+        ".claude/process/team-workflow.md (clarify auto-escalation enforcement in Phase 1)"
+      ],
+      "risk_if_ignored": "Process rules documented in team-workflow.md are not enforced. P1 items accumulate indefinitely. Code coverage gap persists into Epic 8 (7th epic). Tenant isolation test gap remains (overview endpoint is untested for cross-tenant access). Auth denial logging gap persists (forensic data unavailable)."
+    },
+    {
+      "id": "DOCS-004",
+      "title": "Document 10 pre-existing backend test failures as tracked tech debt or fix immediately",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "10 backend unit tests have been failing since before Epic 7 (context.md Section 11). These are reported as 'pre-existing' in every retro but never converted to a tracked action item or deferred task. This creates test suite normalization risk — teams stop treating test failures as blocking. Either fix now or document as known tech debt with a remediation plan.",
+      "evidence_refs": [
+        "context.md Section 3 lines 80-81 (227 passed, 10 FAILED — pre-existing)",
+        "context.md Section 11 (lists all 10 failures: blob storage mocking, stale candidate filtering, validator architecture)",
+        "context.md Section 11 final line: 'reported as pre-existing in every story review but never investigated'"
+      ],
+      "acceptance_criteria": [
+        "Create _bmad-output/planning-artifacts/tech-debt/pre-existing-test-failures.md listing all 10 tests with: test name, file path, suspected root cause, proposed fix, estimated effort",
+        "Add a task to sprint-status.yaml under epic-7 (or epic-8) with key 'epic-X-deferred-fix-pre-existing-tests' linking to the tech debt doc",
+        "OR: Assign to Dev Agent immediately to fix all 10 tests (blob storage mocking likely needs IBlobService mock setup, stale candidate tests may need OverviewSettings config injection)",
+        "Update team-workflow.md evidence assembly step to flag 'pre-existing test failures' lasting more than 2 epics as auto-escalating to P1 action items"
+      ],
+      "automation_hints": [
+        "Blob storage tests: Mock IBlobService in test setup, stub VerifyBlobOwnership to return true for valid paths",
+        "Stale candidate tests: Inject IOptions<OverviewSettings> mock in GetCandidatesQueryHandlerTests constructor, set StaleDays to known value",
+        "Validator test: Check AllRequestTypes_ShouldHaveValidator_UnlessExempt logic — may need to exempt new query types or register missing validators"
+      ],
+      "files_to_touch": [
+        "_bmad-output/planning-artifacts/tech-debt/pre-existing-test-failures.md (create)",
+        "_bmad-output/implementation-artifacts/sprint-status.yaml (add deferred task)",
+        ".claude/process/team-workflow.md (add auto-escalation rule for long-lived test failures)"
+      ],
+      "risk_if_ignored": "Test failures normalize — teams ignore failing tests because 'they were already failing.' New regressions hide among pre-existing failures. Test suite loses credibility. Blob storage and stale candidate features may have latent bugs that existing tests would catch if they ran successfully."
+    },
+    {
+      "id": "DOCS-005",
+      "title": "Clarify E-010 experiment scope mismatch in retro.md and archive as inconclusive",
+      "type": "docs_update",
+      "priority": "P2",
+      "rationale": "E-010 hypothesis was 'Docker Compose fallback eliminates demo BLOCKED' but Epic 7 scope is Azure CLOUD deployment (azd provision, Bicep, GitHub Actions). The experiment measured LOCAL demo execution against an infrastructure epic focused on CLOUD deployment. The experiment failed but for reasons orthogonal to the epic's goals. This is a scope/expectations mismatch that should be documented to prevent similar misalignments in future experiments.",
+      "evidence_refs": [
+        "context.md Section 1b line 40 (E-010 FAIL — Demo BLOCKED, Docker Compose docs exist but Docker not installed)",
+        "context.md Section 10 lines 192-198 (user frustration: 'whole epic was about that and now when we want to demo it's still not working' — expectation was LOCAL infrastructure, epic delivered CLOUD infrastructure)",
+        "_bmad-output/planning-artifacts/epics/epic-7-deployment-infrastructure-automation.md lines 3-14 (epic scope: azd, Bicep, Azure App Service, staging — no mention of local dev environment)"
+      ],
+      "acceptance_criteria": [
+        "Update .retro/2026-02-15T123900Z/retro.md to note E-010 as 'INCONCLUSIVE — scope mismatch' rather than 'FAIL'",
+        "Add a 'Lessons Learned' section to retro.md documenting: 'E-010 measured local demo execution for a cloud deployment epic. Future experiments should align success metrics with epic scope. Local dev environment enablement is a separate concern from cloud deployment automation.'",
+        "Archive E-010 — do not carry forward to Epic 8",
+        "If local dev environment is a priority, create a NEW epic or story specifically for local runtime setup (Docker Compose with SQL Server, .NET runtime verification, frontend dev server integration)"
+      ],
+      "automation_hints": [
+        "No automation needed — this is a documentation and process clarity update"
+      ],
+      "files_to_touch": [
+        ".retro/2026-02-15T123900Z/retro.md (add Lessons Learned section)",
+        "_bmad-output/implementation-artifacts/sprint-status.yaml (add epic-8-deferred-local-dev-environment if prioritized)"
+      ],
+      "risk_if_ignored": "Future experiments measure success metrics misaligned with epic scope. Teams conflate cloud deployment success with local development success. E-010 'failure' incorrectly signals that Epic 7 did not deliver value when in fact it delivered exactly what was scoped (Azure deployment automation)."
+    },
+    {
+      "id": "DOCS-006",
+      "title": "Add architecture shard read tracking to retro evidence bundle",
+      "type": "instrumentation_gap",
+      "priority": "P2",
+      "rationale": "Team-workflow.md line 466-475 documents gate-shard-reads hook enforcement but evidence bundle does not report which shards were read or whether the gate triggered. Cannot verify compliance with shard routing table or evaluate whether agents are reading the correct docs before implementation.",
+      "evidence_refs": [
+        "team-workflow.md lines 466-475 (architecture doc requirements table)",
+        "Evidence bundle Section 6 references architecture shards but does not report read activity",
+        "No evidence confirms Dev Agent or Review Agent loaded patterns-backend.md, testing-standards.md, etc. before implementation/review"
+      ],
+      "acceptance_criteria": [
+        "Add a 'Shard Read Tracking' section to retro evidence bundle template",
+        "Report which shards were accessed during the epic (can derive from git log, file access logs, or explicit logging in agent workflow)",
+        "Note if gate-shard-reads hook triggered any violations",
+        "Include in Phase 1 evidence assembly step in team-workflow.md"
+      ],
+      "automation_hints": [
+        "If gate-shard-reads hook exists, capture its output during story implementation",
+        "Alternatively, add logging to agent workflow when Read tool is called on architecture shard files",
+        "Parse git log for commits that reference shard file paths"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md (Phase 1 evidence item 6: add shard read tracking)",
+        ".retro/<run_id>/context.md template (add Shard Read Tracking section)"
+      ],
+      "risk_if_ignored": "Cannot verify agents are following documented process to read architecture shards before writing code. Shard routing table effectiveness is unmeasured. Agents may skip shard reads and rely on prior knowledge, reducing architecture doc relevance over time."
+    },
+    {
+      "id": "DOCS-007",
+      "title": "Add anti-pattern scan metrics to Dev Agent verification checklist",
+      "type": "instrumentation_gap",
+      "priority": "P2",
+      "rationale": "Team-workflow.md line 72 requires Dev Agent to scan source files against anti-patterns.txt and anti-patterns-pending.txt before declaring done. Evidence bundle does not report scan results (files scanned, patterns matched, false positives). Cannot evaluate anti-pattern file quality or verify scan actually ran.",
+      "evidence_refs": [
+        "team-workflow.md line 72 (anti-pattern scan in pre-review checklist)",
+        "context.md Section 5 shows anti-patterns-pending.txt contents but no scan metrics",
+        "No evidence confirms scan ran or how many files were checked"
+      ],
+      "acceptance_criteria": [
+        "Update verification-before-completion skill or team-workflow.md Step 1.4 to require Dev Agent to report anti-pattern scan results in commit message or Dev Agent Record",
+        "Output format: 'Anti-pattern scan: X files checked, Y patterns matched, Z violations found (list file:line if any)'",
+        "Include scan metrics in Dev Agent Record 'Completion Notes List' subsection",
+        "Next retro evidence bundle includes anti-pattern scan metrics for each story"
+      ],
+      "automation_hints": [
+        "Add a shell script .claude/hooks/scan-anti-patterns.sh that iterates anti-patterns.txt entries, runs grep against specified globs, outputs match count",
+        "Dev Agent calls script before verification-before-completion step, includes output in Dev Agent Record"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md (Step 1.4 verification checklist: add scan metrics requirement)",
+        ".claude/hooks/scan-anti-patterns.sh (create)",
+        "Implementation artifact template (Dev Agent Record Completion Notes: include anti-pattern scan results)"
+      ],
+      "risk_if_ignored": "Anti-pattern files may accumulate ineffective regex patterns with no feedback loop. False positives not tracked. Scan compliance not verifiable. Anti-pattern quality degrades over time without usage metrics."
+    }
+  ]
+}

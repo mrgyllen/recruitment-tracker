@@ -48,6 +48,9 @@ public class BlobStorageService(BlobServiceClient blobServiceClient) : IBlobStor
 
     public bool VerifyBlobOwnership(string containerName, string blobUrl, Guid recruitmentId)
     {
+        if (string.IsNullOrEmpty(blobUrl))
+            return false;
+
         // Normalize the path: resolve any ../ segments
         var normalized = Path.GetFullPath(blobUrl).Replace('\\', '/');
 

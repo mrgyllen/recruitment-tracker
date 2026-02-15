@@ -26,6 +26,8 @@ public class AssignDocumentCommandHandlerTests
         _dbContext = Substitute.For<IApplicationDbContext>();
         _tenantContext = Substitute.For<ITenantContext>();
         _blobStorage = Substitute.For<IBlobStorageService>();
+        _blobStorage.VerifyBlobOwnership(
+            Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid>()).Returns(true);
     }
 
     [Test]

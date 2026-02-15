@@ -1,0 +1,263 @@
+{
+  "persona": "QA Lens",
+  "wins": [
+    "Epic 7 introduced zero new test failures — all 10 failing tests are pre-existing from earlier epics (context.md section 11, line 201)",
+    "Pre-epic gate successfully fixed 22 ESLint errors and 87 warnings plus zero tsc errors before starting work (context.md line 26, line 86)",
+    "Experiment E-011 PASS — all quality signals captured with pass/fail data in evidence bundle (context.md line 41)",
+    "Backend domain tests continue passing at 100% (114 passed, 0 failed) demonstrating stable domain logic (context.md line 79)",
+    "Frontend test suite remains clean with 311 tests passing across 51 files with zero failures (context.md line 78)"
+  ],
+  "problems": [
+    "ZERO acceptance criteria verified live across 3 consecutive epics (4, 5, 7) despite writing 284 total commits including 183+ feature/fix commits. Epic 7 demo: 0/25 ACs verified (context.md section 10, line 188-189). Epic 5 demo: 0/16 ACs verified (context.md line 25). Epic 4 demo: code-level verification only (epic-4-demo-2026-02-14.md lines 1-8). The QA verification pipeline is structurally broken — code is written, committed, and merged without running the application once.",
+    "10 pre-existing backend test failures have been normalized across multiple epics with zero investigation or remediation plan (context.md section 11, lines 200-208). Failures span blob storage mocking, stale candidate filtering, validator architecture, and validation logic. These tests have been marked 'pre-existing' in every retro but never triaged as P0/P1/P2 issues.",
+    "Code coverage has NEVER been measured across 6 epics despite CI pipeline containing --collect:'XPlat Code Coverage' configuration since commit ff26cf3 (context.md line 93, ci.yml lines 17-26). Coverage data is generated but never captured in retro evidence. Action A-004 from Epic 5 marked NOT APPLIED and auto-escalates to P0 this epic (context.md line 29, line 33).",
+    "Epic 7 infrastructure work focused exclusively on CLOUD deployment (Azure Bicep, GitHub Actions, azd) but did NOT resolve the LOCAL development infrastructure blocker that prevented demos in Epics 4, 5, and now 7. User feedback: 'I am very annoyed that we still can't do the demo because there are infrastructure still missing to start-up what we have built. This whole epic was about that and now when we want to demo it's still not working.' (context.md section 10, lines 194-199). Scope/expectations mismatch — Epic 7 automated Azure deployment but left local runtime setup unaddressed.",
+    "Functional tests requiring Testcontainers SQL Server are BLOCKED across all epics (context.md line 82). These tests cover critical security scenarios including the 8 mandatory ITenantContext isolation tests (TenantIsolationTests.cs showing 6 endpoints tested, lines in functional test output). Zero functional test execution means zero verification of actual database query filter enforcement.",
+    "Experiment E-010 (Docker Compose fallback eliminates demo BLOCKED) FAILED — docs exist (getting-started.md) but Docker not installed, demo still BLOCKED (context.md line 40). The experiment hypothesis was invalid: documentation alone cannot substitute for infrastructure availability.",
+    "Fix cycle rate increased to 75% (3 of 4 stories required fixes) vs 50% in Epic 5 (context.md line 128, Epic 5 retro line 17). Story 7.3 had a CRITICAL finding (C-1: auto-migration breaks ALL Production-env functional tests) that required emergency fix commit 62b2ee8 (context.md line 115). This indicates pre-implementation quality checks are not catching architectural risks."
+  ],
+  "missing_evidence": [
+    "Backend code coverage percentage — CI generates coverage.cobertura.xml and Summary.txt but this data is never extracted to retro evidence (ci.yml lines 17-26)",
+    "Frontend code coverage percentage — vite.config.ts has coverage configuration (line in grep output) but never executed with --coverage flag (context.md line 91)",
+    "Functional test execution status — Testcontainers tests exist but have been BLOCKED across all epics; no tracking of which tests would pass if infrastructure were available",
+    "Pre-existing test failure triage report — which of the 10 failures are infrastructure-dependent vs actual bugs vs obsolete tests",
+    "Health check endpoint live verification — Story 7.1 created /health and /ready endpoints but never verified them against a running instance (context.md Story 7.1 all ACs BLOCKED)",
+    "Azure deployment smoke test results — Story 7.2 created Bicep templates, 7.3 created CD pipeline, 7.4 created staging environment but zero deployment executions recorded"
+  ],
+  "candidate_actions": [
+    {
+      "id": "QA-001",
+      "title": "Triage and remediate 10 pre-existing backend test failures before Epic 8",
+      "type": "test_gap",
+      "priority": "P0",
+      "rationale": "10 test failures have been normalized across 6+ epics with zero investigation. Tests failing in ValidatorArchitectureTests, blob storage handlers, stale candidate queries, and email validation represent untested code paths that may hide production bugs. Accepting a non-zero test failure baseline violates fundamental QA hygiene and masks new regressions.",
+      "evidence_refs": [
+        "context.md section 11 lines 200-208: 'These 10 tests have been failing since before Epic 7. They are NOT regressions from this epic. They appear to be related to: Blob storage service mocking, Stale candidate filtering, Validator architecture, Validation'",
+        "context.md line 80: 'Backend unit tests: 227 passed, 10 FAILED (all pre-existing, not introduced by Epic 7)'",
+        "Failure list: AllRequestTypes_ShouldHaveValidator_UnlessExempt, Handle_CandidateNotFound_ThrowsNotFoundException, Handle_ValidRequest_AssignsDocumentAndReturnsDto, Handle_WithExistingDocument_DeletesOldBlob, Handle_WithoutExistingDocument_DoesNotDeleteBlob, Validate_EmailTooLong_Fails, Handle_StaleOnlyWithoutStepId_ReturnsAllStaleCandidates, Handle_StaleOnlyWithStepId_ReturnsOnlyStaleCandidatesAtStep, Handle_StaleCandidates_ReturnsPerStepStaleCounts, VerifyBlobOwnership_WithEmptyPath_ReturnsFalse"
+      ],
+      "acceptance_criteria": [
+        "All 10 failing tests categorized as: (1) needs infrastructure fix, (2) actual bug to fix, or (3) obsolete test to remove/rewrite",
+        "Zero backend unit test failures — dotnet test returns 237/237 passed",
+        "Triage report committed to docs/testing/ documenting investigation findings and resolution for each test",
+        "If infrastructure-dependent: tests skipped with [Ignore] attribute and explanation comment pending infrastructure setup",
+        "If actual bugs: bugs fixed and tests passing",
+        "If obsolete: tests removed or rewritten to match current implementation"
+      ],
+      "automation_hints": [
+        "Run each failing test individually with verbose output to capture exact failure reason",
+        "Check test file history with git log to determine when test was written and when it started failing",
+        "For blob storage tests: verify IBlobStorageService mock configuration matches current service interface",
+        "For stale candidate tests: check if Epic 5 overview changes modified the underlying query logic",
+        "For validator test: verify ValidatorArchitectureTests exempt list matches all current commands/queries without validators",
+        "For email validation: check if Validate_EmailTooLong_Fails references correct max length from current validator rules"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Architecture/ValidatorArchitectureTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Commands/UploadDocument/UploadDocumentCommandHandlerTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Queries/GetCandidates/GetCandidatesQueryHandlerTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Commands/CreateCandidate/CreateCandidateCommandValidatorTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Services/BlobOwnershipTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docs/testing/pre-existing-test-failures-triage.md"
+      ],
+      "risk_if_ignored": "Continued normalization of test failures erodes test suite credibility. New failures blend into noise. Production bugs in blob storage ownership verification, candidate filtering, or input validation may ship undetected."
+    },
+    {
+      "id": "QA-002",
+      "title": "Execute and capture code coverage in retro evidence starting Epic 8",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "CI pipeline has generated code coverage data since commit ff26cf3 (ci.yml lines 17-26) but this data is NEVER captured in retro evidence. 6 epics have shipped with 'Code Coverage: Not measured' despite CI running reportgenerator and outputting Summary.txt. Action A-004 from Epic 5 retro NOT APPLIED, auto-escalates to P0 per retro process rules (context.md line 33-34). Without coverage metrics, untested code paths are invisible.",
+      "evidence_refs": [
+        "context.md line 93: 'Code Coverage: Frontend: Not measured — no --coverage flag run; Backend: Not measured — no --collect:XPlat Code Coverage run; Status: A-004 from previous retro NOT APPLIED. This is the 6th epic without coverage data.'",
+        "ci.yml lines 17-26: CI already runs 'dotnet test --collect:XPlat Code Coverage' and generates Summary.txt via reportgenerator",
+        "context.md line 29: 'A-004 | Verify code coverage CI status | P1 | NOT APPLIED'",
+        "context.md line 33: '3 of 7 actions NOT APPLIED (A-004, A-005, A-006). Per process rules, P1 items carried from a previous retro cannot be deferred again — these auto-escalate to P0.'"
+      ],
+      "acceptance_criteria": [
+        "Retro evidence template updated to include 'Code Coverage' section with backend % and frontend % fields",
+        "Backend coverage: CI outputs Summary.txt parsed and line/branch coverage % extracted to retro evidence",
+        "Frontend coverage: npm run test:coverage executed and coverage % extracted to retro evidence",
+        "Minimum coverage thresholds defined (recommend 70% line coverage for both stacks as starting baseline)",
+        "Coverage % trends tracked across retros to detect coverage regression"
+      ],
+      "automation_hints": [
+        "Backend: CI already generates api/artifacts/coverage-report/Summary.txt — add step to .claude/retro/scripts/ to parse this file and extract Line coverage % and Branch coverage %",
+        "Frontend: Add 'test:coverage' script to web/package.json running 'vitest --run --coverage' with output to coverage/coverage-summary.json",
+        "Add coverage parsing to retro evidence collection script (likely .claude/retro/scripts/collect-quality-signals.sh or team-workflow.md evidence checklist)",
+        "Store coverage % in retro context.md under Quality Signals section",
+        "Consider adding coverage trend chart to retro.md output"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/retro/prompts/context-builder.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/web/package.json",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/web/vite.config.ts",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Invisible coverage gaps allow untested code to accumulate. Critical paths may lack test protection. Refactoring becomes risky without coverage safety net. Technical debt compounds silently."
+    },
+    {
+      "id": "QA-003",
+      "title": "Establish local development runtime as Epic 8 prerequisite",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "Zero acceptance criteria verified live across 3 consecutive epics (4, 5, 7) representing 284+ commits including 183+ feature commits. Epic 7 was titled 'Deployment & Infrastructure Automation' but focused exclusively on Azure cloud deployment, not local development infrastructure. User expressed frustration: 'I am very annoyed that we still can't do the demo because there are infrastructure still missing to start-up what we have built. This whole epic was about that' (context.md lines 194-199). The quality verification pipeline is structurally broken — code is merged without running the application ONCE.",
+      "evidence_refs": [
+        "context.md section 10 lines 188-189: 'Total ACs verified: 0, Pass: 0, Fail: 0, Blocked: 25 (all), Demo method: BLOCKED — No SQL Server, Docker, or Azure subscription available'",
+        "context.md line 192: 'THIS IS THE 3rd CONSECUTIVE BLOCKED DEMO (Epics 4, 5, 7)'",
+        "context.md lines 194-199: User feedback expressing frustration that infrastructure epic did not resolve local runtime blockers",
+        "epic-4-demo-2026-02-14.md lines 1-8: 'Demo method: Code-level verification... The application could not be started for a live walkthrough. The API requires SQL Server, and the environment is Linux without Docker or SQL Server available.'",
+        "context.md line 25: 'Backend tests and demo BLOCKED — .NET 10 runtime not installed. 17 new backend tests written but never executed. Demo verified 0/16 ACs.'"
+      ],
+      "acceptance_criteria": [
+        "Docker Compose verified working on development machine OR SQL Server installed natively OR alternative database backend implemented (e.g., SQLite for dev mode)",
+        "README.md or docs/getting-started.md updated with step-by-step local setup that works on Linux/macOS/Windows",
+        "Pre-epic infrastructure readiness gate (team-workflow.md lines 14-21) executed and passes — app starts successfully",
+        "Demo walkthrough for Epic 8 verifies 50%+ ACs using running application (not code-level verification)",
+        "Functional tests (Testcontainers-based) execute successfully in local environment"
+      ],
+      "automation_hints": [
+        "If using Docker Compose: install Docker runtime, verify docker-compose.yml works, document docker-compose up command",
+        "If using native SQL Server: document installation for target OS, create seed data script",
+        "If switching to SQLite for dev: add Microsoft.EntityFrameworkCore.Sqlite package, add dev-mode database provider switch in DependencyInjection.cs",
+        "Update team-workflow.md infrastructure readiness gate (lines 14-21) to fail if app cannot start",
+        "Add smoke test script (scripts/smoke-test.sh) that starts app, curls /health, verifies 200 response, shuts down"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docker-compose.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/README.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docs/getting-started.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Infrastructure/DependencyInjection.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Epic 8 will ship another 50+ commits with zero live verification. Integration bugs, runtime errors, configuration issues, and UI/UX problems remain undetected. User frustration escalates. Technical debt from untested features compounds across future epics."
+    },
+    {
+      "id": "QA-004",
+      "title": "Add cross-recruitment isolation test for GetRecruitmentOverview endpoint",
+      "type": "test_gap",
+      "priority": "P0",
+      "rationale": "Action A-005 from Epic 5 retro NOT APPLIED — TenantIsolationTests.cs not modified in Epic 7 (context.md line 30). Epic 5 added GetRecruitmentOverview endpoint but did not add the corresponding ITenantContext isolation test. The 8 mandatory security tests require coverage of ALL recruitment-scoped endpoints. Missing test leaves cross-recruitment data leakage vulnerability undetected. Auto-escalates to P0 per retro process (context.md line 34).",
+      "evidence_refs": [
+        "context.md line 30: 'A-005 | Cross-recruitment overview test | P1 | NOT APPLIED — TenantIsolationTests.cs not modified in Epic 7'",
+        "context.md line 34: 'Per process rules, P1 items carried from a previous retro cannot be deferred again — these auto-escalate to P0.'",
+        "Epic 5 retro line 33: 'Missing cross-recruitment test — TenantIsolationTests covers 6 endpoints but not GetRecruitmentOverview'",
+        "Functional test output shows existing tests: GetOverview_NonMember_ReturnsForbidden, GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden"
+      ],
+      "acceptance_criteria": [
+        "TenantIsolationTests.cs contains GetRecruitmentOverview_ForOtherRecruitment_ThrowsForbidden test",
+        "Test creates two recruitments with different team members",
+        "Test verifies user from Recruitment A receives 403 Forbidden when requesting overview for Recruitment B",
+        "Test executes successfully (requires functional test infrastructure from QA-003)",
+        "All 8 mandatory ITenantContext isolation tests present and passing"
+      ],
+      "automation_hints": [
+        "Copy pattern from existing TenantIsolationTests.cs tests (GetCandidateById_ForOtherRecruitment_ThrowsForbidden, RecordOutcome_ForOtherRecruitment_ThrowsForbidden)",
+        "Test structure: create recruitment A with user 1, create recruitment B with user 2, authenticate as user 1, GET /api/recruitments/{recruitmentB_id}/overview, assert 403",
+        "Verify test fails if ITenantContext check removed from GetRecruitmentOverviewQueryHandler",
+        "Add test to architecture test suite that verifies all endpoints returning recruitment-scoped data have corresponding isolation test"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.FunctionalTests/Security/TenantIsolationTests.cs"
+      ],
+      "risk_if_ignored": "Cross-recruitment data leakage vulnerability in overview endpoint. User from Recruitment A could access candidate counts, workflow steps, and outcome statistics for Recruitment B. Violates tenant isolation security model."
+    },
+    {
+      "id": "QA-005",
+      "title": "Add structured logging for ForbiddenAccessException in CustomExceptionHandler",
+      "type": "security_hardening",
+      "priority": "P0",
+      "rationale": "Action A-006 from Epic 5 retro NOT APPLIED — CustomExceptionHandler.cs not modified in Epic 7 (context.md line 31). ForbiddenAccessException is thrown when users attempt cross-recruitment access but no audit trail is created. Cannot detect reconnaissance attacks, privilege escalation attempts, or misconfigured clients. Security monitoring blind spot. Auto-escalates to P0 per retro process (context.md line 34).",
+      "evidence_refs": [
+        "context.md line 31: 'A-006 | Structured logging for auth denials | P1 | NOT APPLIED — CustomExceptionHandler.cs not modified in Epic 7'",
+        "context.md line 34: 'Per process rules, P1 items carried from a previous retro cannot be deferred again — these auto-escalate to P0.'",
+        "Epic 5 retro line 37: 'No authorization denial logging — ForbiddenAccessException thrown with no audit trail. Cannot detect cross-recruitment probing.'",
+        "Functional test output shows ForbiddenAccessException_Returns403WithProblemDetails test exists"
+      ],
+      "acceptance_criteria": [
+        "CustomExceptionHandler.cs logs ForbiddenAccessException with structured fields: userId, requestedRecruitmentId, requestPath, timestamp",
+        "Log level: Warning (security event but not error)",
+        "Log message includes: 'Authorization denied: User {userId} attempted to access recruitment {recruitmentId}'",
+        "Test added verifying log entry created when ForbiddenAccessException thrown",
+        "Log output validated in Application Insights or configured log sink"
+      ],
+      "automation_hints": [
+        "Add ILogger<CustomExceptionHandler> dependency injection",
+        "In TryHandleAsync for ForbiddenAccessException: _logger.LogWarning('Authorization denied: User {UserId} attempted to access recruitment {RecruitmentId} at {Path}', httpContext.User.Identity?.Name, extractedRecruitmentId, httpContext.Request.Path)",
+        "Extract recruitmentId from exception or request path",
+        "Add unit test mocking ILogger and verifying LogWarning called with correct parameters",
+        "Consider adding alerting rule for high frequency of ForbiddenAccessException (potential attack)"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Infrastructure/Exceptions/CustomExceptionHandler.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.FunctionalTests/Infrastructure/CustomExceptionHandlerTests.cs"
+      ],
+      "risk_if_ignored": "Authorization denials are silent. Cannot detect malicious actors probing recruitment boundaries. No audit trail for security investigations. Compliance gap for access logging requirements."
+    },
+    {
+      "id": "QA-006",
+      "title": "Execute health check endpoints against live deployment in Epic 8",
+      "type": "test_gap",
+      "priority": "P1",
+      "rationale": "Story 7.1 created /health liveness and /ready readiness endpoints with 7 comprehensive tests (context.md lines 99-102, Story 7.1 section). All 5 acceptance criteria for Story 7.1 marked BLOCKED — endpoints never verified against running instance (epic-7-demo lines 19-28). Health checks are critical production monitoring contract. Untested health checks can fail silently causing orchestrator issues (Kubernetes liveness/readiness probe failures, Azure App Service health ping errors).",
+      "evidence_refs": [
+        "context.md lines 54-58: Story 7.1 implementation commits (2f4704d, 520fb7e, 51b226f) creating /health and /ready endpoints with tests",
+        "epic-7-demo-2026-02-15.md lines 19-28: All Story 7.1 ACs marked BLOCKED — 'API cannot start (no DB)'",
+        "context.md lines 99-102: Story 7.1 review findings — I-1 fixed weak readiness test assertions, M-1 strengthened auth test",
+        "Functional test output shows HealthCheckEndpointTests.cs with ReadyEndpoint_Returns503_WhenDatabaseIsUnreachable test"
+      ],
+      "acceptance_criteria": [
+        "Health check endpoints verified against local running instance (requires QA-003 local runtime)",
+        "Smoke test script added to scripts/smoke-test.sh verifying: GET /health returns 200, GET /ready returns 200 (DB connected), GET /ready returns 503 (DB disconnected)",
+        "Health check endpoints deployed to Azure staging environment (Epic 7 Story 7.4 staging environment)",
+        "CD pipeline includes post-deployment health check verification step",
+        "Monitoring dashboard configured with /health and /ready probe alerts"
+      ],
+      "automation_hints": [
+        "Once QA-003 (local runtime) resolved: curl http://localhost:5001/health and verify 200 response",
+        "Test DB connectivity failure: stop SQL Server container, curl /ready, verify 503 response, restart container",
+        "Add health check verification to .github/workflows/cd.yml post-deployment: curl staging /health && curl staging /ready",
+        "Configure Azure App Service health check path to /health in Bicep template",
+        "Add Application Insights availability test pinging /health every 5 minutes"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/scripts/smoke-test.sh",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/cd.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/infra/core/host/web.bicep"
+      ],
+      "risk_if_ignored": "Health check endpoints may have runtime issues (dependency injection errors, database connection string problems, timeout configuration) that unit tests don't catch. Production orchestrator may kill healthy instances or keep unhealthy instances alive due to misconfigured probes."
+    },
+    {
+      "id": "QA-007",
+      "title": "Add pre-implementation architectural risk checklist to writing-plans skill",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Fix cycle rate increased to 75% (3 of 4 stories) in Epic 7 vs 50% in Epic 5 (context.md line 128). Story 7.3 had CRITICAL finding C-1: auto-migration breaks ALL Production-env functional tests, requiring emergency fix 62b2ee8 (context.md line 115). This architectural risk was not caught during planning phase. The writing-plans skill should include a structured pre-implementation risk assessment for infrastructure, state mutations, and cross-cutting concerns.",
+      "evidence_refs": [
+        "context.md line 128: 'Fix cycle rate: 75% (3 of 4 stories required fixes). Story 7.4 was only improvements, not blocking.'",
+        "context.md line 115: 'Critical | C-1: Auto-migration breaks ALL Production-env functional tests | Fixed: Database:AutoMigrate config guard (62b2ee8)'",
+        "context.md lines 139-144: Anti-patterns from Story 7.3: 'C-1 auto-migration broke Production-env tests — guard startup logic with config flag'",
+        "Epic 5 retro line 17: Fix cycle rate was 50% (1/2 stories) — trend is worsening"
+      ],
+      "acceptance_criteria": [
+        "Writing-plans skill template updated with 'Architectural Risk Assessment' section",
+        "Risk checklist includes: database state mutations, production vs dev environment differences, startup/shutdown side effects, external service dependencies, breaking changes to contracts",
+        "Dev Agent required to answer each risk question in implementation plan",
+        "Review Agent verifies risk assessment section present and non-empty",
+        "Stories with Critical findings in Epic 8 reference missing risk assessment items from planning phase"
+      ],
+      "automation_hints": [
+        "Update .claude/skills/writing-plans.md template to include: '## Architectural Risk Assessment' section with checklist",
+        "Checklist items: Does this change modify database on startup? Does behavior differ between Development and Production environments? Are there side effects beyond the aggregate boundary? Does this change a public contract (API endpoint, DTO shape, event schema)?",
+        "Add verification step to team-workflow.md Review Agent checklist: 'Implementation plan contains Architectural Risk Assessment section with all questions answered'",
+        "Track correlation between missing risk assessment and Critical findings in retro"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/skills/writing-plans.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Critical architectural issues continue to be discovered during code review instead of planning. Fix cycles remain high. Emergency fixes required post-implementation. Stories take longer due to rework."
+    }
+  ]
+}

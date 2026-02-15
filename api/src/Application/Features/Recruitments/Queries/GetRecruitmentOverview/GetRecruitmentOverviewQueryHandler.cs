@@ -60,7 +60,7 @@ public class GetRecruitmentOverviewQueryHandler : IRequestHandler<GetRecruitment
                     !c.Outcomes.Any(o => o.WorkflowStepId == c.CurrentWorkflowStepId)),
                 StaleCount = g.Count(c =>
                     !c.Outcomes.Any(o => o.WorkflowStepId == c.CurrentWorkflowStepId) &&
-                    c.CreatedAt < staleCutoff),
+                    c.DateApplied < staleCutoff),
                 PassCount = g.Count(c =>
                     c.Outcomes.Any(o => o.WorkflowStepId == c.CurrentWorkflowStepId &&
                                        o.Status == OutcomeStatus.Pass)),

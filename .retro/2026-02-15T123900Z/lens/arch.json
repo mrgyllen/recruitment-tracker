@@ -1,0 +1,224 @@
+{
+  "persona": "Architecture Lens",
+  "wins": [
+    "Deferred A-007 completed with rigorous architectural test enforcing aggregate root boundaries — AggregateRootArchitectureTests.cs validates that IApplicationDbContext exposes no DbSets for owned entities, preventing DbContext bypass anti-pattern (commit 4adb83c, evidence section 2)",
+    "Auto-migration config guard (Database:AutoMigrate) demonstrates proper separation of startup concerns — environment-agnostic infrastructure startup logic is now testable without side effects, fixing C-1 (commit 62b2ee8, evidence section 4)",
+    "Infrastructure-as-Code fully parameterized with explicit SKU defaults — main.bicep declares concrete SKU defaults (B1, Basic, Standard_LRS) preventing null-propagation ARM errors and making deployment cost predictable (evidence section 2, review finding I-1)",
+    "Health check architecture correctly implements liveness/readiness separation — /health has no dependencies (Predicate = _ => false), /ready uses tagged DB check (tags: 'ready'), both endpoints bypass auth via .AllowAnonymous() per Kubernetes/Azure best practices (Program.cs lines 51-59, evidence section 2)",
+    "Bicep module cohesion follows single-responsibility principle — storage-secret.bicep, sqlserver.bicep, and web.bicep each encapsulate one concern with clear input contracts (@description decorators) and stable outputs (evidence sections 2, 4)"
+  ],
+  "problems": [
+    "Startup pipeline lacks configuration schema validation — Database:AutoMigrate config guard defaults to true with no schema enforcement. If a typo ('Database:AutoMigrat') or wrong value type ('yes' instead of bool) is provided, the application silently falls back to default=true, potentially running migrations when disabled was intended. No static validation or startup logging confirms the resolved config value (Program.cs line 27, evidence section 4)",
+    "Production-environment test factory pattern is fragile — tests using UseEnvironment('Production') trigger non-Development startup paths including auto-migration. The fix (UseSetting('Database:AutoMigrate', 'false')) is a manual opt-out per test factory, creating a maintenance burden. Every new Production-environment test must remember this incantation or break (evidence section 4, commit 62b2ee8)",
+    "Auto-migration startup logic is not instrumented — Program.cs logs 'Applying database migrations...' and 'Database migrations applied successfully' but does NOT log when auto-migration is SKIPPED (config guard = false). Operations teams cannot distinguish between 'auto-migration disabled by config' and 'auto-migration enabled but no pending migrations' from runtime logs alone (Program.cs lines 27-35, evidence section 4)",
+    "Ten pre-existing backend unit test failures remain uninvestigated for 6+ epics — failures span Blob storage mocking (Handle_CandidateNotFound, Handle_ValidRequest_AssignsDocumentAndReturnsDto, Handle_WithExistingDocument_DeletesOldBlob, Handle_WithoutExistingDocument_DoesNotDeleteBlob, VerifyBlobOwnership_WithEmptyPath_ReturnsFalse), stale candidate filtering (3 tests), validator architecture (AllRequestTypes_ShouldHaveValidator_UnlessExempt), and validation (Validate_EmailTooLong_Fails). Epic 7 is infrastructure-focused and did not introduce these, but their persistence signals test suite decay (evidence section 3, section 11)",
+    "Code coverage remains unmeasured despite 6 epics and P1 action item A-004 — no frontend --coverage flag, no backend --collect:'XPlat Code Coverage', no CI enforcement. A-004 from Epic 5 retro auto-escalates to P0 per process rules (must not defer P1 items twice) but coverage was not added (evidence section 3)",
+    "CD pipeline runs full test suite (dotnet test, npm run test) duplicating CI work — the cd.yml workflow (lines 44-55) re-runs domain tests, unit tests, and functional tests that already passed in CI. This adds deployment latency and risk (Testcontainers SQL Server dependency could block deployment). Review finding I-1 acknowledged but not fixed (evidence section 4, .github/workflows/cd.yml)",
+    "Bicep infrastructure lacks automated teardown verification — Story 7.2 AC 'azd down removes all provisioned resources' and Story 7.4 AC 'staging teardown leaves no orphan resources' are untestable without actual Azure subscription. The Bicep templates have no idempotency tests, no orphan detection scripts, and no CI-enforced schema validation (evidence sections 1, 10)"
+  ],
+  "missing_evidence": [
+    "Configuration schema validation — no appsettings.schema.json or startup validation logic found. Cannot verify if Database:AutoMigrate, Database:RetryCount, Overview:StaleDays, etc. are validated at startup or fail-fast on misconfiguration",
+    "Startup pipeline logging coverage — Program.cs conditionals (IsDevelopment vs else, Database:AutoMigrate guard) lack comprehensive logging. Missing evidence: are all configuration-driven branches instrumented for observability?",
+    "EF Core migration idempotency verification — no test evidence that MigrateAsync is safe to run repeatedly, safe during concurrent deployments (multi-instance scale), or safe during rollback scenarios (Story 7.3 AC 'rollback to previous commit re-deploys')",
+    "Blob Storage SDK mocking strategy — 10 pre-existing test failures reference blob storage operations, but no evidence of how IBlobStorageService is mocked in unit tests. Are tests using real Azure.Storage.Blobs SDK stubs? Testcontainers Azurite? In-memory fake?",
+    "Health check dependency graph — /ready endpoint is tagged with 'ready' and checks DB via AddDbContextCheck<ApplicationDbContext>. Missing evidence: does the DB check verify schema readiness (migrations applied) or just connectivity? Does it respect tenant isolation?"
+  ],
+  "candidate_actions": [
+    {
+      "id": "ARCH-001",
+      "title": "Add configuration schema validation and startup logging for all config-driven branches",
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "rationale": "The Database:AutoMigrate config guard (C-1 fix) defaults to true with no type/schema validation. Typos or wrong value types silently fall back to defaults, creating production risk. Startup pipeline also lacks observability — no logging when auto-migration is skipped, making operational troubleshooting impossible.",
+      "evidence_refs": [
+        "Program.cs line 27: app.Configuration.GetValue('Database:AutoMigrate', true)",
+        "Evidence section 4: C-1 fix commit 62b2ee8",
+        "Missing evidence: Configuration schema validation",
+        "Missing evidence: Startup pipeline logging coverage"
+      ],
+      "acceptance_criteria": [
+        "appsettings.json declares Database:AutoMigrate with JSON schema type constraint (boolean)",
+        "Program.cs logs resolved Database:AutoMigrate value before conditional: 'Auto-migration enabled: {enabled}'",
+        "Program.cs logs when auto-migration is SKIPPED: 'Auto-migration disabled via configuration'",
+        "Startup validation fails-fast if Database:AutoMigrate is non-boolean (e.g., 'yes', 'true' string, 1)",
+        "Add integration test: UseSettings('Database:AutoMigrate', 'invalid') throws on startup"
+      ],
+      "automation_hints": [
+        "Use IConfiguration.GetValue<bool>('Database:AutoMigrate', true) with explicit type parameter",
+        "Add logger.LogInformation before conditional: logger.LogInformation('Auto-migration enabled: {Enabled}', autoMigrateEnabled)",
+        "Add else branch: logger.LogInformation('Auto-migration disabled via configuration')",
+        "Consider FluentValidation or Options pattern validation for configuration schema enforcement"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Web/Program.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Web/appsettings.json",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Functional.Tests/Configuration/ConfigurationValidationTests.cs (new)"
+      ],
+      "risk_if_ignored": "Misconfigured Database:AutoMigrate (typo, wrong type) silently defaults to true, causing unexpected migrations in test/staging/production. Operations teams cannot diagnose skipped migrations from logs, leading to prolonged outages."
+    },
+    {
+      "id": "ARCH-002",
+      "title": "Create reusable test fixture for Production-environment WebApplicationFactory with auto-migration disabled",
+      "type": "refactor",
+      "priority": "P1",
+      "rationale": "Every Production-environment test factory must manually call UseSetting('Database:AutoMigrate', 'false') or break. This was the root cause of C-1 (all functional tests failing). The pattern is repeated in HealthCheckEndpointTests and DevAuthenticationTests, creating a maintenance burden and risk of future regressions.",
+      "evidence_refs": [
+        "Commit 62b2ee8: Updated all Production-environment test factories",
+        "Evidence section 4: C-1 — Auto-migration breaks ALL Production-env functional tests",
+        "Problem: Production-environment test factory pattern is fragile"
+      ],
+      "acceptance_criteria": [
+        "Create ProductionTestWebApplicationFactory<TProgram> base class in Functional.Tests/Common/",
+        "Base class encapsulates UseEnvironment('Production') + UseSetting('Database:AutoMigrate', 'false')",
+        "Refactor HealthCheckEndpointTests and DevAuthenticationTests to inherit from base class",
+        "Add ArchUnit-style test: all WebApplicationFactory subclasses using Production env must disable auto-migration",
+        "Document pattern in architecture/testing-standards.md: 'Production-env test factories must disable auto-migration'"
+      ],
+      "automation_hints": [
+        "Create api/tests/Functional.Tests/Common/ProductionTestWebApplicationFactory.cs",
+        "Use generic constraint: where TProgram : class",
+        "Override ConfigureWebHost: builder.UseEnvironment('Production').UseSetting('Database:AutoMigrate', 'false')",
+        "Search for UseEnvironment('Production') in test files to find all candidates for refactoring"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Functional.Tests/Common/ProductionTestWebApplicationFactory.cs (new)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Functional.Tests/Endpoints/HealthCheckEndpointTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Functional.Tests/Authentication/DevAuthenticationTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/_bmad-output/planning-artifacts/architecture/testing-standards.md"
+      ],
+      "risk_if_ignored": "Future Production-environment tests forget to disable auto-migration, causing random test failures when migrations are pending. Developers waste time debugging 'works in Development, fails in Production-env tests' issues."
+    },
+    {
+      "id": "ARCH-003",
+      "title": "Investigate and fix 10 pre-existing backend unit test failures",
+      "type": "architecture_alignment",
+      "priority": "P0",
+      "rationale": "Ten unit tests have failed for 6+ epics without investigation. These failures span critical features (Blob storage, stale candidate detection, validation). Tolerating persistent test failures normalizes failure and erodes trust in the test suite. Evidence section 11 notes these are NOT regressions from Epic 7 but pre-existing decay.",
+      "evidence_refs": [
+        "Evidence section 3: Backend unit tests — 227 passed, 10 FAILED (all pre-existing)",
+        "Evidence section 11: 10 Pre-Existing Backend Test Failures",
+        "Problem: Ten pre-existing backend unit test failures remain uninvestigated for 6+ epics"
+      ],
+      "acceptance_criteria": [
+        "All 10 pre-existing test failures are investigated: AllRequestTypes_ShouldHaveValidator_UnlessExempt, Handle_CandidateNotFound_ThrowsNotFoundException, Handle_ValidRequest_AssignsDocumentAndReturnsDto, Handle_WithExistingDocument_DeletesOldBlob, Handle_WithoutExistingDocument_DoesNotDeleteBlob, Validate_EmailTooLong_Fails, Handle_StaleOnlyWithoutStepId_ReturnsAllStaleCandidates, Handle_StaleOnlyWithStepId_ReturnsOnlyStaleCandidatesAtStep, Handle_StaleCandidates_ReturnsPerStepStaleCounts, VerifyBlobOwnership_WithEmptyPath_ReturnsFalse",
+        "Each failure root cause is documented: infrastructure mocking issue, stale test, or production bug",
+        "All 10 tests either fixed or explicitly disabled with [Ignore('reason')] and tech debt issue created",
+        "CI enforces zero unexpected test failures: dotnet test --no-build must return exit code 0",
+        "Retro evidence captures test count delta: 'Backend unit tests: X passed, Y failed (Y down from 10)'"
+      ],
+      "automation_hints": [
+        "Run dotnet test api/tests/Application.UnitTests --filter 'FullyQualifiedName~AllRequestTypes_ShouldHaveValidator_UnlessExempt' --logger 'console;verbosity=detailed'",
+        "Repeat for each failing test to capture stack trace and assertion failure details",
+        "Search codebase for IBlobStorageService mock configuration",
+        "Check if Epic 5's overview changes affected stale candidate query logic",
+        "Document findings in tech debt issue per test, link from [Ignore] attribute if not fixable immediately"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocumentToCandidateTests.cs (likely)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Overview/Queries/GetRecruitmentOverviewTests.cs (likely)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Validators/* (likely)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Common/Behaviours/* (validator architecture test)"
+      ],
+      "risk_if_ignored": "Persistent test failures mask new regressions. Developers cannot trust 'dotnet test' results. Production bugs in blob storage, validation, or stale candidate detection may already exist but are hidden by broken tests. CI red-green feedback loop is meaningless if baseline is 'always 10 failures'."
+    },
+    {
+      "id": "ARCH-004",
+      "title": "Add code coverage measurement to CI and retro evidence (escalated A-004)",
+      "type": "guideline_gap",
+      "priority": "P0",
+      "rationale": "A-004 from Epic 5 retro (P1) was not applied in Epic 7. Per process rules (evidence section 1b), P1 items cannot be deferred twice — they auto-escalate to P0. This is the 6th epic without coverage data. The architectural test (AggregateRootArchitectureTests.cs) validates structure but not behavior coverage.",
+      "evidence_refs": [
+        "Evidence section 1b: A-004 from previous retro NOT APPLIED",
+        "Evidence section 3: Code Coverage — Frontend: Not measured, Backend: Not measured",
+        "Process rule: P1 items carried from a previous retro cannot be deferred again",
+        "Evidence section 10: 3rd consecutive blocked demo — quality signals incomplete without coverage"
+      ],
+      "acceptance_criteria": [
+        "CI workflow runs: dotnet test --collect:'XPlat Code Coverage' --results-directory ./coverage",
+        "CI workflow runs: npm run test -- --coverage --coverageDirectory=./coverage",
+        "Coverage XML reports are archived as GitHub Actions artifacts",
+        "Retro evidence template updated: Code Coverage section must include % lines/branches covered",
+        ".claude/process/team-workflow.md documents coverage as mandatory quality signal",
+        "CI enforces minimum coverage thresholds (e.g., 70% lines, 60% branches) or fails build"
+      ],
+      "automation_hints": [
+        "Add to .github/workflows/ci.yml after dotnet test: --collect:'XPlat Code Coverage' --results-directory ./TestResults",
+        "Add step: uses: actions/upload-artifact@v4 with path: ./TestResults/**/*.cobertura.xml",
+        "Add to web CI: npm run test -- --coverage --coverageReporters=cobertura --coverageDirectory=./coverage",
+        "Install coverage tool: dotnet tool install --global dotnet-coverage",
+        "Generate summary: dotnet coverage merge -o merged.cobertura.xml -f cobertura ./TestResults/**/*.cobertura.xml"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/ci.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/hooks/retro-evidence-template.md (likely)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/web/package.json (add coverage script if missing)"
+      ],
+      "risk_if_ignored": "Architectural compliance tests (AggregateRootArchitectureTests.cs) verify structure but not behavior. Untested code paths (e.g., auto-migration skipped branch, health check failure paths) accumulate. Coverage blind spots allow regressions to merge. Retro quality assessment remains incomplete for 7th consecutive epic."
+    },
+    {
+      "id": "ARCH-005",
+      "title": "Remove duplicate test execution from CD pipeline",
+      "type": "refactor",
+      "priority": "P2",
+      "rationale": "The CD workflow (cd.yml lines 44-55) runs dotnet test and npm run test, duplicating work already done in CI. This adds deployment latency, wastes GitHub Actions minutes, and creates deployment risk (Testcontainers SQL Server dependency in functional tests could block production deploys). Review finding I-1 acknowledged this but did not fix.",
+      "evidence_refs": [
+        ".github/workflows/cd.yml lines 44-55: dotnet test api/api.slnx --no-build, npm run test",
+        "Evidence section 4: Story 7.3 review finding I-1 — CD runs Testcontainers tests (pipeline risk)",
+        "Problem: CD pipeline runs full test suite duplicating CI work"
+      ],
+      "acceptance_criteria": [
+        "CD workflow removes dotnet test and npm run test steps",
+        "CD workflow enforces CI prerequisite: only deploys if CI passed on the same commit SHA",
+        "Deployment gate verifies CI workflow conclusion = 'success' via GitHub API before azd deploy",
+        "CD logs: 'CI passed for commit {sha}, proceeding with deployment'",
+        "CD documentation explains: 'Tests run in CI only; CD verifies CI passed then deploys'"
+      ],
+      "automation_hints": [
+        "Remove lines 44-55 from cd.yml (dotnet restore/build/test, npm ci/build/test)",
+        "Add step before azd deploy: gh run list --workflow=ci.yml --branch=$GITHUB_REF --status=success --limit=1 --json=conclusion",
+        "Use gh api to verify CI run exists for current commit SHA and status = success",
+        "Fail deployment if CI did not pass: exit 1 with message 'CI must pass before deployment'",
+        "Document in docs/deployment-guide.md: CD assumes CI quality gates passed"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/cd.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docs/deployment-guide.md"
+      ],
+      "risk_if_ignored": "Deployment latency remains high. Testcontainers SQL Server dependency could block emergency production deploys if Docker registry is unreachable. GitHub Actions minutes wasted on redundant test execution. No clear separation of concerns between CI (quality gate) and CD (deployment)."
+    },
+    {
+      "id": "ARCH-006",
+      "title": "Add Bicep schema validation and orphan resource detection to CI",
+      "type": "architecture_alignment",
+      "priority": "P2",
+      "rationale": "Story 7.2 AC 'azd down removes all provisioned resources' and Story 7.4 AC 'staging teardown leaves no orphan resources' are untestable without an Azure subscription. Bicep templates have no CI-enforced linting, no schema validation, and no idempotency tests. The 3rd consecutive blocked demo (evidence section 10) highlights the infrastructure verification gap.",
+      "evidence_refs": [
+        "Evidence section 1: Story 7.2 AC 'provisioning + teardown', Story 7.4 AC 'no orphans'",
+        "Evidence section 10: 3rd consecutive BLOCKED demo — no Azure subscription",
+        "Problem: Bicep infrastructure lacks automated teardown verification",
+        "main.bicep, sqlserver.bicep, storage-secret.bicep, web.bicep (evidence section inspection)"
+      ],
+      "acceptance_criteria": [
+        "CI runs: az bicep build --file api/infra/main.bicep to validate syntax",
+        "CI runs: az deployment sub validate --template-file api/infra/main.bicep --parameters @api/infra/main.parameters.json --location westeurope",
+        "CI fails if Bicep linting produces warnings (use bicep lint --diagnostics-format sarif)",
+        "Add script: .github/scripts/detect-orphan-resources.sh that parses azd down output for lingering resource groups",
+        "Document in docs/deployment-guide.md: 'Run azd down after testing to avoid orphan resources; verify with az group list'"
+      ],
+      "automation_hints": [
+        "Install Azure CLI in CI: uses: azure/login@v1 (read-only mode, no deploy)",
+        "Add step: az bicep build --file api/infra/main.bicep --outfile /dev/null (syntax check only)",
+        "Add step: az deployment sub validate --template-file api/infra/main.bicep --location westeurope --parameters api/infra/main.parameters.json",
+        "Use az bicep lint or PSRule.Rules.Azure for policy enforcement (naming conventions, tagging, SKU restrictions)",
+        "Mock azd down in test: verify resource group, storage account, SQL server, Key Vault all have matching tags (azd-env-name) for cleanup"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/ci.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/scripts/validate-bicep.sh (new)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docs/deployment-guide.md"
+      ],
+      "risk_if_ignored": "Bicep syntax errors, parameter mismatches, or ARM deployment failures are only discovered during actual deployment (azd up), wasting time. Orphan resources (zombie storage accounts, SQL databases) accumulate in Azure subscriptions, causing cost leakage. No feedback loop for Bicep quality without manual testing."
+    }
+  ]
+}

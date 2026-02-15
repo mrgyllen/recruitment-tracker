@@ -98,7 +98,7 @@ Developer pushes to main
 ### Deploy to Staging (Automatic)
 
 Every push to `main` triggers the CD pipeline, which deploys to staging automatically. The pipeline:
-1. Builds and tests both API and frontend
+1. Builds API and frontend (tests run in CI only — CD focuses on deployment)
 2. Authenticates with Azure via OIDC
 3. Deploys to the staging environment via `azd deploy`
 4. Verifies deployment health (retries for up to 60 seconds)
@@ -131,14 +131,48 @@ Both endpoints should return HTTP 200 with `Healthy` status.
 
 ### Rollback
 
-To roll back a deployment, re-run the CD pipeline for the previous known-good commit:
+**Application rollback:**
 
 1. Go to GitHub Actions > CD workflow
 2. Click "Run workflow"
-3. Use the branch/ref of the last known-good state
-4. The pipeline rebuilds and redeploys that version
+3. Use the branch/ref of the last known-good commit
+4. Select the target environment (staging or production)
+5. The pipeline rebuilds and redeploys that version
+6. Verify health checks pass: `curl <app-url>/health` and `curl <app-url>/ready`
 
-Database rollback: There is no automatic reverse-migration. If a migration introduced a breaking schema change, create a new forward migration that reverts the change and deploy it normally.
+**Database rollback (forward-only migrations):**
+
+EF Core migrations are forward-only. If a migration introduced a breaking schema change:
+
+1. Create a new migration that reverts the change: `dotnet ef migrations add RevertBreakingChange`
+2. Test the revert migration in staging first
+3. Deploy the revert migration normally via CD
+
+**Database point-in-time restore (data recovery):**
+
+Azure SQL supports Point-in-Time Restore (PITR) with 7-day retention:
+
+```bash
+# Restore to a specific point in time
+az sql db restore \
+  --dest-name apiDb-restored \
+  --resource-group rg-staging \
+  --server <sql-server-name> \
+  --name apiDb \
+  --time "2026-02-15T10:00:00Z"
+```
+
+After restoring, verify data integrity and swap the restored database into the application configuration.
+
+### Recovery Targets
+
+| Target | Staging | Production |
+|--------|---------|------------|
+| RTO (Recovery Time Objective) | 2 hours | 1 hour |
+| RPO (Recovery Point Objective) | 1 hour | 5 minutes |
+| Backup retention | 7 days (PITR) | 7 days (PITR) |
+
+These targets assume single-instance App Service with Azure SQL built-in backups. For stricter RPOs, configure long-term retention (LTR) policies on the SQL database.
 
 ## Override Default SKUs
 

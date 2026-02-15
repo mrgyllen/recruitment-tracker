@@ -41,17 +41,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: web/package-lock.json
 
-      # Build and test API
+      # Build API and web (tests run in CI only — CD focuses on deployment)
       - run: dotnet restore api/api.slnx
       - run: dotnet build api/api.slnx --no-restore
-      - run: dotnet test api/api.slnx --no-build
-
-      # Build and test web
       - run: npm ci
         working-directory: web
       - run: npm run build
-        working-directory: web
-      - run: npm run test -- --run
         working-directory: web
 
       # Deploy via azd (azure.yaml is in api/)

@@ -82,7 +82,7 @@ public class GetCandidatesQueryHandler(
             filtered = filtered.Where(c =>
                 c.CurrentWorkflowStepId != null &&
                 !c.Outcomes.Any(o => o.WorkflowStepId == c.CurrentWorkflowStepId) &&
-                c.CreatedAt < staleCutoff);
+                c.DateApplied < staleCutoff);
         }
 
         var filteredList = filtered.ToList();

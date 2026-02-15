@@ -1,0 +1,568 @@
+{
+  "run_id": "2026-02-15T123900Z",
+  "scope": {
+    "level": "epic",
+    "items": [
+      { "id": "A-007", "title": "Aggregate root architecture test (deferred from Epic 5)" },
+      { "id": "7.1", "title": "Health Check Endpoints" },
+      { "id": "7.2", "title": "Azure Infrastructure as Code" },
+      { "id": "7.3", "title": "CI/CD Pipeline with Auto-Migration" },
+      { "id": "7.4", "title": "Staging Environment" }
+    ],
+    "git": {
+      "base": "3414c38",
+      "head": "edea2da"
+    }
+  },
+  "summary": {
+    "wins": [
+      "Complete Azure deployment infrastructure delivered: Bicep IaC (parameterized SKUs, Key Vault, Blob Storage), CI/CD pipeline with OIDC federated credentials, staging/production environment isolation, health check endpoints — all 4 stories done in ~50 minutes",
+      "Zero new test failures or regressions introduced — 311 frontend tests pass, 114 domain tests pass, zero tsc errors, zero ESLint warnings. Pre-epic gate fixed 22 ESLint errors (bf38a64)",
+      "Critical auto-migration bug (C-1) caught during review and fixed before merge — Database:AutoMigrate config guard prevents Production-env test breakage (62b2ee8)",
+      "Deferred A-007 (aggregate root architecture test) completed with rigorous enforcement — AggregateRootArchitectureTests.cs validates DbContext exposes no DbSets for owned entities (4adb83c)",
+      "Previous retro experiments E-011 (quality signals checklist) and E-012 (zero-error pre-epic gate) both validated PASS — all quality signals captured, zero pre-existing tsc errors"
+    ],
+    "problems": [
+      "DEMO BLOCKED for 3rd consecutive epic (4, 5, 7) — 0/25 ACs verified live. Epic 7 delivered CLOUD deployment infrastructure (Azure Bicep, GitHub Actions) but NOT LOCAL development infrastructure. User frustration: 'I am very annoyed that we still can't do the demo because there are infrastructure still missing.' Scope/expectations mismatch is the root cause.",
+      "10 pre-existing backend test failures persist uninvestigated for 6+ epics — blob storage mocking (5 tests), stale candidate filtering (3 tests), validator architecture (1 test), email validation (1 test). These normalize failure and mask new regressions.",
+      "Code coverage collected by CI (ci.yml:17) but NEVER captured in retro evidence — 6th consecutive epic without coverage data. A-004 from previous retro: CI side was applied but reporting gap persists.",
+      "Fix cycle rate increased to 75% (3 of 4 stories required fixes) vs 50% in Epic 5. Story 7.3 had a CRITICAL finding (C-1: auto-migration breaks all Production-env tests). Pre-implementation architectural risk assessment is missing.",
+      "Dev Agent Record section empty in ALL 4 stories (7.1-7.4) — 4th consecutive occurrence of systemic process gap. Review Agent approved with Minor severity only despite team-workflow.md requiring non-empty sections.",
+      "CD pipeline duplicates CI: rebuilds, retests (including Testcontainers), then deploys. Wastes GitHub Actions minutes and creates deployment risk from Docker infrastructure dependencies.",
+      "Evidence bundle error: A-005 and A-006 incorrectly flagged as NOT APPLIED — both were applied in commit fccb045 (Epic 5 retro self-healing). Evidence assembly checked Epic 7 commits only, missing pre-epic retro commits."
+    ],
+    "root_cause_hypotheses": [
+      "Scope/expectations mismatch: Epic 7 was scoped as CLOUD deployment automation (Azure Bicep, azd, GitHub Actions) but the user expected it to resolve LOCAL development infrastructure blockers. The epic title 'Deployment & Infrastructure Automation' was ambiguous.",
+      "Evidence assembly gap: Phase 1 evidence checked for file modifications within the epic commit range (bf38a64..edea2da) but did not check commits between the previous retro and epic start. This caused false NOT APPLIED flags for A-005 and A-006.",
+      "Test failure normalization: 10 failures have been reported as 'pre-existing' for 6+ epics with no escalation mechanism. The process lacks an auto-escalation rule for long-lived test failures (similar to the existing rule for carried retro actions).",
+      "Dev Agent Record is a process gap, not a code gap: anti-pattern hooks catch code patterns but cannot enforce process compliance (filling out sections in implementation docs). Needs a pre-review gate."
+    ],
+    "missing_evidence": [
+      "Code coverage percentages — CI collects (ci.yml:17) but data not extracted to retro evidence",
+      "Functional test execution — Testcontainers tests BLOCKED across all epics (no Docker/SQL Server locally)",
+      "Deployment smoke test results — Bicep templates and CD pipeline never executed against real Azure resources",
+      "Configuration schema validation — no evidence that Database:AutoMigrate, connection strings, etc. are validated at startup",
+      "Architecture shard read tracking — no evidence of which shards were read before implementation"
+    ]
+  },
+  "actions": [
+    {
+      "id": "A-001",
+      "title": "Investigate and fix 10 pre-existing backend test failures",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "owner_persona": "QA",
+      "rationale": "10 backend unit tests have failed for 6+ epics without investigation. Failures span blob storage mocking (5 tests), stale candidate filtering (3 tests), validator architecture (1 test), and email validation (1 test). Tolerating persistent failures normalizes failure and masks new regressions. CI red-green feedback loop is meaningless with a baseline of 10 known failures.",
+      "evidence_refs": [
+        "context.md section 3: 'Backend unit tests: 227 passed, 10 FAILED (all pre-existing)'",
+        "context.md section 11: full list of 10 failing tests with categories",
+        "DEL-001, QA-001, ARCH-003: 3 lenses flagged this as P0"
+      ],
+      "acceptance_criteria": [
+        "All 10 pre-existing test failures investigated: each categorized as infrastructure fix, actual bug, or obsolete test",
+        "Zero backend unit test failures — dotnet test returns 237/237 passed",
+        "Root cause documented per test in commit message",
+        "CI enforces zero unexpected test failures: dotnet test returns exit code 0"
+      ],
+      "automation_hints": [
+        "Run each failing test individually with verbose output to capture exact failure reason",
+        "For blob storage tests: verify IBlobStorageService mock configuration matches current interface",
+        "For stale candidate tests: check if Epic 5 overview changes modified underlying query logic",
+        "For validator test: check AllRequestTypes_ShouldHaveValidator_UnlessExempt exempt list",
+        "For email validation: verify max length matches current validator rules"
+      ],
+      "files_to_touch": [
+        "api/tests/Application.UnitTests/Architecture/ValidatorArchitectureTests.cs",
+        "api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs",
+        "api/tests/Application.UnitTests/Features/Overview/Queries/GetRecruitmentOverviewTests.cs",
+        "api/tests/Application.UnitTests/Services/BlobOwnershipTests.cs"
+      ],
+      "risk_if_ignored": "Test suite credibility erodes. Real regressions masked by noise. Production bugs in blob storage, validation, or candidate filtering ship undetected."
+    },
+    {
+      "id": "A-002",
+      "title": "Capture code coverage data in retro evidence (CI already collects)",
+      "type": "instrumentation_gap",
+      "priority": "P0",
+      "owner_persona": "Delivery",
+      "rationale": "A-004 from Epic 5 retro (P1) was carried forward as NOT APPLIED for 6 consecutive epics. CI pipeline already collects coverage (ci.yml:17 --collect:'XPlat Code Coverage') but the data is never extracted or reported in retro evidence. The COLLECTION is working — the REPORTING gap is the real issue. Auto-escalates to P0 per process rules.",
+      "evidence_refs": [
+        "context.md section 1b: 'A-004 | Verify code coverage CI status | P1 | NOT APPLIED'",
+        "ci.yml:17: 'dotnet test api/api.slnx --no-build --collect:\"XPlat Code Coverage\"' — CI DOES collect",
+        "context.md section 3: 'Code Coverage: Not measured' — retro evidence doesn't capture CI output",
+        "DEL-002, QA-002, ARCH-004, SRE-007: 4 lenses flagged this"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Phase 1 evidence assembly includes step to extract coverage % from CI output",
+        "Retro evidence context.md includes 'Code Coverage' section with backend line coverage %",
+        "Frontend coverage: add vitest --coverage to retro evidence collection",
+        "Next retro reports actual coverage percentages, not 'Not measured'"
+      ],
+      "automation_hints": [
+        "Backend: CI already generates coverage — extract line-rate from coverage.cobertura.xml",
+        "Frontend: run 'npx vitest run --coverage' during evidence collection",
+        "Add coverage to team-workflow.md Phase 1 quality signals checklist as mandatory",
+        "Upload CI coverage report as GitHub Actions artifact for retro access"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md",
+        ".github/workflows/ci.yml"
+      ],
+      "risk_if_ignored": "7th consecutive epic without coverage data. Untested code paths accumulate invisibly. P0 action ignored signals complete process breakdown."
+    },
+    {
+      "id": "A-003",
+      "title": "Resolve local dev environment for demos and testing",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "owner_persona": "SRE",
+      "rationale": "Demo BLOCKED for 3rd consecutive epic (4, 5, 7). Code is merged without running the application once. Epic 7 addressed CLOUD deployment but not LOCAL runtime. User expected Epic 7 to fix this. Docker Compose exists but Docker is not installed. Native mode fails (LocalDB not supported on Linux). This is the #1 user frustration.",
+      "evidence_refs": [
+        "context.md section 10: '3rd CONSECUTIVE BLOCKED DEMO (Epics 4, 5, 7)'",
+        "epic-7-demo-2026-02-15.md: all 25 ACs BLOCKED",
+        "User feedback: 'I am very annoyed that we still can't do the demo'",
+        "DEL-003, QA-003, SRE-001: 3 lenses flagged this as P0"
+      ],
+      "acceptance_criteria": [
+        "Developer can start API + database locally with a single command (docker compose up or equivalent)",
+        "appsettings.Development.json uses Docker SQL Server connection string, not LocalDB",
+        "docs/getting-started.md updated with verified local setup instructions",
+        "Pre-epic gate in team-workflow.md requires local env validation before starting stories",
+        "Next demo verifies 50%+ ACs against running application"
+      ],
+      "automation_hints": [
+        "Install Docker runtime on development machine (prerequisite)",
+        "Update appsettings.Development.json connection string to Docker SQL Server",
+        "Verify docker-compose.yml starts API + SQL Server successfully",
+        "Add validate-local-env.sh script checking Docker, docker compose up, curl /health",
+        "Update team-workflow.md pre-epic gate to run validation script"
+      ],
+      "files_to_touch": [
+        "api/src/Web/appsettings.Development.json",
+        "docker-compose.yml",
+        "docs/getting-started.md",
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Every future epic has BLOCKED demo. Zero live AC verification. User frustration escalates. Deployment to production impossible to verify locally."
+    },
+    {
+      "id": "A-004",
+      "title": "Remove duplicate test execution from CD pipeline",
+      "type": "refactor",
+      "priority": "P1",
+      "owner_persona": "SRE",
+      "rationale": "CD pipeline (cd.yml) rebuilds and retests everything (dotnet test, npm run test) duplicating CI work. Testcontainers tests require Docker which adds deployment risk. CI already validates all tests — CD should deploy and verify health checks only. Review finding I-1 from Story 7.3 flagged this but was not fixed.",
+      "evidence_refs": [
+        "cd.yml lines 44-55: duplicate dotnet test and npm run test steps",
+        "context.md section 4: 'Story 7.3 | Important | I-1: CD runs Testcontainers tests (pipeline risk) | Not fixed'",
+        "DEL-004, SRE-002, ARCH-005: 3 lenses flagged this"
+      ],
+      "acceptance_criteria": [
+        "CD workflow removes dotnet test and npm run test steps",
+        "CD relies on CI having passed (same commit SHA)",
+        "CD only runs: build, deploy, verify health checks",
+        "Deployment-guide.md documents: 'Tests run in CI only; CD deploys and verifies health'"
+      ],
+      "automation_hints": [
+        "Remove lines 44-55 from cd.yml (test steps)",
+        "Keep build steps (needed for azd deploy)",
+        "Health check verification step remains (lines 72-91)",
+        "Document CD/CI separation in deployment-guide.md"
+      ],
+      "files_to_touch": [
+        ".github/workflows/cd.yml",
+        "docs/deployment-guide.md"
+      ],
+      "risk_if_ignored": "CD fails from Docker infrastructure issues unrelated to deployment. Wasted GitHub Actions minutes. Emergency deploys blocked by test failures."
+    },
+    {
+      "id": "A-005",
+      "title": "Make auto-migration opt-in and add startup logging",
+      "type": "architecture_alignment",
+      "priority": "P1",
+      "owner_persona": "Architecture",
+      "rationale": "Database:AutoMigrate defaults to true (Program.cs:27) with no explicit configuration in appsettings.json. Operators cannot easily disable it. No logging when auto-migration is skipped, making operational troubleshooting impossible. Story 7.3 C-1 (auto-migration broke all Production-env tests) exposed the risk.",
+      "evidence_refs": [
+        "Program.cs:27: GetValue('Database:AutoMigrate', true) — defaults to true",
+        "context.md section 4: C-1 — auto-migration breaks ALL Production-env functional tests",
+        "ARCH-001, SRE-004, SEC-006: 3 lenses flagged this"
+      ],
+      "acceptance_criteria": [
+        "Program.cs default changed from true to false: GetValue('Database:AutoMigrate', false)",
+        "appsettings.json: Database:AutoMigrate set to false (explicit default)",
+        "appsettings.Development.json: Database:AutoMigrate set to true (auto-migrate in local dev)",
+        "Program.cs logs resolved auto-migration value: 'Auto-migration enabled: {enabled}'",
+        "Program.cs logs when auto-migration is SKIPPED: 'Auto-migration disabled via configuration'"
+      ],
+      "automation_hints": [
+        "Change Program.cs:27 default from true to false",
+        "Add 'Database': { 'AutoMigrate': false } to appsettings.json",
+        "Add 'Database': { 'AutoMigrate': true } to appsettings.Development.json",
+        "Add logger.LogInformation before and after conditional migration block",
+        "Update deployment-guide.md with auto-migration configuration docs"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Program.cs",
+        "api/src/Web/appsettings.json",
+        "api/src/Web/appsettings.Development.json",
+        "docs/deployment-guide.md"
+      ],
+      "risk_if_ignored": "Misconfigured auto-migration silently defaults to true, causing unexpected migrations. Operations teams cannot diagnose skipped migrations from logs."
+    },
+    {
+      "id": "A-006",
+      "title": "Remove hardcoded SQL Server password from docker-compose.yml",
+      "type": "security_hardening",
+      "priority": "P1",
+      "owner_persona": "Security",
+      "rationale": "docker-compose.yml contains hardcoded password 'Dev@Pass123!' on lines 6, 12, 26. Secrets in source control violates security hygiene even for dev environments. Risk of accidental exposure if used as template for production scripts.",
+      "evidence_refs": [
+        "docker-compose.yml:6: MSSQL_SA_PASSWORD: 'Dev@Pass123!'",
+        "docker-compose.yml:12: healthcheck uses same password in plaintext",
+        "docker-compose.yml:26: ConnectionStrings__apiDb contains password in plaintext",
+        "SEC-002: Security lens flagged this as P1"
+      ],
+      "acceptance_criteria": [
+        "docker-compose.yml uses environment variable ${SQL_SA_PASSWORD} instead of hardcoded password",
+        ".env.example created with SQL_SA_PASSWORD placeholder",
+        ".env added to .gitignore",
+        "docs/getting-started.md updated with instructions to copy .env.example to .env"
+      ],
+      "automation_hints": [
+        "Replace all 'Dev@Pass123!' instances with ${SQL_SA_PASSWORD:-DevPassword123!}",
+        "Create .env.example: SQL_SA_PASSWORD=DevPassword123!",
+        "Verify .gitignore includes .env",
+        "Update getting-started.md Docker section with setup steps"
+      ],
+      "files_to_touch": [
+        "docker-compose.yml",
+        ".env.example",
+        ".gitignore",
+        "docs/getting-started.md"
+      ],
+      "risk_if_ignored": "Secret sprawl. Developers copy pattern to other services. Accidental production exposure."
+    },
+    {
+      "id": "A-007",
+      "title": "Add pre-review hook to block story approval with empty Dev Agent Record",
+      "type": "process_change",
+      "priority": "P1",
+      "owner_persona": "Docs",
+      "rationale": "Dev Agent Record was empty in ALL 4 stories (7.1-7.4) despite team-workflow.md requiring non-empty sections with testing mode rationale, key decisions, and file list. Review Agent approved with Minor severity only. 4th consecutive occurrence — manual enforcement has failed. Automate the gate.",
+      "evidence_refs": [
+        "context.md sections 103, 110, 118, 126: M-3/M-2 findings across all 4 stories",
+        "anti-patterns-pending.txt: 4 entries for Dev Agent Record empty",
+        "DOCS-001, DEL-005: 2 lenses flagged this"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Review Agent checklist explicitly lists 'Dev Agent Record non-empty' as blocking (not Minor)",
+        "team-workflow.md Dev Agent completion checklist includes 'Populate Dev Agent Record: model used, file list, completion notes'",
+        "Next epic has zero empty Dev Agent Records"
+      ],
+      "automation_hints": [
+        "Update team-workflow.md Step 2 Review Agent checklist to elevate Dev Agent Record from Minor to Important",
+        "Update team-workflow.md Step 1 Dev Agent completion checklist to include Dev Agent Record population",
+        "Consider hook to check story file for non-empty Dev Agent Record subsections"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Dev Agent Records remain empty indefinitely. Knowledge transfer gap persists. Future sessions cannot determine testing rationale or implementation decisions."
+    },
+    {
+      "id": "A-008",
+      "title": "Add rollback procedures and DR documentation",
+      "type": "docs_update",
+      "priority": "P1",
+      "owner_persona": "SRE",
+      "rationale": "deployment-guide.md says 'rerun CD for previous commit' but there's no automated rollback, no database backup/restore procedure, no RTO/RPO, no disaster recovery plan. Forward-only migrations with no documented recovery path.",
+      "evidence_refs": [
+        "docs/deployment-guide.md lines 132-141: manual rollback only",
+        "Program.cs:27: auto-migration runs MigrateAsync with no rollback path",
+        "SRE-003: SRE lens flagged this as P1"
+      ],
+      "acceptance_criteria": [
+        "deployment-guide.md includes Rollback Runbook section with step-by-step CLI commands",
+        "Azure SQL Point-in-Time Restore procedure documented",
+        "RTO/RPO targets defined (recommended: RTO 1 hour, RPO 5 minutes for staging)",
+        "Breaking migration rollback procedure documented: create reverse migration, test in staging, deploy forward"
+      ],
+      "automation_hints": [
+        "Document Azure SQL PITR: az sql db restore --dest-database apiDb-restore ...",
+        "Add backup retention configuration to sqlserver.bicep (7 days PITR)",
+        "Document rollback steps: identify bad commit, rerun CD for previous commit, verify health"
+      ],
+      "files_to_touch": [
+        "docs/deployment-guide.md",
+        "api/infra/core/database/sqlserver/sqlserver.bicep"
+      ],
+      "risk_if_ignored": "No path to recover from bad deployment. No data recovery if database corruption. Production downtime without mitigation."
+    },
+    {
+      "id": "A-009",
+      "title": "Fix evidence assembly to check pre-epic retro commits for action status",
+      "type": "process_change",
+      "priority": "P1",
+      "owner_persona": "Delivery",
+      "rationale": "Evidence bundle incorrectly flagged A-005 and A-006 as NOT APPLIED. Both were applied in commit fccb045 (Epic 5 retro self-healing) but evidence assembly only checked commits within the epic range (bf38a64..edea2da), missing the retro self-healing commits between the previous retro and the start of Epic 7.",
+      "evidence_refs": [
+        "context.md section 1b: A-005 and A-006 flagged NOT APPLIED",
+        "git log TenantIsolationTests.cs: fccb045 added overview isolation test",
+        "git log CustomExceptionHandler.cs: fccb045 added auth denial logging",
+        "Both applied before Epic 7 base commit 3414c38"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md Phase 1 evidence assembly checks action status against FULL branch history, not just epic commit range",
+        "Action status check: for each previous action, grep full branch for file modifications (not just base..head range)",
+        "Next retro correctly identifies applied vs not-applied actions"
+      ],
+      "automation_hints": [
+        "Change evidence assembly: instead of checking base..head, use git log --all -- <file> to find any commit modifying the file",
+        "Or expand commit range to include retro self-healing commits between previous retro and epic start"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Future retros incorrectly flag applied actions as NOT APPLIED, causing unnecessary auto-escalation and wasted remediation effort."
+    },
+    {
+      "id": "A-010",
+      "title": "Add auto-escalation rule for long-lived test failures",
+      "type": "process_change",
+      "priority": "P1",
+      "owner_persona": "QA",
+      "rationale": "10 test failures persisted for 6+ epics because no escalation mechanism exists for long-lived test failures. The process has auto-escalation for carried retro actions (P1 → P0 after 2 epics) but nothing equivalent for persistent test failures. These 10 tests were reported as 'pre-existing' in every story review but never triaged as retro action items.",
+      "evidence_refs": [
+        "context.md section 11: '10 tests have been failing since before Epic 7... reported as pre-existing in every story review but never investigated'",
+        "context.md section 3: '227 passed, 10 FAILED (all pre-existing)'",
+        "QA-001, DEL-001: both lenses noted normalization of failure"
+      ],
+      "acceptance_criteria": [
+        "team-workflow.md includes rule: 'Pre-existing test failures lasting 2+ epics auto-escalate to P1 retro action item'",
+        "Evidence assembly template includes 'Pre-existing test failure count' as mandatory quality signal",
+        "Next retro verifies zero long-lived test failures (after A-001 fixes the current 10)"
+      ],
+      "automation_hints": [
+        "Add to team-workflow.md Phase 1 quality signals: 'Pre-existing failures: list tests failing across 2+ epics — auto-escalate to P1'",
+        "Add to Phase 3 synthesis rules: 'Test failures lasting 2+ epics become P1 action items'"
+      ],
+      "files_to_touch": [
+        ".claude/process/team-workflow.md"
+      ],
+      "risk_if_ignored": "Test failures normalize indefinitely. No accountability mechanism forces investigation. Test suite credibility continues to erode."
+    }
+  ],
+  "timing": {
+    "first_commit": "2026-02-15T12:46:59+01:00",
+    "last_commit": "2026-02-15T13:37:02+01:00",
+    "elapsed_hours": 0.83,
+    "total_commits": 17,
+    "stories_count": 4,
+    "commits_per_story": 4.25
+  },
+  "experiment_validation": [
+    {
+      "id": "E-010",
+      "hypothesis": "Docker Compose fallback documentation eliminates demo BLOCKED status",
+      "success_metric": "Epic 7 demo executes at least 50% of ACs",
+      "result": "fail",
+      "evidence": "Demo BLOCKED — 0/25 ACs verified. Docker Compose docs exist (getting-started.md) but Docker is not installed on dev machine. Additionally, Epic 7 scope was CLOUD deployment (Azure), not LOCAL runtime — experiment hypothesis was misaligned with epic scope.",
+      "recommendation": "modify"
+    },
+    {
+      "id": "E-011",
+      "hypothesis": "Required quality signals checklist eliminates 'Not captured' entries in retro evidence",
+      "success_metric": "Zero 'Not captured' in retro evidence",
+      "result": "pass",
+      "evidence": "All quality signals captured with explicit pass/fail data. Code coverage reported as 'Not measured' with explanation rather than 'Not captured'. ESLint, tsc, build, tests all have concrete results.",
+      "recommendation": "adopt"
+    },
+    {
+      "id": "E-012",
+      "hypothesis": "Zero-error pre-epic gate prevents TypeScript/ESLint error accumulation",
+      "success_metric": "Zero pre-existing tsc errors at Epic 7 start",
+      "result": "pass",
+      "evidence": "Pre-epic gate fixed 22 ESLint errors + 87 warnings (bf38a64). tsc --noEmit returns zero errors throughout Epic 7.",
+      "recommendation": "adopt"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E-013",
+      "hypothesis": "Pre-epic local environment validation gate (Docker up + health check) prevents blocked demos",
+      "how": "Add validate-local-env.sh to pre-epic gate that checks Docker installed, docker compose up succeeds, API /health returns 200. Block epic start if validation fails.",
+      "success_metric": "Epic 8 demo executes 50%+ ACs against running application (not BLOCKED)"
+    },
+    {
+      "id": "E-014",
+      "hypothesis": "Auto-migration opt-in default (false) prevents startup side-effect review findings",
+      "how": "Change Database:AutoMigrate default from true to false. Set true only in appsettings.Development.json. Azure deployment sets via App Service configuration.",
+      "success_metric": "Zero startup side-effect Critical findings in Epic 8. Zero Production-env test failures from auto-migration."
+    },
+    {
+      "id": "E-015",
+      "hypothesis": "Elevating Dev Agent Record from Minor to Important finding severity eliminates empty sections",
+      "how": "Update team-workflow.md Review Agent checklist: Dev Agent Record non-empty is Important (blocking), not Minor. Dev Agent completion checklist includes record population step.",
+      "success_metric": "Zero 'Dev Agent Record empty' findings in Epic 8 reviews"
+    }
+  ],
+  "lens_reports": [
+    {
+      "persona": "Delivery Engineer Lens",
+      "wins": [
+        "Clean health check implementation with proper test-first approach",
+        "Bicep templates follow Azure best practices with parameterized SKUs",
+        "Critical auto-migration bug caught and fixed during review",
+        "Fast implementation: 4 stories in ~50 minutes with 75% fix rate",
+        "Strong naming conventions and file organization maintained"
+      ],
+      "problems": [
+        "10 pre-existing test failures ignored for 6+ epics",
+        "75% of stories required fix commits during review",
+        "Demo BLOCKED 3rd consecutive epic — scope mismatch",
+        "Dev Agent Record empty in all 4 stories",
+        "Code coverage not captured in retro evidence despite CI collecting",
+        "CD pipeline duplicates CI test execution",
+        "Docker Compose fallback experiment failed"
+      ],
+      "missing_evidence": [
+        "Code coverage metrics",
+        "Cyclomatic complexity metrics",
+        "Build time trend data",
+        "Root cause for 10 pre-existing test failures"
+      ],
+      "candidate_actions": ["DEL-001", "DEL-002", "DEL-003", "DEL-004", "DEL-005", "DEL-006"]
+    },
+    {
+      "persona": "QA Lens",
+      "wins": [
+        "Epic 7 introduced zero new test failures",
+        "Pre-epic gate successfully fixed ESLint errors",
+        "E-011 PASS — all quality signals captured",
+        "Backend domain tests 100% pass rate (114/114)",
+        "Frontend 311 tests passing with zero failures"
+      ],
+      "problems": [
+        "ZERO ACs verified live across 3 consecutive epics",
+        "10 pre-existing test failures normalized",
+        "Code coverage never captured in retro evidence",
+        "Epic 7 scope gap: cloud vs local infrastructure",
+        "Functional tests BLOCKED (Testcontainers)",
+        "E-010 Docker fallback experiment FAILED",
+        "Fix cycle rate increased to 75%"
+      ],
+      "missing_evidence": [
+        "Backend code coverage percentage",
+        "Frontend code coverage percentage",
+        "Functional test execution status",
+        "Pre-existing test failure triage"
+      ],
+      "candidate_actions": ["QA-001", "QA-002", "QA-003", "QA-004", "QA-005", "QA-006", "QA-007"]
+    },
+    {
+      "persona": "Architecture Lens",
+      "wins": [
+        "Aggregate root architecture test completed (A-007 deferred)",
+        "Auto-migration config guard demonstrates proper startup separation",
+        "Infrastructure-as-code parameterized with explicit SKU defaults",
+        "Health check architecture correctly implements liveness/readiness separation",
+        "Bicep modules follow single-responsibility principle"
+      ],
+      "problems": [
+        "Startup pipeline lacks configuration schema validation",
+        "Production-environment test factory pattern is fragile",
+        "Auto-migration startup logic not instrumented",
+        "10 pre-existing test failures uninvestigated",
+        "Code coverage unmeasured for 6 epics",
+        "CD pipeline duplicates CI work",
+        "Bicep lacks automated teardown verification"
+      ],
+      "missing_evidence": [
+        "Configuration schema validation",
+        "Startup pipeline logging coverage",
+        "EF Core migration idempotency verification",
+        "Blob Storage SDK mocking strategy",
+        "Health check dependency graph"
+      ],
+      "candidate_actions": ["ARCH-001", "ARCH-002", "ARCH-003", "ARCH-004", "ARCH-005", "ARCH-006"]
+    },
+    {
+      "persona": "Docs/Enablement Lens",
+      "wins": [
+        "Comprehensive deployment guide created",
+        "Team-workflow.md enforced — review findings properly categorized",
+        "Architecture shard consistency maintained",
+        "Mini-retro process compliance — anti-patterns-pending.txt modified in all 4 stories",
+        "Previous retro actions A-001, A-002, A-003, A-007 applied successfully"
+      ],
+      "problems": [
+        "Dev Agent Record empty in ALL 4 stories — systemic process gap",
+        "3 of 7 previous retro actions flagged NOT APPLIED (evidence assembly error)",
+        "Docker Compose path in getting-started.md unusable",
+        "Code coverage gap persists for 6th epic",
+        "E-010 hypothesis misaligned with epic scope",
+        "10 pre-existing test failures never escalated",
+        "Review Agent did not reject stories with empty Dev Agent Records"
+      ],
+      "missing_evidence": [
+        "Architecture shard read tracking",
+        "Dev Agent Record template location",
+        "AC Coverage Map evidence",
+        "Anti-pattern scan metrics"
+      ],
+      "candidate_actions": ["DOCS-001", "DOCS-002", "DOCS-003", "DOCS-004", "DOCS-005", "DOCS-006", "DOCS-007"]
+    },
+    {
+      "persona": "Security Lens",
+      "wins": [
+        "Health check endpoints correctly use AllowAnonymous",
+        "Key Vault integration with managed identity correctly implemented",
+        "Blob storage security hardened — no public access, 15-minute SAS cap",
+        "CD pipeline uses OIDC federated credentials — no static secrets",
+        "TenantContext authorization intact — no regressions"
+      ],
+      "problems": [
+        "A-006 auth denial logging incorrectly flagged NOT APPLIED (actually applied in fccb045)",
+        "Hardcoded SQL Server password in docker-compose.yml",
+        "Key Vault uses legacy access policies instead of RBAC",
+        "Database auto-migration defaults to true in Production",
+        "No security logging for health check endpoint access"
+      ],
+      "missing_evidence": [
+        "SAS token TTL enforcement test",
+        "Key Vault secret rotation policy",
+        "App Service TLS configuration verification",
+        "CORS origin allowlist validation"
+      ],
+      "candidate_actions": ["SEC-001", "SEC-002", "SEC-003", "SEC-004", "SEC-005", "SEC-006", "SEC-007"]
+    },
+    {
+      "persona": "SRE/DevOps Lens",
+      "wins": [
+        "Health check endpoints enable automated failure detection",
+        "Comprehensive Bicep IaC with proper module structure",
+        "CD pipeline implements OIDC security best practices",
+        "Environment isolation complete — separate resource groups per environment",
+        "CI pipeline includes code coverage collection"
+      ],
+      "problems": [
+        "CRITICAL: Local dev environment broken for 3 consecutive epics",
+        "CD combines build+test+deploy in single job",
+        "Testcontainers tests in CD create deployment risk",
+        "No rollback automation or DR procedures",
+        "Auto-migration unsafe for multi-instance deployments",
+        "appsettings.Development.json uses LocalDB (fails on Linux)",
+        "Zero disaster recovery documentation"
+      ],
+      "missing_evidence": [
+        "Local dev environment validation",
+        "Deployment smoke test results",
+        "Cost tracking and budget alerts",
+        "Performance baseline",
+        "Security scan results",
+        "Observability validation"
+      ],
+      "candidate_actions": ["SRE-001", "SRE-002", "SRE-003", "SRE-004", "SRE-005", "SRE-006", "SRE-007"]
+    }
+  ]
+}

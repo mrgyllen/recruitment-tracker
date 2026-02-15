@@ -1,0 +1,224 @@
+{
+  "persona": "Delivery Engineer Lens",
+  "wins": [
+    "Clean, well-structured health check implementation with proper test-first approach (7 tests, clear assertions, good separation of liveness vs readiness)",
+    "Bicep templates follow Azure best practices: parameterized SKUs, explicit @description decorators, modular structure, no hardcoded values",
+    "Critical auto-migration bug (C-1) caught and fixed during review before merge — prevented Production test suite breakage",
+    "Strong naming conventions maintained: PascalCase in C#, descriptive variable names, consistent file organization",
+    "Fast implementation cycle: 4 stories + 1 deferred item completed in ~50 minutes (17 commits) with 75% fix rate addressed same-sprint"
+  ],
+  "problems": [
+    "10 pre-existing backend test failures have been ignored for at least 6 epics. These are NOT cosmetic — they include architecture enforcement (missing validator for ProcessPdfBundleCommand), blob ownership verification, stale candidate queries, and document assignment logic. Evidence: sections 3 & 11 of context.md. The team has reported these as 'pre-existing' in every story review since at least Epic 4 but never investigated root cause.",
+    "75% of stories (7.1, 7.2, 7.3) required fix commits during review. Pattern: weak test assertions (not-404 instead of 200), missing config guards (auto-migration broke Production tests), missing Bicep decorators. This suggests inadequate implementation planning or insufficient self-review before requesting formal review.",
+    "Demo BLOCKED for 3rd consecutive epic (4, 5, 7). Epic 7 was titled 'Deployment & Infrastructure Automation' but addressed only CLOUD infrastructure (Azure Bicep, GitHub Actions). The local dev infrastructure gap (no SQL Server, no Docker installed, no instructions for runtime setup) remains unresolved. Evidence: section 10, user frustration quote. The fundamental problem: scope mismatch between user expectation (fix local demo blockers) and epic scope (Azure cloud deployment).",
+    "Dev Agent Record section is empty in ALL 4 story implementation docs (7.1–7.4). Evidence: sections 4, review findings M-3, M-2 across all stories, anti-patterns-pending.txt lines 137, 142. This is a recurring process gap — the team workflow expects this section to be populated but it is systematically skipped.",
+    "Code coverage data missing for 6th consecutive epic (A-004 from previous retro NOT APPLIED). Evidence: section 3, 'Code Coverage: Not measured'. No coverage configuration in CI, no coverage flags run during retro evidence collection. This is a P1 item carried forward that auto-escalates to P0 per process rules.",
+    "CD pipeline runs ALL backend tests including Testcontainers-dependent functional tests (review finding I-1 in Story 7.3, not fixed). This creates pipeline risk: CD may fail due to Docker infrastructure issues unrelated to deployment validity. CI already runs the same tests — CD should only re-run smoke tests or skip tests entirely after CI pass.",
+    "Build friction: Docker Compose fallback (E-010 hypothesis) failed. Docs exist (getting-started.md) but Docker is not installed and native mode fails (LocalDB not supported on Linux). Evidence: demo walkthrough section, E-010 result. The experiment was designed to test if Docker Compose docs would unblock demos — it failed because the environment lacks Docker runtime, exposing a gap in dev environment provisioning."
+  ],
+  "missing_evidence": [
+    "Code coverage metrics: No coverage percentage, no branch coverage, no uncovered lines report. Action A-004 required 'verify code coverage CI status' but this was not applied. Need: dotnet test --collect:'XPlat Code Coverage' output and coverlet report parsing.",
+    "Cyclomatic complexity metrics: No static analysis output (e.g., SonarQube, NDepend, Roslyn analyzers with complexity thresholds). Cannot assess if methods exceed complexity budgets without instrumentation.",
+    "Build time metrics: No measurement of 'dotnet build' or 'npm run build' duration over time. Inner loop speed (change-build-test) is listed as a focus area but there is no baseline or trend data.",
+    "Root cause for 10 pre-existing test failures: Evidence bundle lists the failures but does not include test output, stack traces, or investigative notes. Need: full test failure output, git log to identify when they started failing, bisect to find introducing commit.",
+    "Docker Compose execution attempt: Demo walkthrough states 'Docker is not installed' but does not show the command attempted (docker-compose up? docker version?). Need: exact command run, error output, OS/distro version for reproducibility."
+  ],
+  "candidate_actions": [
+    {
+      "id": "DEL-001",
+      "title": "Investigate and fix 10 pre-existing backend test failures",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "10 backend tests have failed for 6+ epics without investigation. These failures include architectural enforcement (AllRequestTypes_ShouldHaveValidator_UnlessExempt), domain logic (stale candidate queries), and infrastructure integration (blob ownership, document assignment). Allowing these to persist erodes trust in the test suite and may mask real regressions. Test output shows ForbiddenAccessException where NotFoundException expected, suggesting broken test setup or handler logic changes in Epic 5.",
+      "evidence_refs": [
+        "context.md section 3: 'Backend unit tests: 227 passed, 10 FAILED (all pre-existing, not introduced by Epic 7)'",
+        "context.md section 11: detailed list of 10 failing tests with categories (blob storage, stale candidate filtering, validator architecture)",
+        "Test output: Handle_CandidateNotFound_ThrowsNotFoundException expects NotFoundException but gets ForbiddenAccessException (line 35 of AssignDocumentCommandHandler.cs)",
+        "Test output: AllRequestTypes_ShouldHaveValidator_UnlessExempt fails for ProcessPdfBundleCommand (ValidatorArchitectureTests.cs:line 80)"
+      ],
+      "acceptance_criteria": [
+        "All 10 pre-existing backend test failures are resolved (tests pass or are removed if obsolete)",
+        "Root cause documented for each failure (e.g., 'Epic 5 introduced blob ownership check, tests need updated setup')",
+        "If tests are removed, justification added to commit message (e.g., 'validator test exempt list updated per architecture decision X')",
+        "CI gate prevents merging if backend unit test count drops below current passing count (227)"
+      ],
+      "automation_hints": [
+        "Run: dotnet test api/api.slnx --filter 'FullyQualifiedName~AllRequestTypes_ShouldHaveValidator_UnlessExempt' --logger 'console;verbosity=detailed' to get full stack trace",
+        "Use git log --all --source -- api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs to find when test last passed",
+        "Use git bisect to find commit that introduced ForbiddenAccessException in AssignDocumentCommandHandler",
+        "Check if Epic 5 overview changes (VerifyBlobOwnership) affected test mocking setup",
+        "Add missing validator for ProcessPdfBundleCommand or add to ExemptRequestTypes with justification comment"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandlerTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Architecture/ValidatorArchitectureTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Application/Features/Candidates/Commands/AssignDocument/AssignDocumentCommandHandler.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/tests/Application.UnitTests/Features/Candidates/Queries/GetStaleRecruitmentCandidatesQueryHandlerTests.cs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/src/Application/Features/Import/Commands/ProcessPdfBundle/ProcessPdfBundleCommandValidator.cs (may need to create)"
+      ],
+      "risk_if_ignored": "Test suite credibility erodes further. Developers learn to ignore red tests. Real regressions may be masked by noise. Architectural rules (e.g., all commands must have validators) are not enforced, leading to inconsistent validation coverage."
+    },
+    {
+      "id": "DEL-002",
+      "title": "Add code coverage collection to CI and retro evidence workflow",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "A-004 from Epic 5 retro is a P1 item that was NOT APPLIED for the 6th consecutive epic. Per process rules, P1 items carried from previous retro auto-escalate to P0. No coverage data means the team cannot assess whether new code is tested, whether tests are comprehensive, or whether coverage is trending up/down. This is a foundational quality signal missing from the process.",
+      "evidence_refs": [
+        "context.md section 1b: 'A-004 | Verify code coverage CI status | P1 | NOT APPLIED — no coverage configuration added to CI or retro evidence'",
+        "context.md section 3: 'Code Coverage: Frontend: Not measured, Backend: Not measured, Status: A-004 from previous retro NOT APPLIED. This is the 6th epic without coverage data.'",
+        ".retro/2026-02-14T224500Z/actions.md (inferred): A-004 originated in Epic 5 retro as P1"
+      ],
+      "acceptance_criteria": [
+        "CI workflow (.github/workflows/ci.yml) runs backend tests with --collect:'XPlat Code Coverage' flag",
+        "CI workflow runs frontend tests with --coverage flag (npm run test -- --coverage)",
+        "Coverage reports (cobertura.xml for backend, coverage/lcov.info for frontend) are uploaded as CI artifacts",
+        "Retro evidence collection script (.claude/hooks/retro-evidence.sh or equivalent) downloads and parses coverage reports",
+        "Retro context.md includes coverage percentages for backend and frontend (line coverage minimum)"
+      ],
+      "automation_hints": [
+        "Add to ci.yml after 'dotnet test': --collect:'XPlat Code Coverage' --results-directory ./coverage",
+        "Add GitHub Actions step: uses: actions/upload-artifact@v4 with path: coverage/**/coverage.cobertura.xml",
+        "Add to ci.yml after 'npm run test': -- --coverage --coverageReporters=lcov",
+        "Parse backend coverage: grep 'line-rate' coverage/*/coverage.cobertura.xml | awk to extract percentage",
+        "Parse frontend coverage: grep 'Lines' coverage/lcov-report/index.html or use coverage-summary.json"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/ci.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/hooks/retro-evidence.sh (if exists, or team-workflow.md to update manual steps)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.retro/2026-02-15T123900Z/context.md (template for future retros)"
+      ],
+      "risk_if_ignored": "Team continues flying blind on test coverage. Untested code paths accumulate. Coverage may be declining without visibility. P0 items that are ignored signal process breakdown — if high-priority actions are not applied, the retro process loses credibility."
+    },
+    {
+      "id": "DEL-003",
+      "title": "Resolve local dev environment blockers (SQL Server + Docker setup)",
+      "type": "process_change",
+      "priority": "P0",
+      "rationale": "3 consecutive demos BLOCKED (Epics 4, 5, 7). Epic 7 was titled 'Deployment & Infrastructure Automation' but the user expected it to resolve local demo blockers. The disconnect: epic addressed cloud infrastructure (Azure Bicep, GHA workflows) but not local runtime (SQL Server, Docker). User quote: 'I am very annoyed that we still can't do the demo because there are infrastructure still missing to start-up what we have built. This whole epic was about that and now when we want to demo it's still not working.' This is a fundamental scope/expectations gap that must be addressed before Epic 8.",
+      "evidence_refs": [
+        "context.md section 10: 'THIS IS THE 3rd CONSECUTIVE BLOCKED DEMO (Epics 4, 5, 7)'",
+        "context.md section 10: User feedback quote expressing frustration",
+        "epic-7-demo-2026-02-15.md: 'Native mode: API fails on startup — LocalDB is not supported on this platform (Linux host, no SQL Server available)'",
+        "epic-7-demo-2026-02-15.md: 'Docker Compose mode: Docker is not installed on this machine'",
+        "context.md section 1b: E-010 experiment FAILED — Docker Compose docs exist but Docker not installed"
+      ],
+      "acceptance_criteria": [
+        "Developer can run 'make dev-up' (or equivalent single command) to start API + database locally on Linux/macOS/Windows",
+        "Docker Compose stack (api, sqlserver, optional azurite for blob storage) starts with zero manual setup beyond 'docker compose up'",
+        "docs/getting-started.md updated with: (1) Docker Desktop install link, (2) 'docker compose up' command, (3) smoke test command to verify API is running",
+        "Demo walkthrough (epic N demo) can verify at least 50% of ACs without Azure subscription (e.g., health endpoints, auth, local CRUD operations)",
+        "If Docker cannot be installed on the demo machine, document this as a known limitation and provide Azure-based demo alternative (e.g., staging environment walkthrough)"
+      ],
+      "automation_hints": [
+        "Create docker-compose.yml at repo root with services: api (Dockerfile), sqlserver (mcr.microsoft.com/mssql/server:2022-latest), azurite (optional)",
+        "Add health checks to docker-compose.yml: API /health endpoint, SQL Server HEALTHCHECK with sqlcmd",
+        "Add .env.example with placeholders for SA_PASSWORD, ACCEPT_EULA, ConnectionStrings__apiDb",
+        "Add Makefile or script: dev-up: docker compose up -d && sleep 5 && curl http://localhost:5000/health",
+        "Update docs/getting-started.md: Prerequisites: Docker Desktop (link), Git; Quick start: git clone, docker compose up, npm run dev (frontend)",
+        "Test on clean VM or GitHub Codespaces to verify zero-friction setup"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docker-compose.yml (create or update)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/Dockerfile (may already exist)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.env.example (create)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/docs/getting-started.md (update)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/Makefile (create, optional)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md (update demo process to verify docker compose up works before demo)"
+      ],
+      "risk_if_ignored": "Demos remain blocked. User frustration escalates. The team cannot verify their own work without Azure subscription. New developers cannot onboard (no local dev environment). Epic 8+ will also have blocked demos, further eroding confidence in the project."
+    },
+    {
+      "id": "DEL-004",
+      "title": "Remove Testcontainers tests from CD pipeline (keep in CI only)",
+      "type": "refactor",
+      "priority": "P1",
+      "rationale": "CD pipeline (.github/workflows/cd.yml) runs 'dotnet test api/api.slnx' which includes Testcontainers-based functional tests. These tests require Docker and can fail due to infrastructure issues (Docker daemon not running, image pull timeouts, container startup failures) unrelated to deployment validity. CI already runs the same test suite — CD should focus on deployment and post-deployment smoke tests (health checks), not repeat full test suite. This was flagged as review finding I-1 in Story 7.3 but not fixed.",
+      "evidence_refs": [
+        "context.md section 4: 'Story 7.3 | Important | I-1: CD runs Testcontainers tests (pipeline risk) | Not fixed — CI handles same tests'",
+        ".github/workflows/cd.yml lines 45-47: 'dotnet test api/api.slnx --no-build' runs ALL tests including Testcontainers",
+        ".github/workflows/ci.yml: same 'dotnet test' command already runs in CI"
+      ],
+      "acceptance_criteria": [
+        "CD workflow (.github/workflows/cd.yml) skips backend tests entirely OR only runs health check smoke tests",
+        "CI workflow continues to run full test suite (domain, unit, functional with Testcontainers)",
+        "CD verifies deployment health via existing health check step (lines 72-91 of cd.yml)",
+        "If CD test step is removed, document in commit message: 'CI already validates all tests; CD focuses on deployment and smoke tests only'"
+      ],
+      "automation_hints": [
+        "Option 1 (remove tests from CD): Delete lines 45-47 and 54-55 from cd.yml (dotnet test, npm run test)",
+        "Option 2 (smoke tests only): Replace 'dotnet test api/api.slnx' with 'dotnet test api/api.slnx --filter Category=Smoke' (requires adding [Category('Smoke')] to select tests)",
+        "Verify health check step (lines 72-91) remains — this is the post-deployment validation",
+        "Update cd.yml comment to clarify: 'CI validates all tests; CD deploys and verifies health checks'"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/cd.yml"
+      ],
+      "risk_if_ignored": "CD pipeline may fail due to Docker infrastructure issues (e.g., image pull timeout) even when code is valid and deployment would succeed. False negatives waste time and reduce confidence in CD. CD runtime increases unnecessarily (Testcontainers tests take 30-60s to spin up SQL Server container)."
+    },
+    {
+      "id": "DEL-005",
+      "title": "Enforce Dev Agent Record section population in story implementation docs",
+      "type": "process_change",
+      "priority": "P2",
+      "rationale": "Dev Agent Record section is empty in ALL 4 story implementation docs (7.1, 7.2, 7.3, 7.4). This section is intended to capture: agent model used, debug log references, completion notes, file list. Evidence: review findings M-3, M-2 across all stories, flagged 4 times in anti-patterns-pending.txt. This is a recurring process gap — the workflow expects this data but it is systematically skipped. Without this metadata, it is difficult to audit agent-generated work or understand what model/configuration was used.",
+      "evidence_refs": [
+        "7-1-health-check-endpoints.md lines 236-240: Dev Agent Record section header with empty subsections",
+        "context.md section 4: 'Minor | M-3: Dev Agent Record empty | Not fixed — recurring pattern' (Story 7.1)",
+        "context.md section 4: 'Minor | M-2: Dev Agent Record empty | Not fixed — recurring' (Stories 7.2, 7.3, 7.4)",
+        "anti-patterns-pending.txt lines 137, 140, 142: 'M-3/M-2 Dev Agent Record empty (3rd/4th occurrence — process gap)'"
+      ],
+      "acceptance_criteria": [
+        "Story implementation template (.claude/templates/story-implementation.md or equivalent) includes pre-filled placeholder text for Dev Agent Record",
+        "Pre-commit hook or linter warns if Dev Agent Record section is empty when committing *-implementation.md files",
+        "Team workflow (.claude/process/team-workflow.md) updated: Dev Agent must populate Agent Model Used and Completion Notes at story completion",
+        "Next story implementation doc (8.1 or later) has non-empty Dev Agent Record section"
+      ],
+      "automation_hints": [
+        "Update story template to include: '### Agent Model Used: [e.g., Claude Opus 4.6, temperature 0.7]'",
+        "Add pre-commit hook: if git diff --cached --name-only | grep implementation.md && grep -q 'Agent Model Used:$', then warn",
+        "Update .claude/process/team-workflow.md: Step 7 (Story Completion) add: 'Agent fills Dev Agent Record: model, commit refs, completion notes'",
+        "Consider automation: parse git log for story branch, extract model from commit messages, auto-populate section"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/templates/story-implementation.md (if exists)",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/process/team-workflow.md",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.git/hooks/pre-commit (if using local hooks)"
+      ],
+      "risk_if_ignored": "Low immediate impact but creates audit gap. If agent-generated code has issues, it is harder to trace back to model/config used. Process debt accumulates — recurring 'M-2' findings in every retro suggest team is tolerating process violations."
+    },
+    {
+      "id": "DEL-006",
+      "title": "Add complexity and maintainability metrics to retro evidence",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "Delivery lens is asked to assess 'complexity hotspots' and 'maintainability' but the evidence bundle provides no cyclomatic complexity metrics, no static analysis output, no code smell detection. Current evidence is limited to build pass/fail, test pass/fail, linter errors. This gap prevents objective assessment of whether code is becoming more/less maintainable over time.",
+      "evidence_refs": [
+        "delivery-lens.md lines 22-25: 'Complexity hotspots: Which files or methods have high cyclomatic complexity? Are there god classes or methods doing too much?'",
+        "delivery-lens.md lines 27-30: 'Maintainability: Can another developer understand and modify this code in 6 months? Are there implicit dependencies or hidden coupling?'",
+        "context.md: No complexity or maintainability metrics present in evidence bundle"
+      ],
+      "acceptance_criteria": [
+        "Retro evidence includes cyclomatic complexity report (e.g., from Roslyn analyzers, NDepend, or dotnet-complexity tool)",
+        "Threshold violations reported: methods with complexity >15, classes with >500 LOC, files with >10 dependencies",
+        "Frontend: ESLint complexity rules enabled (complexity: ['warn', 15], max-lines-per-function: ['warn', 100])",
+        "Retro context.md includes section: 'Complexity Hotspots' with top 5 most complex methods and files"
+      ],
+      "automation_hints": [
+        "Backend: Use Roslyn analyzer Microsoft.CodeAnalysis.Metrics, add to Directory.Packages.props",
+        "Backend: Add .editorconfig rule: dotnet_diagnostic.CA1506.severity = warning (excessive class coupling)",
+        "Frontend: Add to .eslintrc.js: rules: { complexity: ['warn', { max: 15 }], 'max-lines-per-function': ['warn', 100] }",
+        "CI: Run dotnet build with /p:RunCodeAnalysis=true, capture warnings",
+        "Retro script: Parse build output for CA* warnings, list top violators in context.md"
+      ],
+      "files_to_touch": [
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/Directory.Packages.props",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/api/.editorconfig",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/web/.eslintrc.cjs",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.github/workflows/ci.yml",
+        "/home/thomasg/Projects/Web/recruitment-tracker-epic7/.claude/hooks/retro-evidence.sh (or equivalent)"
+      ],
+      "risk_if_ignored": "Code complexity may be increasing without visibility. Technical debt accumulates. Refactoring opportunities are missed because there is no data-driven signal for 'this method is too complex'. Subjective code review comments ('this seems complex') are less actionable than objective metrics ('this method has cyclomatic complexity 23, threshold is 15')."
+    }
+  ]
+}

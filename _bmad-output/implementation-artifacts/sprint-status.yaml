@@ -101,12 +101,12 @@ development_status:
   epic-5-deferred-aggregate-root-test: done    # A-007: Architectural test enforcing aggregate root modification pattern (P2, 2-3h effort)
 
   # Epic 7: Deployment & Infrastructure Automation (executes before Epic 6)
-  epic-7: in-progress
+  epic-7: done
   7-1-health-check-endpoints: done
   7-2-azure-infrastructure-as-code: done
   7-3-cicd-pipeline-auto-migration: done
   7-4-staging-environment: done
-  epic-7-retrospective: optional
+  epic-7-retrospective: done
 
   # Epic 6: Audit Trail & GDPR Compliance
   epic-6: backlog

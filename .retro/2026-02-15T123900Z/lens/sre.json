@@ -1,0 +1,274 @@
+{
+  "persona": "SRE/DevOps Lens",
+  "wins": [
+    "Health check endpoints implemented correctly (/health liveness, /ready readiness with DB connectivity check) — enables automated failure detection and restart",
+    "Infrastructure-as-code is comprehensive: 50 Bicep files, well-structured modules, parameterized SKUs, proper Key Vault integration, full observability (App Service diagnostic settings, Application Insights, Log Analytics)",
+    "CD pipeline implements security best practices: OIDC federated credentials (no stored secrets), separate GitHub Environments with isolation, manual production gate",
+    "Environment isolation is complete: separate resource groups, Key Vaults, databases, storage accounts per environment — no cross-environment data leakage risk",
+    "CI pipeline includes code coverage collection and reporting (--collect:\"XPlat Code Coverage\", reportgenerator) — addresses long-standing gap A-004"
+  ],
+  "problems": [
+    "CRITICAL SCOPE GAP: Epic 7 was titled 'Deployment & Infrastructure Automation' and the user expected it to make the system runnable. Instead it delivered ONLY cloud deployment (Azure), leaving local dev environment broken for 3 consecutive epics. Docker Compose exists but Docker is not installed. No native SQL Server. Demo has been BLOCKED for Epics 4, 5, and 7.",
+    "CD pipeline combines build+test+deploy in a single job — violates separation of concerns, wastes time rebuilding on every deploy, prevents artifact reuse. CI already builds and tests; CD should deploy pre-built artifacts.",
+    "CD pipeline runs Testcontainers tests (dotnet test api/api.slnx) which require Docker — pipeline will fail in GitHub Actions unless Docker is available. Review finding I-1 from Story 7.3 noted this but it was not fixed.",
+    "No rollback automation: deployment-guide.md says 'rerun CD for previous commit' but there's no automated rollback script, no database backup/restore procedure, no disaster recovery plan. Only forward migrations supported.",
+    "Auto-migration on startup (Program.cs Database:AutoMigrate) is unsafe for multi-instance deployments and creates downtime risk. Default is true with no explicit configuration in appsettings.json — operators cannot easily disable it.",
+    "appsettings.Development.json uses LocalDB connection string (Server=(localdb)\\mssqllocaldb) which does NOT work on Linux. This is the 3rd consecutive epic where local dev is broken. getting-started.md documents workarounds but the default config is non-functional.",
+    "Zero disaster recovery documentation: no backup strategy, no RTO/RPO defined, no data recovery procedure, no chaos engineering validation. SQL auditing is enabled but recovery procedures are absent."
+  ],
+  "missing_evidence": [
+    "No local dev environment validation: Docker Compose exists but was never executed or validated. No evidence that 'docker compose up' works.",
+    "No deployment smoke test results: deployment-guide.md describes manual verification steps but no evidence these were executed in staging or production.",
+    "No cost tracking: deployment-guide.md estimates ~$38/month for both environments but no actual cost validation or budget alert configuration.",
+    "No performance baseline: health checks verify 200 status but no load testing, no response time SLOs, no performance regression detection.",
+    "No security scan results: Bicep templates open SQL firewall to 0.0.0.1-255.255.255.254 (entire internet) but no penetration testing, no vulnerability scanning, no security review evidence.",
+    "No observability validation: Application Insights and Log Analytics are provisioned but no evidence of alert configuration, dashboard creation, or runbook documentation.",
+    "Code coverage data missing from retro evidence despite CI collecting it: A-004 NOT APPLIED for 6 consecutive epics."
+  ],
+  "candidate_actions": [
+    {
+      "id": "SRE-001",
+      "title": "Create local dev environment validation script and enforce pre-epic gate",
+      "type": "quality_gate_gap",
+      "priority": "P0",
+      "rationale": "Demo has been BLOCKED for 3 consecutive epics (4, 5, 7) due to missing local infrastructure. User explicitly stated frustration: 'I am very annoyed that we still can't do the demo because there are infrastructure still missing to start-up what we have built.' This is a critical workflow failure.",
+      "evidence_refs": [
+        "_bmad-output/implementation-artifacts/epic-4-demo-2026-02-14.md: 'The application could not be started for a live walkthrough. The API requires SQL Server, and the environment is Linux without Docker or SQL Server available.'",
+        "_bmad-output/implementation-artifacts/epic-5-demo-2026-02-14.md: 'Demo method: BLOCKED -- .NET 10 runtime not installed on host; API cannot start'",
+        "_bmad-output/implementation-artifacts/epic-7-demo-2026-02-15.md: 'Demo method: BLOCKED — No SQL Server, Docker, or Azure subscription available'",
+        ".retro/2026-02-15T123900Z/context.md: Experiment E-010 FAIL — 'Demo BLOCKED (0/25 ACs verified). Docker Compose docs exist (getting-started.md) but Docker not installed.'",
+        "docker-compose.yml exists but 'which docker' returns 'docker not found'",
+        "appsettings.Development.json uses LocalDB which fails on Linux"
+      ],
+      "acceptance_criteria": [
+        "Create .claude/scripts/validate-local-env.sh that checks: Docker installed, docker compose up succeeds, API returns 200 from /health, frontend builds",
+        "Update .claude/process/team-workflow.md pre-epic gate to run validate-local-env.sh and BLOCK epic start if it fails",
+        "Update docker-compose.yml to include frontend service (currently only has API + SQL)",
+        "Update appsettings.Development.json to use Docker SQL Server connection string by default, not LocalDB",
+        "Add validation-local-env.sh execution to retro evidence collection (quality signals section)"
+      ],
+      "automation_hints": [
+        "Script should exit non-zero if Docker not installed",
+        "Script should run 'docker compose up -d', wait for health checks, curl localhost:5000/health, then docker compose down",
+        "Add to pre-epic gate in team-workflow.md: 'Run .claude/scripts/validate-local-env.sh — if fails, install Docker or fix docker-compose.yml before proceeding'",
+        "Consider adding docker-compose.override.yml for developer customizations (ports, volumes) to avoid committing personal config"
+      ],
+      "files_to_touch": [
+        ".claude/scripts/validate-local-env.sh (create)",
+        ".claude/process/team-workflow.md (modify: pre-epic gate)",
+        "docker-compose.yml (add web service for frontend)",
+        "api/src/Web/appsettings.Development.json (change connection string to docker SQL)",
+        ".retro/template/context.md (add local env validation to quality signals)"
+      ],
+      "risk_if_ignored": "Every future epic will have BLOCKED demo, user frustration will escalate, no confidence in delivered features, deployment to production is impossible to verify"
+    },
+    {
+      "id": "SRE-002",
+      "title": "Separate CD pipeline into build (artifact creation) and deploy (artifact promotion) jobs",
+      "type": "process_change",
+      "priority": "P1",
+      "rationale": "CD pipeline rebuilds and retests on every deploy, wasting CI/CD minutes and time. CI already validates PRs with build+test. CD should deploy pre-built artifacts, not rebuild from source. This is standard GitOps practice.",
+      "evidence_refs": [
+        ".github/workflows/cd.yml lines 44-55: CD runs 'dotnet build' and 'dotnet test' and 'npm run build' and 'npm run test' before deploy",
+        ".github/workflows/ci.yml lines 11-27: CI already runs identical build+test steps on every PR",
+        "Review finding I-1 from Story 7.3: 'CD runs Testcontainers tests (pipeline risk) — Not fixed'",
+        ".github/workflows/cd.yml line 47: 'dotnet test api/api.slnx' runs ALL tests including Testcontainers which require Docker"
+      ],
+      "acceptance_criteria": [
+        "CI workflow uploads build artifacts (API binaries, frontend dist/) to GitHub Actions artifacts storage",
+        "CD workflow downloads artifacts from CI run (using run ID or tag) instead of rebuilding",
+        "CD workflow removes build+test steps, only runs azd deploy + health check verification",
+        "CD pipeline execution time drops by 50%+ (no rebuild, no test execution)",
+        "Deployment-guide.md documents artifact-based deployment flow"
+      ],
+      "automation_hints": [
+        "CI: Add 'actions/upload-artifact@v4' step after build (upload api/artifacts/publish and web/dist)",
+        "CD: Add 'actions/download-artifact@v4' step before azd deploy",
+        "CD: Remove dotnet build/test and npm build/test steps entirely",
+        "CD: azd deploy should use pre-built artifacts from download location",
+        "Consider using GitHub Container Registry (ghcr.io) for Docker images if switching to containerized deployment"
+      ],
+      "files_to_touch": [
+        ".github/workflows/ci.yml (add artifact upload)",
+        ".github/workflows/cd.yml (remove build+test, add artifact download)",
+        "docs/deployment-guide.md (document artifact-based deployment)"
+      ],
+      "risk_if_ignored": "Wasted CI/CD time and cost, CD pipeline failures due to Testcontainers requiring Docker, inability to quickly rollback (must rebuild old commit instead of redeploying old artifact)"
+    },
+    {
+      "id": "SRE-003",
+      "title": "Add automated rollback script and database backup/restore procedures",
+      "type": "docs_update",
+      "priority": "P1",
+      "rationale": "Deployment-guide.md says rollback is 'rerun CD for previous commit' but there's no automation, no database rollback (only forward migrations), no backup strategy. This creates unacceptable production risk.",
+      "evidence_refs": [
+        "docs/deployment-guide.md lines 132-141: 'To roll back a deployment, re-run the CD pipeline for the previous known-good commit... Database rollback: There is no automatic reverse-migration.'",
+        "api/src/Web/Program.cs lines 27-28: 'Database:AutoMigrate' defaults to true, runs MigrateAsync on startup",
+        "No evidence of Point-in-Time Restore (PITR) documentation for Azure SQL",
+        "No evidence of backup retention policy configuration in Bicep templates",
+        "api/infra/core/database/sqlserver/sqlserver.bicep: No backup configuration, no long-term retention (LTR) policy"
+      ],
+      "acceptance_criteria": [
+        "Create .azure/scripts/rollback.sh that accepts environment + version parameters, downloads artifact, runs azd deploy with specific version",
+        "Document Azure SQL Point-in-Time Restore procedure in deployment-guide.md with runbook format (step-by-step CLI commands)",
+        "Add backup retention policy to sqlserver.bicep (short-term: 7 days PITR, long-term: monthly backups for 12 months)",
+        "Document breaking migration rollback procedure: create reverse migration, test in staging, deploy forward",
+        "Add RTO (Recovery Time Objective) and RPO (Recovery Point Objective) to deployment-guide.md (recommended: RTO 1 hour, RPO 5 minutes)"
+      ],
+      "automation_hints": [
+        "Rollback script: .azure/scripts/rollback.sh production v1.2.3 → downloads artifact from GH Actions, runs azd deploy",
+        "Azure SQL PITR: az sql db restore --dest-database apiDb-restore --resource-group rg-production --server sql-xxx --name apiDb --time 2026-02-15T10:00:00Z",
+        "Bicep: Add 'shortTermRetentionPolicy' and 'longTermRetentionPolicy' resources to sqlserver.bicep",
+        "Test rollback procedure in staging before documenting for production"
+      ],
+      "files_to_touch": [
+        ".azure/scripts/rollback.sh (create)",
+        "docs/deployment-guide.md (add Rollback Runbook section, RTO/RPO, PITR procedure)",
+        "api/infra/core/database/sqlserver/sqlserver.bicep (add backup policies)",
+        "docs/disaster-recovery.md (create: comprehensive DR plan)"
+      ],
+      "risk_if_ignored": "No path to recover from bad deployment, no data recovery if database corruption or accidental DELETE, production downtime without mitigation, regulatory compliance risk (data retention)"
+    },
+    {
+      "id": "SRE-004",
+      "title": "Make auto-migration opt-in with explicit configuration flag",
+      "type": "quality_gate_gap",
+      "priority": "P1",
+      "rationale": "Program.cs runs MigrateAsync on startup by default (Database:AutoMigrate defaults to true). This is unsafe for multi-instance deployments (race conditions, lock contention, downtime during migration). Operators cannot easily disable it because the config flag is not in appsettings.json.",
+      "evidence_refs": [
+        "api/src/Web/Program.cs lines 27-28: 'if (app.Configuration.GetValue(\"Database:AutoMigrate\", true))' — defaults to TRUE",
+        "api/src/Web/appsettings.json: No Database:AutoMigrate setting — default is implicit",
+        "Review finding C-1 from Story 7.3: 'Auto-migration breaks ALL Production-env functional tests — Fixed with config guard'",
+        "docs/deployment-guide.md line 240: 'Auto-migration fails on startup: Check Application Insights logs' — but no documentation on how to disable it"
+      ],
+      "acceptance_criteria": [
+        "Change Program.cs default from 'GetValue(\"Database:AutoMigrate\", true)' to 'GetValue(\"Database:AutoMigrate\", false)' — make opt-in",
+        "Add 'Database:AutoMigrate': false to appsettings.json (explicit default)",
+        "Add 'Database:AutoMigrate': true to appsettings.Development.json (auto-migrate in local dev)",
+        "Update deployment-guide.md to explain auto-migration trade-offs and how to disable for multi-instance deployments",
+        "Add migration job documentation: how to run migrations as a separate azd pre-deploy step or init container"
+      ],
+      "automation_hints": [
+        "For single-instance deployments (current): set Database:AutoMigrate=true via App Service config or Key Vault",
+        "For multi-instance (future): create .azure/scripts/migrate.sh that runs 'dotnet ef database update' before azd deploy",
+        "Consider Azure Container Apps init containers for zero-downtime migrations in future",
+        "Document in deployment-guide.md: 'Auto-migration is disabled by default. Enable via App Service Configuration → Database__AutoMigrate = true'"
+      ],
+      "files_to_touch": [
+        "api/src/Web/Program.cs (change default to false)",
+        "api/src/Web/appsettings.json (add Database:AutoMigrate: false)",
+        "api/src/Web/appsettings.Development.json (add Database:AutoMigrate: true)",
+        "docs/deployment-guide.md (document auto-migration configuration and migration job alternative)",
+        ".azure/scripts/migrate.sh (create: standalone migration runner)"
+      ],
+      "risk_if_ignored": "Migration failures in production, race conditions if scaling to multiple instances, unplanned downtime during schema changes, no operator control over when migrations run"
+    },
+    {
+      "id": "SRE-005",
+      "title": "Add observability validation and runbook creation to deployment process",
+      "type": "instrumentation_gap",
+      "priority": "P1",
+      "rationale": "Application Insights and Log Analytics are provisioned but there's no evidence of alert configuration, dashboard creation, or runbook documentation. Deployed infrastructure is not observable in practice.",
+      "evidence_refs": [
+        "api/infra/core/host/appservice.bicep lines 86-131: Diagnostic settings configured (AppServiceHTTPLogs, AppServiceConsoleLogs, AppServiceAppLogs, AllMetrics) with 7-day retention",
+        "api/infra/main.bicep lines 81-91: Monitoring module provisions Log Analytics and Application Insights",
+        "docs/deployment-guide.md line 237: 'Check App Service logs via az webapp log tail' — but no alert configuration documented",
+        "No evidence in deployment-guide.md of: alert rules, dashboards, log queries, SLOs, on-call runbooks"
+      ],
+      "acceptance_criteria": [
+        "Create api/infra/core/monitor/alerts.bicep with critical alert rules: health check failures (>3 in 5 min), HTTP 5xx rate (>5% in 5 min), response time P95 (>2s), database connection failures",
+        "Create Application Insights dashboard with key metrics: request rate, response time, failure rate, database query duration, active users",
+        "Document 5 most common failure scenarios in docs/runbooks/incident-response.md: database unreachable, blob storage timeout, memory leak, failed migration, certificate expiration",
+        "Add alert notification configuration to main.bicep: email or Teams webhook for critical alerts",
+        "Add observability validation to CD pipeline: verify Application Insights receiving telemetry within 2 minutes of deployment"
+      ],
+      "automation_hints": [
+        "Bicep alerts: 'Microsoft.Insights/metricAlerts@2018-03-01' resource with criteria for health check path failures",
+        "Application Insights query for health check failures: 'requests | where name == \"GET /health\" and resultCode != 200 | summarize count() by bin(timestamp, 5m)'",
+        "CD pipeline: Add step 'az monitor app-insights query --app $APP_NAME --analytics-query \"requests | where timestamp > ago(5m) | count\" --offset 2m' to verify telemetry",
+        "Dashboard: Use 'az portal dashboard create' or Bicep 'Microsoft.Portal/dashboards@2020-09-01-preview' resource",
+        "Runbooks: Markdown files in docs/runbooks/ with symptom → diagnosis → resolution format"
+      ],
+      "files_to_touch": [
+        "api/infra/core/monitor/alerts.bicep (create)",
+        "api/infra/main.bicep (add alerts module reference)",
+        "api/infra/core/monitor/dashboard.bicep (create)",
+        "docs/runbooks/incident-response.md (create)",
+        ".github/workflows/cd.yml (add observability validation step)",
+        "docs/deployment-guide.md (add Observability section)"
+      ],
+      "risk_if_ignored": "Production failures go undetected, no proactive incident detection, Mean Time to Detect (MTTD) is unbounded, on-call engineers have no runbooks, customer-reported outages instead of monitoring-detected"
+    },
+    {
+      "id": "SRE-006",
+      "title": "Lock down SQL Server firewall and add VNet integration for production",
+      "type": "quality_gate_gap",
+      "priority": "P2",
+      "rationale": "SQL Server firewall is open to the entire internet (0.0.0.1-255.255.255.254) for 'debugging purposes'. This is acceptable for test/staging but creates security risk for production. No VNet integration configured.",
+      "evidence_refs": [
+        "api/infra/core/database/sqlserver/sqlserver.bicep lines 42-47: firewall rule 'startIpAddress: 0.0.0.1, endIpAddress: 255.255.255.254' with comment 'allow direct access from developer machine, for debugging purposes'",
+        "No VNet or Private Endpoint configuration in main.bicep or web.bicep",
+        "docs/deployment-guide.md line 236: 'Check subscription quota limits' — no mention of network isolation"
+      ],
+      "acceptance_criteria": [
+        "Add Bicep parameter 'allowPublicDatabaseAccess' (default: true for staging, false for production)",
+        "When allowPublicDatabaseAccess=false, create Azure Private Endpoint for SQL Server instead of firewall rule",
+        "Add VNet integration to App Service in production environment (vnetIntegrationEnabled parameter)",
+        "Update deployment-guide.md to document network isolation for production and IP whitelisting for developer access",
+        "Add network security validation to CD pipeline for production: verify no public SQL endpoint exposed"
+      ],
+      "automation_hints": [
+        "Bicep: Add 'param allowPublicDatabaseAccess bool = true' to main.bicep",
+        "Bicep: Conditional firewall rule: 'resource firewall = if (allowPublicDatabaseAccess) { ... }'",
+        "Bicep: Add 'core/network/private-endpoint.bicep' module for SQL when allowPublicDatabaseAccess=false",
+        "App Service VNet integration: 'virtualNetworkSubnetId' parameter in web.bicep",
+        "CD pipeline: Add 'az sql server show --name $SQL_SERVER --resource-group $RG --query publicNetworkAccess' and assert 'Disabled' for production",
+        "azd env set allowPublicDatabaseAccess false for production environment"
+      ],
+      "files_to_touch": [
+        "api/infra/main.bicep (add allowPublicDatabaseAccess parameter)",
+        "api/infra/core/database/sqlserver/sqlserver.bicep (conditional firewall rule)",
+        "api/infra/core/network/private-endpoint.bicep (create)",
+        "api/infra/services/web.bicep (add VNet integration parameters)",
+        "docs/deployment-guide.md (document network isolation)",
+        ".github/workflows/cd.yml (add network security validation for production)"
+      ],
+      "risk_if_ignored": "Production database exposed to internet, brute-force attack risk, compliance violations (SOC2, ISO27001 require network isolation), lateral movement risk if App Service compromised"
+    },
+    {
+      "id": "SRE-007",
+      "title": "Add code coverage reporting to retro evidence and track coverage trends",
+      "type": "instrumentation_gap",
+      "priority": "P2",
+      "rationale": "CI pipeline collects code coverage (ci.yml line 17 --collect:\"XPlat Code Coverage\") and generates reports, but coverage data is not included in retro evidence. A-004 from Epic 5 retro has been NOT APPLIED for 6 consecutive epics. Coverage trends are invisible.",
+      "evidence_refs": [
+        ".retro/2026-02-15T123900Z/context.md lines 91-94: 'Code Coverage: Frontend: Not measured, Backend: Not measured. Status: A-004 from previous retro NOT APPLIED. This is the 6th epic without coverage data.'",
+        ".github/workflows/ci.yml lines 17-26: CI runs 'dotnet test --collect:\"XPlat Code Coverage\"' and 'reportgenerator' but output is only logged, not saved",
+        "Previous retro A-004: 'Verify code coverage CI status — NOT APPLIED'",
+        ".retro/2026-02-14T224500Z/summary.md (assumed): A-004 was P1 priority, carried forward to Epic 7, auto-escalates to P0 if not applied"
+      ],
+      "acceptance_criteria": [
+        "Update .claude/process/retro-evidence-collection.sh to run 'dotnet test --collect:\"XPlat Code Coverage\"' and extract line coverage percentage from Summary.txt",
+        "Add code coverage data to .retro/template/context.md quality signals section: Backend coverage %, Frontend coverage %",
+        "CI workflow uploads coverage report as artifact (coverage.cobertura.xml and Summary.txt)",
+        "Create .claude/scripts/coverage-trend.sh that compares current coverage to previous retro and reports increase/decrease",
+        "Set minimum coverage threshold: 70% for backend, 80% for frontend (matches current levels per Epic 4 demo notes)"
+      ],
+      "automation_hints": [
+        "retro-evidence-collection.sh: Add 'dotnet test api/api.slnx --collect:\"XPlat Code Coverage\" && cat api/artifacts/coverage-report/Summary.txt | grep \"Line coverage\"'",
+        "CI: Add 'actions/upload-artifact@v4' step to upload coverage report",
+        "coverage-trend.sh: Parse previous retro context.md for coverage %, compare to current, output diff",
+        "Consider Codecov or Coveralls integration for historical tracking and PR comments",
+        "Frontend coverage: Add 'npm run test -- --coverage' to retro evidence collection"
+      ],
+      "files_to_touch": [
+        ".claude/process/retro-evidence-collection.sh (add coverage collection)",
+        ".retro/template/context.md (add Code Coverage section template)",
+        ".claude/scripts/coverage-trend.sh (create)",
+        ".github/workflows/ci.yml (upload coverage artifact)",
+        "docs/testing-standards.md (add coverage thresholds)"
+      ],
+      "risk_if_ignored": "Coverage degradation goes undetected, P1 action item ignored for 6 epics signals broken process, no accountability for test quality, regression risk increases"
+    }
+  ]
+}

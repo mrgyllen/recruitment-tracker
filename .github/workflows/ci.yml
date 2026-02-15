@@ -24,6 +24,14 @@ jobs:
             -targetdir:"api/artifacts/coverage-report" \
             -reporttypes:"TextSummary;Cobertura"
           cat api/artifacts/coverage-report/Summary.txt
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: |
+            api/artifacts/testResults/**/coverage.cobertura.xml
+            api/artifacts/coverage-report/Summary.txt
       - run: dotnet format api/api.slnx --verify-no-changes
 
   web:
