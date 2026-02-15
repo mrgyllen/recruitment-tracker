@@ -104,7 +104,7 @@ development_status:
   epic-7: in-progress
   7-1-health-check-endpoints: done
   7-2-azure-infrastructure-as-code: done
-  7-3-cicd-pipeline-auto-migration: ready-for-dev
+  7-3-cicd-pipeline-auto-migration: in-progress
   7-4-staging-environment: ready-for-dev
   epic-7-retrospective: optional
 

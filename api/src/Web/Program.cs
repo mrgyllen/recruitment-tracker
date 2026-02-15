@@ -1,6 +1,7 @@
 using api.Infrastructure.Data;
 using api.Web.Middleware;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -19,7 +20,16 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
+    // Auto-migrate: apply pending EF Core migrations on startup.
+    // Safe for single-instance deployments (current scale).
+    // For multi-instance, switch to a migration job or init container.
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+    logger.LogInformation("Applying database migrations...");
+    await db.Database.MigrateAsync();
+    logger.LogInformation("Database migrations applied successfully.");
+
     app.UseHsts();
 }
 
