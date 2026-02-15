@@ -5,3 +5,6 @@
 # Story 7.2: M-1 fixed in follow-up commit (0f902f7), M-2 Dev Agent Record empty (recurring)
 # Story 7.3: C-1 auto-migration broke Production-env tests — guard startup logic with config flag
 # Story 7.3: M-2 Dev Agent Record empty (3rd occurrence — process gap)
+# Story 7.4: I-1 health check step only verified /health, not /ready — verify all AC-specified endpoints
+# Story 7.4: I-2 azd --output json portability — prefer dotenv parsing over JSON flags for CLI tools
+# Story 7.4: M-2 Dev Agent Record empty (4th occurrence — systemic process gap)
