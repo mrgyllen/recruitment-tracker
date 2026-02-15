@@ -3,3 +3,5 @@
 # Story 7.1: M-2 (pipeline ordering) not actionable — no anti-pattern added
 # Story 7.1: M-3 Dev Agent Record empty — process gap, not code anti-pattern
 # Story 7.2: M-1 fixed in follow-up commit (0f902f7), M-2 Dev Agent Record empty (recurring)
+# Story 7.3: C-1 auto-migration broke Production-env tests — guard startup logic with config flag
+# Story 7.3: M-2 Dev Agent Record empty (3rd occurrence — process gap)
