@@ -523,7 +523,7 @@ Sample files in `docs/example-import-files/`:
 
 ## Non-Functional Requirements
 
-*40 NFRs across 5 categories. Only categories relevant to this product are included. The Deployment & Infrastructure category was added post-initial PRD to close a gap identified during implementation.*
+*47 NFRs across 6 categories. Only categories relevant to this product are included. The Deployment & Infrastructure category was added post-initial PRD to close a gap identified during implementation. The Testing category was added per [ADR-001](architecture/adrs/ADR-001-test-pyramid-e2e-decomposition.md) after the first live integration test revealed gaps in the test pyramid.*
 
 ### Performance
 
@@ -579,3 +579,13 @@ Sample files in `docs/example-import-files/`:
 - **NFR38:** API deployed to Azure App Service using azd deployment pipeline. Docker Compose retained for local development environment.
 - **NFR39:** EF Core database migrations execute automatically during deployment. Rollback strategy is deploy-previous-version, not reverse-migration.
 - **NFR40:** Health check endpoints: `/health` (liveness — process alive) and `/ready` (readiness — database connected, dependencies available) enable Azure load balancer integration and automatic container restart on failure.
+
+### Testing
+
+- **NFR41:** Query and command handlers using EF Core LINQ-to-SQL features (`.Include()`, `.Where()` with navigation properties, `.Select()` projections, `.GroupBy()`) must have functional tests running against real SQL Server via Testcontainers. Unit tests with mocked `IApplicationDbContext` are insufficient for these handlers.
+- **NFR42:** Security isolation verified by integration tests against real SQL Server for all 8 mandatory scenarios defined in `testing-standards.md`. Tests must use Testcontainers, not `UseInMemoryDatabase`.
+- **NFR43:** E2E scenarios documented in `docs/e2e-scenarios.md` registry, traceable to lower-level tests via "Covered By" column. Automated browser-based E2E tests added only when no combination of lower tests covers the risk.
+- **NFR44:** Frontend-backend DTO contract alignment verified by structural contract tests in `Application.UnitTests/Contracts/`. Required for every endpoint with a corresponding MSW handler.
+- **NFR45:** CI runs all test layers (unit, contract, integration, functional) on every PR. Total CI pipeline completes within 10 minutes (shared with NFR35).
+- **NFR46:** Post-deployment smoke tests in the CD pipeline verify liveness (`/health` → 200), readiness (`/ready` → 200), and authentication enforcement (`/api/recruitments` unauthenticated → 401) after each deployment.
+- **NFR47:** No `UseInMemoryDatabase` in any test project. All database-dependent tests use Testcontainers with real SQL Server to ensure EF Core global query filters, FK constraints, and SQL-specific behavior are exercised.

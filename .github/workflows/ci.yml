@@ -14,6 +14,9 @@ jobs:
           dotnet-version: '10.0.x'
       - run: dotnet restore api/api.slnx
       - run: dotnet build api/api.slnx --no-restore
+      # Runs all test layers: unit, contract, integration, functional.
+      # Integration and functional tests use Testcontainers (auto-provisions SQL Server in Docker).
+      # GitHub Actions ubuntu-latest runners have Docker pre-installed.
       - run: dotnet test api/api.slnx --no-build --collect:"XPlat Code Coverage"
       - name: Generate coverage report
         if: always()

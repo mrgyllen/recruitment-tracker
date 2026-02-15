@@ -8,7 +8,7 @@ Decision log for architectural changes made during implementation. ADRs capture 
 
 | # | Title | Date | Status | Shards Updated |
 |---|-------|------|--------|----------------|
-| — | No decisions recorded yet | — | — | — |
+| 001 | [Test Pyramid and E2E Decomposition](ADR-001-test-pyramid-e2e-decomposition.md) | 2026-02-15 | Accepted | `testing-standards.md`, `prd.md`, `team-workflow.md`, `testing-pragmatic-tdd.md`, `ci.yml`, `cd.yml` |
 
 ## ADR Template
 

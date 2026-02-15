@@ -12,6 +12,7 @@
 | Screening/batch processing UI | Add `frontend-architecture.md` (Batch Screening Architecture, PDF Viewing sections) |
 | Creating new files/folders | Add `project-structure.md` |
 | Any story with tests | Add `testing-standards.md` |
+| E2E scenario planning | `architecture.md` (core) + `testing-standards.md` |
 | Auth-related work | Add `dev-auth-patterns.md` |
 | DevOps/deployment | Add `infrastructure.md` |
 | Project scaffolding (Story 1.1 only) | Add `starter-templates.md` |
@@ -75,12 +76,16 @@
   - [CI/CD](./infrastructure.md#cicd)
   - [Environment Configuration](./infrastructure.md#environment-configuration)
   - [Background Processing](./infrastructure.md#background-processing)
-- [Testing Standards](./testing-standards.md) — Test frameworks (NUnit, NSubstitute, Vitest, MSW), naming conventions, Testcontainers, mandatory security tests, pragmatic TDD modes
+- [Testing Standards](./testing-standards.md) — Test frameworks (NUnit, NSubstitute, Vitest, MSW), naming conventions, Testcontainers, mandatory security tests, pragmatic TDD modes, test pyramid, E2E decomposition, contract tests, post-deployment smoke tests
   - [Test Frameworks](./testing-standards.md#test-frameworks)
   - [Test Naming Convention](./testing-standards.md#test-naming-convention)
   - [Integration Tests with Testcontainers](./testing-standards.md#integration-tests-with-testcontainers)
   - [Mandatory Security Test Scenarios](./testing-standards.md#mandatory-security-test-scenarios)
   - [Pragmatic TDD Modes](./testing-standards.md#pragmatic-tdd-modes)
+  - [Test Pyramid Layers](./testing-standards.md#test-pyramid-layers) _(ADR-001)_
+  - [E2E Decomposition Method](./testing-standards.md#e2e-decomposition-method) _(ADR-001)_
+  - [Contract Tests](./testing-standards.md#contract-tests) _(ADR-001)_
+  - [Post-Deployment Smoke Tests](./testing-standards.md#post-deployment-smoke-tests) _(ADR-001)_
 - [Validation Results](./validation-results.md) — Coherence validation, requirements coverage, gap analysis, completeness checklist, readiness assessment (historical reference)
 
 ### Architecture Decision Records

@@ -84,3 +84,16 @@ jobs:
               fi
             done
           done
+
+      - name: Verify auth enforcement
+        working-directory: api
+        run: |
+          APP_URL=$(azd env get-values | grep '^WEB_BASE_URI=' | sed 's/^WEB_BASE_URI="//' | sed 's/"$//')
+          echo "Checking auth enforcement at $APP_URL/api/recruitments..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/api/recruitments")
+          if [ "$STATUS" = "401" ]; then
+            echo "Auth enforcement check passed (unauthenticated request returned 401)"
+          else
+            echo "Auth enforcement check FAILED: expected 401, got $STATUS"
+            exit 1
+          fi

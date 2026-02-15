@@ -63,6 +63,13 @@ Repeat this cycle for each story in the sprint:
      | GetFooQueryHandler | Query | Yes | Same pattern — queries need the SAME check |
      | ListBarsQueryHandler | Query | No — filtered by global query filter | N/A |
      Plans missing this table for any story with recruitment-scoped handlers are incomplete.
+   - **Test Layer Map requirement (ADR-001):** Implementation plans MUST include a "Test Layer Map" table mapping each handler/component to required test layers. The table format:
+     | Handler/Component | Unit | Contract | Functional | Why |
+     |-------------------|------|----------|------------|-----|
+     | CreateFooCommandHandler | Yes | — | Yes | Uses `.Include()` for Members navigation property |
+     | GetFooQueryHandler | Yes | Yes | Yes | `.Select()` projection + has MSW handler |
+     | FooDto | — | Yes | — | MSW handler exists in frontend |
+     Use the layer selection decision tree in `testing-standards.md` to fill the "Why" column. Plans missing this table are incomplete.
 3. Dev Agent implements using `test-driven-development` skill
 4. Dev Agent runs `verification-before-completion` before declaring done
    - **Anti-pattern scanning (E-006, replaces E-002):** Before declaring done, Dev Agent MUST run through this structured pre-review checklist (not just regex scanning):
@@ -70,6 +77,7 @@ Repeat this cycle for each story in the sprint:
      - [ ] All EF queries use `.Include()` for navigation properties accessed after query (no lazy loading)
      - [ ] All recruitment-scoped handlers verify ITenantContext membership (see Authorization table from step 2)
      - [ ] No magic strings — use constants or enums for status values, action types, etc.
+     - [ ] Test layer map from implementation plan is fulfilled — all required functional tests exist per testing-standards.md
      - [ ] Anti-pattern scan: check source files against `.claude/hooks/anti-patterns.txt` and `.claude/hooks/anti-patterns-pending.txt`
      - [ ] Domain entity properties use private setters
      - [ ] FluentValidation on all command/query inputs
@@ -159,6 +167,34 @@ Task D: "Implement Story X.Z"        (Dev Agent)    — blockedBy: [C]  <-- gate
 - Task D (next story) is ALWAYS blocked by Task C (approval), never by Task B (review)
 
 **Dev Agent guardrail:** NEVER start a new story task unless the Team Lead explicitly assigns it to you with a message. Do not self-assign based on task list availability alone.
+
+## Post-Epic Integration Verification
+
+_Added by [ADR-001](/_bmad-output/planning-artifacts/architecture/adrs/ADR-001-test-pyramid-e2e-decomposition.md). Run after the last story is completed but before the Epic Demo Walkthrough._
+
+Before proceeding to the demo, verify that all test layers pass against real infrastructure:
+
+1. **Run functional tests:** `dotnet test api/tests/Application.FunctionalTests/`
+   - These use WebApplicationFactory + Testcontainers — Docker must be running
+   - All tests must pass. Failures here indicate LINQ-to-SQL bugs that unit tests missed.
+
+2. **Run integration tests:** `dotnet test api/tests/Infrastructure.IntegrationTests/`
+   - These verify tenant isolation and security scenarios against real SQL Server
+   - All 8 mandatory security scenarios must pass.
+
+3. **Check E2E scenario registry:** Review `docs/e2e-scenarios.md` for coverage gaps introduced by this epic's stories
+   - Any "Gap? = Partial" entries related to this epic's stories should be resolved
+   - Update the registry if new tests were added
+
+4. **If tests fail:** Fix BEFORE proceeding to demo. Do not proceed with known functional/integration test failures.
+
+5. **Record results** in `demo.md` under a "Pre-Demo Integration Verification" section:
+   ```markdown
+   ## Pre-Demo Integration Verification
+   - Functional tests: X passed, Y failed
+   - Integration tests: X passed, Y failed
+   - E2E registry gaps: [none | list]
+   ```
 
 ## Epic Demo Walkthrough
 
