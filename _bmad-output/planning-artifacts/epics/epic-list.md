@@ -31,4 +31,10 @@ Users can view the complete audit trail for a recruitment, and the system handle
 **FRs covered:** FR9, FR52, FR53, FR54, FR63
 **Implementation scope:** Audit trail viewing UI, GDPR retention job (IHostedService daily timer), anonymization logic (preserve aggregate metrics, strip PII), configurable retention period. AuditEntry entity + AuditBehaviour recording set up in Epic 1; this epic adds viewing UI and GDPR lifecycle.
 
+## Epic 7: Deployment & Infrastructure Automation
+The application can be deployed to Azure through an automated azd pipeline with infrastructure defined as Bicep templates. Changes are verified in a staging environment before reaching production. Health monitoring enables automatic container restart on failure.
+**NFRs covered:** NFR35, NFR36, NFR37, NFR38 (amended), NFR39, NFR40
+**Implementation scope:** ASP.NET Core health check endpoints (`/health` liveness, `/ready` readiness with DB probe), adapt existing azd Bicep scaffolding (add Blob Storage module, update runtime to .NET 10), new `cd.yml` GitHub Actions workflow for push-to-main deployment via azd, EF Core auto-migration on startup, staging environment via azd env with manual promotion to production.
+**Parallelism note:** Epic 7 can be developed independently of Epics 2-6. It builds only on Epic 1's CI pipeline and project structure. Health check endpoints (Story 7.1) can be implemented at any time.
+
 ---

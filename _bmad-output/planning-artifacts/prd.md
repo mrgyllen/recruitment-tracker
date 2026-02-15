@@ -11,6 +11,13 @@ stepsCompleted:
   - step-09-functional
   - step-10-nonfunctional
   - step-11-polish
+  - step-e-01-discovery
+  - step-e-02-review
+  - step-e-03-edit
+lastEdited: '2026-02-15'
+editHistory:
+  - date: '2026-02-15'
+    changes: 'Added Deployment & Infrastructure NFRs (NFR35-NFR40): CI/CD pipeline, staging environment, IaC (Bicep), containerized deployment, database migration automation, health check endpoints'
 inputDocuments:
   - _bmad-output/planning-artifacts/product-brief-recruitment-tracker-2026-02-01.md
   - docs/chatgpt-research-intro.md
@@ -516,7 +523,7 @@ Sample files in `docs/example-import-files/`:
 
 ## Non-Functional Requirements
 
-*34 NFRs across 4 categories. Only categories relevant to this product are included.*
+*40 NFRs across 5 categories. Only categories relevant to this product are included. The Deployment & Infrastructure category was added post-initial PRD to close a gap identified during implementation.*
 
 ### Performance
 
@@ -563,3 +570,12 @@ Sample files in `docs/example-import-files/`:
 - **NFR32:** Document storage separated from application database. No documents in the database.
 - **NFR33:** Structured data stored in a relational database with ACID compliance
 - **NFR34:** API follows RESTful conventions with consistent error response format and appropriate HTTP status codes
+
+### Deployment & Infrastructure
+
+- **NFR35:** Automated CI/CD pipeline builds, tests, and deploys on PR merge to main. Full pipeline completes within 10 minutes. PRs require passing build and test suite as merge gate.
+- **NFR36:** A staging environment mirrors production configuration for end-to-end verification before production deployment.
+- **NFR37:** All Azure infrastructure defined declaratively using Bicep templates. Full environment reproducible from source control within 30 minutes.
+- **NFR38:** API deployed to Azure App Service using azd deployment pipeline. Docker Compose retained for local development environment.
+- **NFR39:** EF Core database migrations execute automatically during deployment. Rollback strategy is deploy-previous-version, not reverse-migration.
+- **NFR40:** Health check endpoints: `/health` (liveness — process alive) and `/ready` (readiness — database connected, dependencies available) enable Azure load balancer integration and automatic container restart on failure.
