@@ -1,6 +1,6 @@
-import { render, screen } from '@/test-utils'
 import { OutcomeHistory } from './OutcomeHistory'
 import type { OutcomeHistoryDto } from '@/lib/api/screening.types'
+import { render, screen } from '@/test-utils'
 
 const mockHistory: OutcomeHistoryDto[] = [
   {

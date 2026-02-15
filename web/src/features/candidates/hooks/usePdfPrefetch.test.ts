@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
 import { renderHook } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
 import { usePdfPrefetch } from './usePdfPrefetch'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
 import { mockStepId1, mockStepId2 } from '@/mocks/fixtures/candidates'

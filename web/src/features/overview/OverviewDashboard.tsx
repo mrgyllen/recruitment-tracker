@@ -1,15 +1,15 @@
-import { useEffect, useState } from 'react'
 import { ChevronDown, ChevronUp } from 'lucide-react'
+import { useState } from 'react'
+import { useRecruitmentOverview } from './hooks/useRecruitmentOverview'
+import { KpiCard } from './KpiCard'
+import { PendingActionsPanel } from './PendingActionsPanel'
+import { StepSummaryCard } from './StepSummaryCard'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from '@/components/ui/collapsible'
-import { KpiCard } from './KpiCard'
-import { PendingActionsPanel } from './PendingActionsPanel'
-import { StepSummaryCard } from './StepSummaryCard'
-import { useRecruitmentOverview } from './hooks/useRecruitmentOverview'
 
 interface OverviewDashboardProps {
   recruitmentId: string
@@ -23,17 +23,19 @@ export function OverviewDashboard({
   onStaleFilter,
 }: OverviewDashboardProps) {
   const storageKey = `overview-collapsed:${recruitmentId}`
+  const [prevStorageKey, setPrevStorageKey] = useState(storageKey)
   const [isOpen, setIsOpen] = useState(() => {
     const stored = localStorage.getItem(storageKey)
     return stored !== 'true'
   })
 
-  const { data, isPending } = useRecruitmentOverview(recruitmentId)
-
-  useEffect(() => {
+  if (prevStorageKey !== storageKey) {
+    setPrevStorageKey(storageKey)
     const stored = localStorage.getItem(storageKey)
     setIsOpen(stored !== 'true')
-  }, [storageKey])
+  }
+
+  const { data, isPending } = useRecruitmentOverview(recruitmentId)
 
   function handleOpenChange(open: boolean) {
     setIsOpen(open)

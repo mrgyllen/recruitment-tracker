@@ -2,6 +2,7 @@ import userEvent from '@testing-library/user-event'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { CandidateList } from './CandidateList'
+import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
 import {
   mockCandidates,
   mockStepId1,
@@ -9,7 +10,6 @@ import {
 } from '@/mocks/fixtures/candidates'
 import { server } from '@/mocks/server'
 import { render, screen, waitFor } from '@/test-utils'
-import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
 
 const recruitmentId = '550e8400-e29b-41d4-a716-446655440000'
 

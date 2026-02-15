@@ -1,9 +1,9 @@
-import { renderHook, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Toaster } from '@/components/ui/sonner'
+import { renderHook, act } from '@testing-library/react'
 import { useScreeningSession } from './useScreeningSession'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
 import type { OutcomeResultDto } from '@/lib/api/screening.types'
+import { Toaster } from '@/components/ui/sonner'
 
 beforeEach(() => {
   vi.useFakeTimers()

@@ -1,5 +1,6 @@
-import { renderHook, act } from '@testing-library/react'
-import { render, screen } from '@testing-library/react'
+import { act } from '@testing-library/react'
+import { render } from '@testing-library/react'
+import { useEffect } from 'react'
 import { useResizablePanel } from './useResizablePanel'
 
 let resizeCallback: ResizeObserverCallback | null = null
@@ -26,11 +27,13 @@ afterEach(() => {
 })
 
 // Helper component that mounts the ref onto a real DOM element
-function TestHarness(props: Parameters<typeof useResizablePanel>[0] & { onResult: (r: ReturnType<typeof useResizablePanel>) => void }) {
+function TestHarness(props: Parameters<typeof useResizablePanel>[0] & { onResult: (r: Omit<ReturnType<typeof useResizablePanel>, 'containerRef'>) => void }) {
   const { onResult, ...options } = props
-  const result = useResizablePanel(options)
-  onResult(result)
-  return <div ref={result.containerRef} data-testid="container" />
+  const { containerRef, ...rest } = useResizablePanel(options)
+  useEffect(() => {
+    onResult(rest)
+  })
+  return <div ref={containerRef} data-testid="container" />
 }
 
 function simulateResize(width: number) {

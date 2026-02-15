@@ -1,5 +1,5 @@
-import { CandidateList } from '@/features/candidates/CandidateList'
 import type { WorkflowStepDto } from '@/lib/api/recruitments.types'
+import { CandidateList } from '@/features/candidates/CandidateList'
 
 interface CandidatePanelProps {
   recruitmentId: string

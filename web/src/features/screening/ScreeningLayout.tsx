@@ -1,17 +1,17 @@
-import { useRef, useState, useEffect, useCallback } from 'react'
+import { useRef, useState, useCallback, useMemo } from 'react'
 import { useParams } from 'react-router'
-import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
+import { CandidatePanel } from './CandidatePanel'
+import { useKeyboardNavigation } from './hooks/useKeyboardNavigation'
+import { useResizablePanel } from './hooks/useResizablePanel'
+import { useScreeningSession } from './hooks/useScreeningSession'
+import { OutcomeForm } from './OutcomeForm'
+import type { OutcomeStatus, OutcomeResultDto } from '@/lib/api/screening.types'
+import { EmptyState } from '@/components/EmptyState'
+import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { useCandidates } from '@/features/candidates/hooks/useCandidates'
 import { usePdfPrefetch } from '@/features/candidates/hooks/usePdfPrefetch'
 import { PdfViewer } from '@/features/candidates/PdfViewer'
-import { useResizablePanel } from './hooks/useResizablePanel'
-import { useScreeningSession } from './hooks/useScreeningSession'
-import { useKeyboardNavigation } from './hooks/useKeyboardNavigation'
-import { CandidatePanel } from './CandidatePanel'
-import { OutcomeForm } from './OutcomeForm'
-import { EmptyState } from '@/components/EmptyState'
-import { SkeletonLoader } from '@/components/SkeletonLoader'
-import type { OutcomeStatus, OutcomeResultDto } from '@/lib/api/screening.types'
+import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
 
 export function ScreeningLayout() {
   const { recruitmentId } = useParams<{ recruitmentId: string }>()
@@ -21,9 +21,9 @@ export function ScreeningLayout() {
     pageSize: 50,
   })
 
-  const candidates = candidateData?.items ?? []
+  const candidates = useMemo(() => candidateData?.items ?? [], [candidateData?.items])
 
-  const panel = useResizablePanel({
+  const { containerRef: panelContainerRef, leftWidth, centerWidth, isDragging, dividerProps } = useResizablePanel({
     storageKey: recruitmentId!,
     defaultRatio: 0.25,
     minLeftPx: 250,
@@ -35,6 +35,7 @@ export function ScreeningLayout() {
   const [keyboardOutcome, setKeyboardOutcome] = useState<OutcomeStatus | null>(null)
   const [candidateAnnouncement, setCandidateAnnouncement] = useState('')
   const [outcomeAnnouncement, setOutcomeAnnouncement] = useState('')
+  const [prevSelectedCandidateId, setPrevSelectedCandidateId] = useState<string | null>(null)
 
   const session = useScreeningSession(recruitmentId!, candidates, {
     onAutoAdvance: () => {
@@ -65,19 +66,16 @@ export function ScreeningLayout() {
     ? prefetch.getPrefetchedUrl(selectedCandidate.id) ?? selectedCandidate.documentSasUrl
     : null
 
-  // ARIA announcement on candidate switch
-  useEffect(() => {
+  // ARIA announcement on candidate switch + reset keyboard outcome
+  if (session.selectedCandidateId !== prevSelectedCandidateId) {
+    setPrevSelectedCandidateId(session.selectedCandidateId)
     if (selectedCandidate) {
       setCandidateAnnouncement(
         `Now reviewing ${selectedCandidate.fullName} at ${selectedCandidate.currentWorkflowStepName ?? 'unknown step'}`,
       )
     }
-  }, [selectedCandidate])
-
-  // Reset keyboard outcome when candidate changes
-  useEffect(() => {
     setKeyboardOutcome(null)
-  }, [session.selectedCandidateId])
+  }
 
   const handleOutcomeWithAnnouncement = useCallback(
     (result: OutcomeResultDto) => {
@@ -88,7 +86,7 @@ export function ScreeningLayout() {
       setKeyboardOutcome(null)
       session.handleOutcomeRecorded(result)
     },
-    [candidates, session.handleOutcomeRecorded],
+    [candidates, session],
   )
 
   if (recruitmentLoading || candidatesLoading) {
@@ -97,13 +95,13 @@ export function ScreeningLayout() {
 
   return (
     <div
-      ref={panel.containerRef}
+      ref={panelContainerRef}
       className="flex h-[calc(100vh-4rem)]"
-      style={{ userSelect: panel.isDragging ? 'none' : 'auto' }}
+      style={{ userSelect: isDragging ? 'none' : 'auto' }}
     >
       {/* Left Panel: Candidate List */}
       <div
-        style={{ width: panel.leftWidth, flexShrink: 0 }}
+        style={{ width: leftWidth, flexShrink: 0 }}
         className="overflow-hidden border-r focus-visible:outline-2 focus-visible:outline-blue-500 focus-visible:outline-offset-2"
         role="region"
         aria-label="Candidate list"
@@ -124,7 +122,7 @@ export function ScreeningLayout() {
 
       {/* Resizable Divider */}
       <div
-        {...panel.dividerProps}
+        {...dividerProps}
         className="flex-shrink-0 bg-gray-200 transition-colors hover:bg-blue-400"
         role="separator"
         aria-orientation="vertical"
@@ -133,7 +131,7 @@ export function ScreeningLayout() {
 
       {/* Center Panel: PDF Viewer */}
       <div
-        style={{ width: panel.centerWidth, flexShrink: 0 }}
+        style={{ width: centerWidth, flexShrink: 0 }}
         className="overflow-hidden"
         role="region"
         aria-label="CV viewer"

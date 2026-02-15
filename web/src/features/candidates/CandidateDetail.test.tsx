@@ -1,20 +1,20 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, expect, it, vi } from 'vitest'
 import { CandidateDetail } from './CandidateDetail'
+import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/features/auth/AuthContext'
 import {
   mockCandidateDetail,
   mockCandidateId1,
 } from '@/mocks/fixtures/candidates'
 import { server } from '@/mocks/server'
-import { render, screen, waitFor } from '@testing-library/react'
-import { AuthProvider } from '@/features/auth/AuthContext'
-import { Toaster } from '@/components/ui/sonner'
 
 // Mock react-pdf since jsdom cannot render canvas
 vi.mock('react-pdf', () => {
-  const Document = ({ onLoadSuccess, children, file }: any) => {
+  const Document = ({ onLoadSuccess, children, file }: { onLoadSuccess?: (info: { numPages: number }) => void; children: React.ReactNode; file?: string }) => {
     if (file) {
       setTimeout(() => onLoadSuccess?.({ numPages: 1 }), 0)
     }
@@ -24,7 +24,7 @@ vi.mock('react-pdf', () => {
       </div>
     )
   }
-  const Page = ({ pageNumber }: any) => (
+  const Page = ({ pageNumber }: { pageNumber: number }) => (
     <div data-testid={`pdf-page-${pageNumber}`}>Page {pageNumber}</div>
   )
   return {

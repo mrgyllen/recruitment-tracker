@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { toast } from 'sonner'
 import type { CandidateResponse } from '@/lib/api/candidates.types'
 import type { OutcomeResultDto } from '@/lib/api/screening.types'
@@ -25,7 +25,9 @@ export function useScreeningSession(
   const autoAdvanceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const recentlyScreenedRef = useRef<Set<string>>(new Set())
   const onAutoAdvanceRef = useRef(options?.onAutoAdvance)
-  onAutoAdvanceRef.current = options?.onAutoAdvance
+  useEffect(() => {
+    onAutoAdvanceRef.current = options?.onAutoAdvance
+  }, [options?.onAutoAdvance])
 
   const selectedCandidate = candidates.find((c) => c.id === selectedCandidateId) ?? null
 

@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react'
+import { useDocumentUpload } from './hooks/useDocumentUpload'
+import type { CandidateDocumentDto } from '@/lib/api/candidates.types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,8 +13,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { useAppToast } from '@/hooks/useAppToast'
-import { useDocumentUpload } from './hooks/useDocumentUpload'
-import type { CandidateDocumentDto } from '@/lib/api/candidates.types'
 import { ApiError } from '@/lib/api/httpClient'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10 MB

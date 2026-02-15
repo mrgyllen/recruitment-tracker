@@ -1,13 +1,13 @@
 import { http, HttpResponse } from 'msw'
-import type {
-  CandidateDocumentDto,
-  PaginatedCandidateList,
-} from '@/lib/api/candidates.types'
 import {
   mockCandidateDetail,
   mockCandidateDocument,
   mockCandidates,
 } from './fixtures/candidates'
+import type {
+  CandidateDocumentDto,
+  PaginatedCandidateList,
+} from '@/lib/api/candidates.types'
 
 const duplicateEmail = 'duplicate@example.com'
 

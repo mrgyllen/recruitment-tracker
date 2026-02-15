@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { screeningApi } from '@/lib/api/screening'
 import type { RecordOutcomeRequest } from '@/lib/api/screening.types'
+import { screeningApi } from '@/lib/api/screening'
 
 export function useRecordOutcome() {
   const queryClient = useQueryClient()

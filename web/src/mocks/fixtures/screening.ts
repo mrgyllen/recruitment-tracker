@@ -1,8 +1,8 @@
+import { mockCandidateId1, mockStepId1, mockStepId2 } from './candidates'
 import type {
   OutcomeResultDto,
   OutcomeHistoryDto,
 } from '@/lib/api/screening.types'
-import { mockCandidateId1, mockStepId1, mockStepId2 } from './candidates'
 
 export const mockOutcomeResult: OutcomeResultDto = {
   outcomeId: 'outcome-1111-1111-1111-111111111111',

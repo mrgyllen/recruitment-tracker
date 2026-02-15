@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import { ImportSummary } from './ImportSummary'
-import { render, screen } from '@/test-utils'
 import type { ImportDocumentDto, ImportRowResult } from '@/lib/api/import.types'
+import { render, screen } from '@/test-utils'
 
 const defaultRows: ImportRowResult[] = [
   { rowNumber: 1, candidateEmail: 'a@test.com', action: 'Created', errorMessage: null, resolution: null },

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import { importApi } from '@/lib/api/import'
 import type { ImportSessionResponse } from '@/lib/api/import.types'
+import { importApi } from '@/lib/api/import'
 
 const POLL_INTERVAL_MS = 2000
 

@@ -1,16 +1,15 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { renderHook, waitFor, act } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { renderHook, waitFor, act } from '@testing-library/react'
 import { createElement, type ReactNode } from 'react'
+import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { useSasUrl } from './useSasUrl'
+import { candidateApi } from '@/lib/api/candidates'
 
 vi.mock('@/lib/api/candidates', () => ({
   candidateApi: {
     getById: vi.fn(),
   },
 }))
-
-import { candidateApi } from '@/lib/api/candidates'
 
 function createWrapper() {
   const queryClient = new QueryClient({

@@ -1,8 +1,8 @@
 import { AlertTriangle } from 'lucide-react'
 import { useResolveMatch } from './hooks/useResolveMatch'
+import type { ImportRowResult } from '@/lib/api/import.types'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import type { ImportRowResult } from '@/lib/api/import.types'
 
 export interface FlaggedRow extends ImportRowResult {
   originalIndex: number

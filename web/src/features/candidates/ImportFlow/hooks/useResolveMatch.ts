@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { importApi } from '@/lib/api/import'
 import type { ResolveMatchRequest } from '@/lib/api/import.types'
+import { importApi } from '@/lib/api/import'
 
 export function useResolveMatch(importSessionId: string) {
   const queryClient = useQueryClient()

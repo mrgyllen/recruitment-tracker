@@ -1,9 +1,10 @@
+import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { FileUploadStep } from './FileUploadStep'
+import { useImportSession } from './hooks/useImportSession'
 import { ImportProgress } from './ImportProgress'
 import { ImportSummary } from './ImportSummary'
 import { MatchReviewStep, type FlaggedRow } from './MatchReviewStep'
-import { useImportSession } from './hooks/useImportSession'
 import {
   Sheet,
   SheetContent,
@@ -12,9 +13,8 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet'
 import { useAppToast } from '@/hooks/useAppToast'
-import { importApi } from '@/lib/api/import'
 import { ApiError } from '@/lib/api/httpClient'
-import { useQueryClient } from '@tanstack/react-query'
+import { importApi } from '@/lib/api/import'
 
 type WizardStep = 'upload' | 'processing' | 'summary' | 'matchReview'
 

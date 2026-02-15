@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
 import { PdfViewer } from './PdfViewer'
 
 // Mock react-pdf since jsdom cannot render canvas
@@ -10,7 +10,7 @@ vi.mock('react-pdf', () => {
     loading,
     error,
     file,
-  }: any) => {
+  }: { onLoadSuccess?: (info: { numPages: number }) => void; children: React.ReactNode; loading?: React.ReactNode; error?: React.ReactNode; file?: string }) => {
     if (!file) {
       // Simulate error for empty/invalid URL
       return <>{error}</>
@@ -24,7 +24,7 @@ vi.mock('react-pdf', () => {
       </div>
     )
   }
-  const Page = ({ pageNumber }: any) => (
+  const Page = ({ pageNumber }: { pageNumber: number }) => (
     <div data-testid={`pdf-page-${pageNumber}`}>Page {pageNumber}</div>
   )
   return {

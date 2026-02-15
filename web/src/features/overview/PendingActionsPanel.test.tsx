@@ -1,6 +1,6 @@
-import { render, screen } from '@/test-utils'
 import { describe, expect, it } from 'vitest'
 import { PendingActionsPanel } from './PendingActionsPanel'
+import { render, screen } from '@/test-utils'
 
 describe('PendingActionsPanel', () => {
   it('should render pending action count', () => {

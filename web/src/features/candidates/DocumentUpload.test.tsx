@@ -1,9 +1,9 @@
-import { describe, expect, it } from 'vitest'
 import { fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, expect, it } from 'vitest'
 import { DocumentUpload } from './DocumentUpload'
-import { render, screen } from '@/test-utils'
 import type { CandidateDocumentDto } from '@/lib/api/candidates.types'
+import { render, screen } from '@/test-utils'
 
 const defaultProps = {
   recruitmentId: '550e8400-e29b-41d4-a716-446655440000',

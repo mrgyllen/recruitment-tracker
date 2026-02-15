@@ -1,9 +1,9 @@
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { AuthProvider } from '@/features/auth/AuthContext'
-import { Toaster } from '@/components/ui/sonner'
 import { ScreeningLayout } from './ScreeningLayout'
+import { Toaster } from '@/components/ui/sonner'
+import { AuthProvider } from '@/features/auth/AuthContext'
 
 // Mock PdfViewer to avoid pdfjs-dist DOMMatrix dependency in jsdom
 vi.mock('@/features/candidates/PdfViewer', () => ({

@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { ImportDocumentDto, ImportSessionResponse } from '@/lib/api/import.types'
 import { mockCandidateId1 } from './fixtures/candidates'
+import type { ImportDocumentDto, ImportSessionResponse } from '@/lib/api/import.types'
 
 export const mockImportSessionId = 'import-session-001'
 

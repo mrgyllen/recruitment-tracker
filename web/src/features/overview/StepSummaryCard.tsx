@@ -1,5 +1,5 @@
-import { StatusBadge } from '@/components/StatusBadge'
 import type { StepOverview } from '@/lib/api/recruitments.types'
+import { StatusBadge } from '@/components/StatusBadge'
 
 interface StepSummaryCardProps {
   step: StepOverview

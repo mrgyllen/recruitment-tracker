@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Document, Page } from 'react-pdf'
 import '@/lib/pdfWorkerConfig'
 import 'react-pdf/dist/Page/AnnotationLayer.css'
@@ -11,7 +11,20 @@ interface PdfViewerProps {
 
 export function PdfViewer({ url, onError }: PdfViewerProps) {
   const [numPages, setNumPages] = useState<number>(0)
+  const [containerWidth, setContainerWidth] = useState<number>(600)
   const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width)
+      }
+    })
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
 
   const handleLoadSuccess = useCallback(
     ({ numPages: total }: { numPages: number }) => {
@@ -57,7 +70,7 @@ export function PdfViewer({ url, onError }: PdfViewerProps) {
           <Page
             key={`page-${index + 1}`}
             pageNumber={index + 1}
-            width={containerRef.current?.clientWidth ?? 600}
+            width={containerWidth}
             renderTextLayer={true}
             renderAnnotationLayer={true}
           />

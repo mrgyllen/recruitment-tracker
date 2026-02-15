@@ -1,5 +1,5 @@
-import { render, screen } from '@/test-utils'
 import { CandidatePanel } from './CandidatePanel'
+import { render, screen } from '@/test-utils'
 
 const defaultProps = {
   recruitmentId: '550e8400-e29b-41d4-a716-446655440000',

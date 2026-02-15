@@ -1,6 +1,6 @@
 import { http, HttpResponse } from 'msw'
-import type { RecordOutcomeRequest } from '@/lib/api/screening.types'
 import { mockOutcomeResult, mockOutcomeHistoryList } from './fixtures/screening'
+import type { RecordOutcomeRequest } from '@/lib/api/screening.types'
 
 export const screeningHandlers = [
   http.post(

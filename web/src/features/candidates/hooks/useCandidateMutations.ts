@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { candidateApi } from '@/lib/api/candidates'
 import type { CreateCandidateRequest } from '@/lib/api/candidates.types'
+import { candidateApi } from '@/lib/api/candidates'
 
 export function useCreateCandidate(recruitmentId: string) {
   const queryClient = useQueryClient()

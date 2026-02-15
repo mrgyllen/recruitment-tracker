@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
-import { useAppToast } from '@/hooks/useAppToast'
+import { useState } from 'react'
 import { useRecordOutcome } from './hooks/useRecordOutcome'
-import { cn } from '@/lib/utils'
 import type { OutcomeHistoryDto, OutcomeResultDto, OutcomeStatus } from '@/lib/api/screening.types'
+import { useAppToast } from '@/hooks/useAppToast'
+import { cn } from '@/lib/utils'
 
 interface OutcomeFormProps {
   recruitmentId: string
@@ -34,14 +34,14 @@ export function OutcomeForm({
   externalOutcome,
 }: OutcomeFormProps) {
   const [selectedOutcome, setSelectedOutcome] = useState<OutcomeStatus | null>(
-    existingOutcome?.outcome ?? null,
+    externalOutcome ?? existingOutcome?.outcome ?? null,
   )
+  const [prevExternalOutcome, setPrevExternalOutcome] = useState(externalOutcome)
 
-  useEffect(() => {
-    if (externalOutcome) {
-      setSelectedOutcome(externalOutcome)
-    }
-  }, [externalOutcome])
+  if (externalOutcome && externalOutcome !== prevExternalOutcome) {
+    setPrevExternalOutcome(externalOutcome)
+    setSelectedOutcome(externalOutcome)
+  }
   const [reason, setReason] = useState(existingOutcome?.reason ?? '')
   const toast = useAppToast()
   const recordOutcome = useRecordOutcome()

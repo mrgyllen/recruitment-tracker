@@ -3,12 +3,12 @@ import { renderHook, waitFor } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, it } from 'vitest'
 import { useRecruitmentOverview } from './useRecruitmentOverview'
+import type { ReactNode } from 'react'
 import {
   mockOverviewData,
   mockRecruitmentId,
 } from '@/mocks/recruitmentHandlers'
 import { server } from '@/mocks/server'
-import type { ReactNode } from 'react'
 
 function createWrapper() {
   const queryClient = new QueryClient({

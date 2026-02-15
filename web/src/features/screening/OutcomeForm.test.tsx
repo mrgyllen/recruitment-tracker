@@ -1,8 +1,8 @@
-import { render, screen, waitFor } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
+import { http, HttpResponse } from 'msw'
 import { OutcomeForm } from './OutcomeForm'
 import { server } from '@/mocks/server'
-import { http, HttpResponse } from 'msw'
+import { render, screen, waitFor } from '@/test-utils'
 
 const defaultProps = {
   recruitmentId: '550e8400-e29b-41d4-a716-446655440000',

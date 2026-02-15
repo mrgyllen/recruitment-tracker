@@ -1,15 +1,15 @@
+import { ArrowLeft, Download } from 'lucide-react'
 import { useParams, Link } from 'react-router'
-import { useCandidateById } from './hooks/useCandidateById'
 import { DocumentUpload } from './DocumentUpload'
-import { PdfViewer } from './PdfViewer'
+import { useCandidateById } from './hooks/useCandidateById'
 import { useSasUrl } from './hooks/useSasUrl'
-import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
+import { PdfViewer } from './PdfViewer'
+import type { OutcomeHistoryEntry } from '@/lib/api/candidates.types'
 import { SkeletonLoader } from '@/components/SkeletonLoader'
 import { StatusBadge } from '@/components/StatusBadge'
 import { toStatusVariant } from '@/components/StatusBadge.types'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Download } from 'lucide-react'
-import type { OutcomeHistoryEntry } from '@/lib/api/candidates.types'
+import { useRecruitment } from '@/features/recruitments/hooks/useRecruitment'
 
 
 export function CandidateDetail() {

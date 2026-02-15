@@ -1,6 +1,6 @@
+import type { OutcomeHistoryDto } from '@/lib/api/screening.types'
 import { StatusBadge } from '@/components/StatusBadge'
 import { toStatusVariant } from '@/components/StatusBadge.types'
-import type { OutcomeHistoryDto } from '@/lib/api/screening.types'
 
 interface OutcomeHistoryProps {
   history: OutcomeHistoryDto[]

@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
 import { fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { describe, expect, it, vi } from 'vitest'
 import { FileUploadStep } from './FileUploadStep'
 import { render, screen } from '@/test-utils'
 

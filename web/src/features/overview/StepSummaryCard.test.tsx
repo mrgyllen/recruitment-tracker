@@ -1,8 +1,8 @@
-import { render, screen } from '@/test-utils'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import { StepSummaryCard } from './StepSummaryCard'
 import type { StepOverview } from '@/lib/api/recruitments.types'
+import { render, screen } from '@/test-utils'
 
 const mockStep: StepOverview = {
   stepId: 'step-1',
