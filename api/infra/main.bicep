@@ -45,6 +45,7 @@ param sqlDatabaseSku object = {
 @description('Storage Account SKU (default: Standard_LRS for test deployment)')
 param storageSku string = 'Standard_LRS'
 
+@description('Override name for the Storage Account (auto-generated if empty)')
 param storageAccountName string = ''
 
 var abbrs = loadJsonContent('./abbreviations.json')
