@@ -98,7 +98,7 @@ development_status:
   5-2-overview-dashboard-ui: done
   epic-5-retrospective: done
   # Deferred items from Epic 5
-  epic-5-deferred-aggregate-root-test: backlog    # A-007: Architectural test enforcing aggregate root modification pattern (P2, 2-3h effort)
+  epic-5-deferred-aggregate-root-test: done    # A-007: Architectural test enforcing aggregate root modification pattern (P2, 2-3h effort)
 
   # Epic 7: Deployment & Infrastructure Automation (executes before Epic 6)
   epic-7: in-progress
