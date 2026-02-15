@@ -60,6 +60,9 @@ dotnet test api/api.slnx
 Best when .NET SDK is not installed locally. Starts the API and SQL Server in containers.
 
 ```bash
+# Copy environment file first
+cp .env.example .env
+
 # From repo root — starts API + SQL Server
 docker compose up --build
 
@@ -72,7 +75,7 @@ npm run dev
 | Service | URL |
 |---------|-----|
 | API | `http://localhost:5000` |
-| SQL Server | `localhost:1433` (sa / Dev@Pass123!) |
+| SQL Server | `localhost:1433` (sa / password from `.env` file) |
 | Frontend | `http://localhost:5173` |
 
 ### Running Backend Tests via Docker
