@@ -4,6 +4,15 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment (staging or production)'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
 
 permissions:
   id-token: write
@@ -12,11 +21,12 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment || 'staging' }}
     env:
       AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
       AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
       AZURE_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-      AZURE_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+      AZURE_ENV_NAME: ${{ github.event_name == 'workflow_dispatch' && inputs.environment || 'staging' }}
       AZURE_LOCATION: ${{ vars.AZURE_LOCATION }}
     steps:
       - uses: actions/checkout@v4
@@ -58,3 +68,20 @@ jobs:
       - name: Deploy Application
         working-directory: api
         run: azd deploy --no-prompt
+
+      - name: Verify deployment health
+        working-directory: api
+        run: |
+          APP_URL=$(azd env get-values --output json | jq -r '.WEB_BASE_URI')
+          echo "Checking health at $APP_URL/health..."
+          for i in {1..6}; do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$APP_URL/health" || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Attempt $i: status $STATUS, retrying in 10s..."
+            sleep 10
+          done
+          echo "Health check failed after 60 seconds"
+          exit 1
