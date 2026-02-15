@@ -78,6 +78,7 @@ public class DevAuthenticationTests
                 builder.UseSetting("AzureAd:TenantId", "fake-tenant-id");
                 builder.UseSetting("AzureAd:ClientId", "fake-client-id");
                 builder.UseSetting("AzureAd:Audience", "api://fake-client-id");
+                builder.UseSetting("Database:AutoMigrate", "false");
                 builder.UseSetting("ConnectionStrings:apiDb",
                     "Server=(localdb)\\mssqllocaldb;Database=apiTestDb;Trusted_Connection=True;MultipleActiveResultSets=true");
             });

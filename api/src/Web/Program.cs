@@ -23,12 +23,16 @@ else
     // Auto-migrate: apply pending EF Core migrations on startup.
     // Safe for single-instance deployments (current scale).
     // For multi-instance, switch to a migration job or init container.
-    using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-    logger.LogInformation("Applying database migrations...");
-    await db.Database.MigrateAsync();
-    logger.LogInformation("Database migrations applied successfully.");
+    // Guarded by config so tests using Production environment can disable it.
+    if (app.Configuration.GetValue("Database:AutoMigrate", true))
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Applying database migrations...");
+        await db.Database.MigrateAsync();
+        logger.LogInformation("Database migrations applied successfully.");
+    }
 
     app.UseHsts();
 }
